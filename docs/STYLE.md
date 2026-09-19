@@ -32,6 +32,9 @@ Rules:
 - Radius: 4 / 8 / 16 px; pills for CTAs (`9999px`).
 - Borders: 1px warm hairline.
 - Spacing: 4 px rhythm.
+- Focus: the composer field lights up — its hairline goes to clay at ~60% alpha
+  with a 1px warm bleed and a deeper drop shadow. The footer tray below follows
+  the same hairline so the two tiers stay one outline.
 
 ## Implementation notes
 
