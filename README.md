@@ -30,7 +30,7 @@
 ## 安装
 
 ```sh
-dsh plugin --profile web add TaiyakiOffical/dsh-claude-style   # GitHub 源
+dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub 源
 # 或（若已发布到 npm）
 dsh plugin --profile web add dsh-claude-style                    # npm 源
 ```

@@ -24,7 +24,7 @@ A theme plugin for the DeepSeek Harness (DSH) Web client, recreating the Claude 
 ## Installation
 
 ```sh
-dsh plugin --profile web add TaiyakiOffical/dsh-claude-style   # GitHub source
+dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub source
 # or, if published to npm
 dsh plugin --profile web add dsh-claude-style                    # npm source
 ```
