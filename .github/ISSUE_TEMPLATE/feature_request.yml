@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a style change or new capability
+title: "[feat] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like to see added or changed?
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why
+      description: How does this fit the warm-editorial direction? (see docs/STYLE.md)
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: Optional — a screenshot or site that demonstrates the idea.

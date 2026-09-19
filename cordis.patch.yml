@@ -1,0 +1,6 @@
+# Claude Style skin bundle patch: inserts its dsh.client row into the web roster.
+# Mutual exclusion with other skins is handled at the profile patch layer
+# (disabled rows), same as dsh-client-ui-skin-claude.
+- insert:
+    - id: ui-skin-claude-style
+      name: 'dsh-claude-style'

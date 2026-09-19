@@ -1,0 +1,32 @@
+{
+  "id": "claude-style",
+  "name": "Claude Style · 暖象牙",
+  "nameEn": "Claude Style",
+  "author": "TaiyakiOffical",
+  "tagline": "Anthropic 暖调编辑风 · 象牙画布 · 陶烬橙点睛 · 衬线标题",
+  "description": "根据 anthropic.com 界面风格蒸馏报告创作的 Claude 风格暖调编辑型皮肤：象牙白(#FAF9F5)/暖黑(#141413)双画布、陶烬橙(#D97757→#C6613F)强调、衬线展示标题 + 无衬线界面、发丝线描边、胶囊 CTA、编辑器式排版节奏，跟随原生亮/暗主题。",
+  "tags": [
+    "claude",
+    "anthropic",
+    "warm",
+    "editorial",
+    "ivory",
+    "clay",
+    "serif",
+    "light",
+    "dark",
+    "minimal"
+  ],
+  "accent": "#d97757",
+  "bodyAttr": "data-dsh-claude-style",
+  "package": "dsh-claude-style",
+  "wiring": {
+    "id": "ui-skin-claude-style",
+    "bundleWired": false
+  },
+  "preview": {
+    "light": "docs/light.png",
+    "dark": "docs/dark.png"
+  },
+  "order": 10
+}
