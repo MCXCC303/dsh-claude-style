@@ -15,7 +15,7 @@ A deep-customized theme plugin for the DeepSeek Harness (DSH) Web client, recrea
 - **Editorial Rhythm**: Hairline borders, 8px card radii, and full-pill CTA buttons.
 
 ### 2. Claude Code Interaction Replicas
-- **Plan / Edit / Auto Segmented Controls**: Replaces the shipped access mode menu with inline segments to switch between Plan (read-only), Edit (workspace write), and Auto (full access with safety confirmation).
+- **Read / Edit / Auto Segmented Controls**: Replaces the shipped access mode menu with inline segments to switch between Read (read-only), Edit (workspace write), and Auto (full access with safety confirmation).
 - **Desktop Copy & Brand**: Custom new-conversation greeting, composer placeholder, and brand mark.
 - **Sidebar Account Drawer**: Account button and popover drawer in the sidebar footer with quick access to Settings (`Ctrl+,`) and plugins.
 
