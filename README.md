@@ -2,7 +2,7 @@
 
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-为 DeepSeek Harness (DSH) Web 客户端深度复刻 Claude Code Desktop 视觉与交互体验的主题插件。
+为 DeepSeek Harness (DSH) Web 客户端复刻 Claude Code Desktop 视觉与交互体验的主题插件。
 
 ![light 亮色](docs/light.png)
 
@@ -10,8 +10,8 @@
 
 ### 1. Claude 经典暖调视觉
 - **象牙白 / 暖黑双画布**：亮色象牙白（`#FCFCFB`）与浅色侧栏（`#FBFBF9`），暗色暖黑（`#141413`），遵循系统亮暗模式切换。
-- **陶烬橙点睛**：经典陶烬橙（`#D97757`，hover `#C6613F`）作为唯一操作强调色。
-- **三字体系排版**：衬线展示标题（Serif）+ 无衬线界面（Sans）+ 等宽代码（Mono）。
+- **陶烬橙强调色**：经典陶烬橙（`#D97757`，hover `#C6613F`）作为唯一操作强调色。
+- **三种字体分工**：衬线展示标题（Serif）+ 无衬线界面（Sans）+ 等宽代码（Mono）。
 - **细致质感**：精致发丝边框、8px 卡片圆角、全圆角胶囊 CTA 按钮。
 
 ### 2. Claude Code 交互复刻
@@ -29,28 +29,26 @@ dsh plugin --profile web add TaiyakiOffical/dsh-claude-style   # GitHub 源
 dsh plugin --profile web add dsh-claude-style                    # npm 源
 ```
 
-安装后**重启 `dsh web`**，刷新页面即生效。
+安装命令会把主题自动接入 profile 组合，无需手工配置。安装后**重启 `dsh web`**，刷新页面即生效。
 
-## 切换与互斥
+## 禁用与切换
 
-同一时刻只建议启用一个主题/皮肤。在 profile 的 `cordis.patch.yml` 中确保配置如下：
+同一时刻建议只启用一个主题。停用本主题时，在 profile 的 `cordis.patch.yml`（`~/.dsh/profiles/web/cordis.patch.yml`）中加入：
 
 ```yaml
-# ~/.dsh/profiles/web/cordis.patch.yml
 - id: ui-skin-claude-style
-  name: dsh-claude-style
+  disabled: true
 ```
 
-若需切换其他主题，可将本项设为 `disabled: true` 或使用 `dsh-skin-manager` 切换。
+保存后约 1 秒内热生效，刷新页面即回到原生外观。也可以安装 [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager)，在设置页一键切换所有已安装的主题。
 
 ## 卸载
 
-1. 删除 profile `cordis.patch.yml` 中 `ui-skin-claude-style` 的配置项
-2. 执行卸载命令：
-   ```sh
-   dsh plugin --profile web remove dsh-claude-style
-   ```
-3. 重启 `dsh web`
+```sh
+dsh plugin --profile web remove dsh-claude-style
+```
+
+然后重启 `dsh web`。若曾在 `cordis.patch.yml` 手工添加过本主题的条目，一并删除。
 
 ## 许可
 

@@ -1,15 +1,29 @@
 # Changelog
 
+## [0.2.1] - 2026-09-19
+
+### Added
+- 账户抽屉支持悬停展开与延迟关闭，移入弹层不打断浏览。
+
+### Changed
+- 权限控制器首段从 Plan 改名为 Read，与它映射的只读预设（read-only）名称一致。
+- 新会话按钮改为与会话行同高的窄条：左对齐加号图标、常驻悬停底色。
+- 会话行标题默认为次级灰，悬停或选中时回到主文字色。
+- 账户底栏改为贯通侧栏的全宽分割线布局。
+
+### Fixed
+- 补齐 LICENSE 版权署名；修正 README 中无效的手工 patch 配置示例。
+
 ## [0.2.0] - 2026-09-19
 
 ### Added
-- **Claude Code Desktop Theme**: 深度定制重构，从普通配色皮肤升级为完整的 Claude Code Desktop 视觉与交互复刻主题。
+- **Claude Code Desktop Theme**: 重构，从配色皮肤升级为完整的 Claude Code Desktop 视觉与交互复刻主题。
 - **Plan / Edit / Auto 分段权限控制**：行内三段式控制器，支持快捷切换会话权限（Plan 只读、Edit 写入、Auto 完全权限并带安全确认）。
 - **侧栏账户抽屉**：侧栏底部集成账户按钮与弹出菜单，支持一键打开设置（`Ctrl+,`）与管理插件。
 - **视觉与文案重塑**：专属问候语、输入框引导文案与品牌星芒标识。
 
 ### Changed
-- 项目全面重命名为 `dsh-claude-style`，与上游 `claude-style-skin` 彻底区分。
+- 项目重命名为 `dsh-claude-style`，与上游 `claude-style-skin` 区分。
 - 优化亮色画布色值（`#FCFCFB`）与侧栏色值（`#FBFBF9`）。
 
 ## [0.1.0] - 2026-08-22
