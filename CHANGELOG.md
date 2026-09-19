@@ -1,20 +1,18 @@
 # Changelog
 
-## [0.1.1] - 2026-08-22
+## [0.2.0] - 2026-09-19
+
+### Added
+- **Claude Code Desktop Theme**: 深度定制重构，从普通配色皮肤升级为完整的 Claude Code Desktop 视觉与交互复刻主题。
+- **Plan / Edit / Auto 分段权限控制**：行内三段式控制器，支持快捷切换会话权限（Plan 只读、Edit 写入、Auto 完全权限并带安全确认）。
+- **侧栏账户抽屉**：侧栏底部集成账户按钮与弹出菜单，支持一键打开设置（`Ctrl+,`）与管理插件。
+- **视觉与文案重塑**：专属问候语、输入框引导文案与品牌星芒标识。
 
 ### Changed
-
-- Soften elevation shadows: dark mode drops the heavy `0 18px 54px` shadow for
-  a calmer `0 4px 16px`; light mode gains a subtle warm shadow
-  (`rgba(20, 20, 19, …)`) so floating surfaces read as gently lifted.
+- 项目全面重命名为 `dsh-claude-style`，与上游 `claude-style-skin` 彻底区分。
+- 优化亮色画布色值（`#FCFCFB`）与侧栏色值（`#FBFBF9`）。
 
 ## [0.1.0] - 2026-08-22
 
 ### Added
-
-- Initial release: Claude Style — an Anthropic warm-editorial skin for the DeepSeek Harness Web GUI, distilled from anthropic.com.
-- Ivory `#FAF9F5` / warm-black `#141413` dual canvas with all-warm grays.
-- A single clay ember accent `#D97757` (hover `#C6613F`) reserved for CTA / links / focus.
-- Three-face editorial typography: serif display, sans UI, mono labels.
-- Editorial markdown: serif headings, clay-edged blockquotes, inline-code chips, horizontal-rule tables.
-- Light / dark themes following the system.
+- 初始版本：暖调象牙白/暖黑双画布与陶烬橙强调色。

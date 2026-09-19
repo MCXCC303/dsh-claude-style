@@ -1,7 +1,7 @@
 {
   "name": "dsh-claude-style",
-  "description": "Claude Style — Anthropic warm-editorial skin for the dsh web GUI, distilled from anthropic.com",
-  "version": "0.1.1",
+  "description": "Claude Code Desktop theme for DeepSeek Harness (dsh) web GUI — visual & interaction overhaul",
+  "version": "0.2.0",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -32,23 +32,21 @@
     "dsh-plugin",
     "cordis",
     "web-ui",
-    "skin",
     "theme",
     "claude",
+    "claude-code",
+    "desktop-theme",
     "anthropic",
-    "warm",
-    "editorial",
-    "ivory",
-    "clay"
+    "editorial"
   ],
   "license": "MIT",
   "author": "TaiyakiOffical",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TaiyakiOffical/claude-style-skin.git"
+    "url": "git+https://github.com/TaiyakiOffical/dsh-claude-style.git"
   },
-  "homepage": "https://github.com/TaiyakiOffical/claude-style-skin#readme",
+  "homepage": "https://github.com/TaiyakiOffical/dsh-claude-style#readme",
   "bugs": {
-    "url": "https://github.com/TaiyakiOffical/claude-style-skin/issues"
+    "url": "https://github.com/TaiyakiOffical/dsh-claude-style/issues"
   }
 }

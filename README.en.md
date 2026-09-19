@@ -1,48 +1,55 @@
-# claude-style-skin · Claude Style
+# dsh-claude-style · Claude Code Desktop Theme
 
-[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-An Anthropic warm-editorial skin for the DeepSeek Harness Web GUI, distilled from anthropic.com: an ivory / warm-black canvas, a single clay ember accent, serif display headlines + sans UI + mono labels, hairline borders and pill CTAs, following the native light/dark theme.
+A deep-customized theme plugin for the DeepSeek Harness (DSH) Web client, recreating the Claude Code Desktop visual and interaction experience.
 
 ![light](docs/light.png)
 
 ## Highlights
 
-- **Ivory `#FAF9F5` (light) / warm-black `#141413` (dark)** canvas, all-warm grays
-- **One clay ember accent `#D97757`**, deepening to `#C6613F` on hover; accent reserved for CTA / links / focus (<10%)
-- **Serif display + sans UI + mono labels** — a three-face editorial hierarchy
-- Warm hairline borders, 8px radii, full pill CTAs
-- Editorial markdown: serif headings, serif italics for emphasis, clay-edged blockquotes, inline-code chips, horizontal-rule tables
-- A clean brand area: whale + wordmark float on the canvas, no badge, no backing pill
-- Light / dark themes, following the system
+### 1. Claude Warm Editorial Aesthetics
+- **Ivory / Warm-black Dual Canvas**: Ivory canvas (`#FCFCFB`) with muted sidebar (`#FBFBF9`) for light mode, warm-black (`#141413`) for dark mode, following system preferences.
+- **Clay Ember Accent**: Signature clay ember (`#D97757`, hover `#C6613F`) for primary actions and focus states.
+- **Three-Face Typography**: Serif display headings + sans-serif UI chrome + monospace code.
+- **Editorial Rhythm**: Hairline borders, 8px card radii, and full-pill CTA buttons.
+
+### 2. Claude Code Interaction Replicas
+- **Plan / Edit / Auto Segmented Controls**: Replaces the shipped access mode menu with inline segments to switch between Plan (read-only), Edit (workspace write), and Auto (full access with safety confirmation).
+- **Desktop Copy & Brand**: Custom new-conversation greeting, composer placeholder, and brand mark.
+- **Sidebar Account Drawer**: Account button and popover drawer in the sidebar footer with quick access to Settings (`Ctrl+,`) and plugins.
 
 ![dark](docs/dark.png)
 
-## Install
+## Installation
 
 ```sh
-dsh plugin --profile web add TaiyakiOffical/claude-style-skin   # GitHub source
+dsh plugin --profile web add TaiyakiOffical/dsh-claude-style   # GitHub source
 # or, if published to npm
-dsh plugin --profile web add claude-style-skin                   # npm source (market prefers)
+dsh plugin --profile web add dsh-claude-style                    # npm source
 ```
 
-Then **restart `dsh web`** and refresh the page.
+After installation, **restart `dsh web`** and refresh the browser.
 
-## Mutual exclusion
+## Mutual Exclusion
 
-Only one skin is active at a time. Add `disabled: true` to the insert row of any other skin in the profile's `cordis.patch.yml`, or switch via [dsh-market](https://github.com/dsh-market/dsh-market) / [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager):
+Only one theme should be active at a time. Ensure the following entry is in your profile's `cordis.patch.yml`:
 
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: ui-skin-claude-style
-  name: claude-style-skin
+  name: dsh-claude-style
 ```
 
-## Uninstall
+To switch to another theme, set `disabled: true` on this row or use `dsh-skin-manager`.
 
-1. Remove the `ui-skin-claude-style` insert row from the profile's `cordis.patch.yml`
-2. `dsh plugin --profile web remove claude-style-skin`
+## Uninstallation
+
+1. Remove the `ui-skin-claude-style` row from profile `cordis.patch.yml`
+2. Run:
+   ```sh
+   dsh plugin --profile web remove dsh-claude-style
+   ```
 3. Restart `dsh web`
 
 ## License

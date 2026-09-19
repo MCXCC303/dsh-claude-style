@@ -1,48 +1,55 @@
-# claude-style-skin · Claude Style 暖象牙
+# dsh-claude-style · Claude Code Desktop 主题
 
-[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Anthropic 暖调编辑风 DeepSeek Harness Web 皮肤 —— 依据 [anthropic.com](https://www.anthropic.com/) 界面风格蒸馏报告创作：象牙白 / 暖黑双画布、陶烬橙点睛、衬线标题 + 无衬线界面 + 等宽标签、发丝线描边、胶囊 CTA，跟随原生亮/暗主题。
+为 DeepSeek Harness (DSH) Web 客户端深度复刻 Claude Code Desktop 视觉与交互体验的主题插件。
 
 ![light 亮色](docs/light.png)
 
-## 设计要点
+## 特性
 
-- **暖象牙 `#FAF9F5`（亮）/ 暖黑 `#141413`（暗）双画布**，全部暖调灰阶，绝不用冷灰
-- **单一陶烬橙 `#D97757` 强调**，hover 加深 `#C6613F`；强调只用于 CTA／链接／焦点（占比 <10%）
-- **衬线展示标题 + 无衬线界面 + 等宽标签** —— 三字体的编辑部式层级
-- 发丝暖线描边、8px 卡片圆角、全圆角胶囊 CTA
-- Markdown 编辑排版：衬线标题、衬线斜体强调、陶橙左缘引用块、行内代码芯片、横向发丝表格
-- 干净品牌区：鲸鱼 + wordmark 直接浮于画布，无徽章、无底衬
-- 亮 / 暗双主题，跟随系统切换
+### 1. Claude 经典暖调视觉
+- **象牙白 / 暖黑双画布**：亮色象牙白（`#FCFCFB`）与浅色侧栏（`#FBFBF9`），暗色暖黑（`#141413`），遵循系统亮暗模式切换。
+- **陶烬橙点睛**：经典陶烬橙（`#D97757`，hover `#C6613F`）作为唯一操作强调色。
+- **三字体系排版**：衬线展示标题（Serif）+ 无衬线界面（Sans）+ 等宽代码（Mono）。
+- **细致质感**：精致发丝边框、8px 卡片圆角、全圆角胶囊 CTA 按钮。
+
+### 2. Claude Code 交互复刻
+- **Plan / Edit / Auto 三段式权限控制器**：替换原生访问模式菜单，平滑切换只读（Plan）、工作区写入（Edit）与完全权限（Auto，带安全确认弹窗）。
+- **桌面端问候语与占位符**：专属对话问候语与输入框引导文案。
+- **侧栏账户抽屉**：侧栏底部集成账户按钮与抽屉菜单，支持一键打开设置（快捷键 `Ctrl+,`）与管理插件。
 
 ![dark 暗色](docs/dark.png)
 
 ## 安装
 
 ```sh
-dsh plugin --profile web add TaiyakiOffical/claude-style-skin   # GitHub 源
+dsh plugin --profile web add TaiyakiOffical/dsh-claude-style   # GitHub 源
 # 或（若已发布到 npm）
-dsh plugin --profile web add claude-style-skin                    # npm 源，市场优先
+dsh plugin --profile web add dsh-claude-style                    # npm 源
 ```
 
-装完**重启 `dsh web`**，刷新页面即生效。
+安装后**重启 `dsh web`**，刷新页面即生效。
 
-## 与其它皮肤的互斥
+## 切换与互斥
 
-同一时刻只启用一个皮肤。把当前启用皮肤的 insert 行加 `disabled: true`（编辑 profile 的 `cordis.patch.yml`），或直接用 [dsh-market](https://github.com/dsh-market/dsh-market) ／ [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) 一键切换：
+同一时刻只建议启用一个主题/皮肤。在 profile 的 `cordis.patch.yml` 中确保配置如下：
 
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
 - id: ui-skin-claude-style
-  name: claude-style-skin
+  name: dsh-claude-style
 ```
+
+若需切换其他主题，可将本项设为 `disabled: true` 或使用 `dsh-skin-manager` 切换。
 
 ## 卸载
 
-1. 删除 profile `cordis.patch.yml` 里 `ui-skin-claude-style` 的 insert 行
-2. `dsh plugin --profile web remove claude-style-skin`
+1. 删除 profile `cordis.patch.yml` 中 `ui-skin-claude-style` 的配置项
+2. 执行卸载命令：
+   ```sh
+   dsh plugin --profile web remove dsh-claude-style
+   ```
 3. 重启 `dsh web`
 
 ## 许可

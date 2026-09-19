@@ -1,13 +1,13 @@
 # Style Guide · 设计令牌
 
-Claude Style is a *warm editorial* skin distilled from anthropic.com.
-This page documents the design tokens so contributions stay on-style.
+Design tokens for `dsh-claude-style`, recreating the Claude Code Desktop aesthetic.
 
 ## Palette
 
 | Token | Value | Use |
 |---|---|---|
-| ivory light | `#FAF9F5` | light canvas |
+| ivory light | `#FCFCFB` | light canvas |
+| sidebar light | `#FBFBF9` | light sidebar |
 | ivory | `#F0EEE6` | secondary surfaces |
 | ivory dark | `#E8E6DC` | hover / section bg |
 | slate dark | `#141413` | text (light mode), canvas (dark mode) |
@@ -36,6 +36,5 @@ Rules:
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
-- Dark tokens are the base; light overrides use
-  `:not([data-ds-dark-theme])`.
+- Dark tokens are the base; light overrides use `:not([data-ds-dark-theme])`.
 - Hand-written plain JS bundle (`lib/client.js`), no build step.
