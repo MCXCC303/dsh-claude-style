@@ -116,3 +116,19 @@ body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"]
 body[data-dsh-claude-style][data-ds-dark-theme] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]):focus-visible {
   outline-color: rgba(250, 249, 245, 0.60);
 }
+
+/* ---------- composer dock overlays: stay above the message layer ---------- */
+/* Queue, jobs and goal are full-width overlays that can visually extend over
+   the transcript. The message cards paint later in the DOM, so give each
+   overlay its own stacking layer above the chat content. */
+body[data-dsh-claude-style] [data-queue-dock],
+body[data-dsh-claude-style] [data-goal-bar],
+body[data-dsh-claude-style] [data-slot="conversation.input.dock"] > * {
+  position: relative;
+  z-index: 100 !important;
+}
+
+body[data-dsh-claude-style] [data-slot="conversation.session.header.actions"] > * {
+  position: relative;
+  z-index: 100 !important;
+}

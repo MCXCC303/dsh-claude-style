@@ -98,11 +98,25 @@ body[data-dsh-claude-style] pre {
   border-radius: 8px;
 }
 
+/* Code blocks keep the same outer rhythm as body paragraphs: 12px between
+   blocks and the 23px + delta prose line box. The host ships 16px/19px,
+   so override both the wrapper margin and the pre line-height. */
+body[data-dsh-claude-style] .md-code-block {
+  margin: 12px 0;
+}
+
+body[data-dsh-claude-style] .md-code-block pre,
+body[data-dsh-claude-style] .md-code-block pre code {
+  line-height: calc(23px + var(--dsh-content-font-delta, 0px)) !important;
+  font-weight: 500 !important;
+}
+
 /* Claude sets code blocks at the same size as body copy; the host sizes
    pre/code itself, so force both to the surrounding body size. */
 body[data-dsh-claude-style] pre,
 body[data-dsh-claude-style] pre code {
   font-size: 1em !important;
+  font-weight: 500 !important;
 }
 
 /* Claude's inline-code chip: warm red on the same neutral gray the components
