@@ -40,4 +40,46 @@ Rules:
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
 - Dark tokens are the base; light overrides use `:not([data-ds-dark-theme])`.
-- Hand-written plain JS bundle (`lib/client.js`), no build step.
+
+## Architecture · 源码结构
+
+The shipped bundle `lib/client.js` is **generated** — never edit it directly.
+Source lives in `src/` and `node scripts/build.mjs` (or `npm run build`)
+assembles the bundle:
+
+| Source | Zone | Content |
+|---|---|---|
+| `src/constants.js` | 1 | constants, spinner verbs, SVG masks (evaluated at build time to fill `%%TOKEN%%` placeholders in the stylesheets) |
+| `src/styles/tokens.css` | 2.1 | design tokens (dark base + ivory light) |
+| `src/styles/typography.css` | 2.2 | serif display / sans UI / mono code, editorial markdown |
+| `src/styles/chrome.css` | 2.3 | canvas, hairlines, clay accent, chrome details |
+| `src/styles/composer.css` | 2.3 | hero + in-conversation composer |
+| `src/styles/sidebar.css` | 2.3 | sidebar brand, new-session row, workspace tree |
+| `src/styles/components.css` | 2.4 | segments, permission popover, account drawer, settings section |
+| `src/context.js` | 3 | host context & helpers |
+| `src/overrides.js` | 4+5 | DOM overrides, MutationObserver scheduler, teardown |
+| `src/settings.js` | 4.4 | settings section (brand switch) |
+| `src/entry.js` | 6 | `apply()` + exports |
+
+Fragments share one factory scope at runtime: keep the 4-space base
+indentation and do not use `import`/`export` inside fragments. The build
+script rejects unsubstituted `%%TOKENS%%` and refuses to emit a bundle that
+fails to parse.
+
+### Host selector discipline · 宿主选择器纪律
+
+The host uses hashed CSS-module classes (`p_FcLG_row`, `_0cyzDW_viewArea`, …).
+Substring matchers must use the **longest stable fragment**, and every new
+rule should be checked for accidental hits:
+
+- `[class*="_row"]`, never `[class*="row"]` — the bare substring also matches
+  the composer growth wrapper `…_grow` and pinned the input field to 28px.
+- Never override the host's active-phase layout contract on
+  `[class*="viewArea"]` (`flex: 1 0 auto; min-height: auto`) — it is what
+  keeps the sticky composer seat pinned to the scrollport bottom.
+
+`node scripts/probe.cjs --token <launch-token>` drives a headless Chrome over
+CDP and asserts the invariants (composer pinned at bottom, single-line start,
+content growth). `node scripts/shoot.cjs --token <launch-token>` recaptures
+the README screenshots (`docs/light.png` / `docs/dark.png`), swapping personal
+data for neutral stand-ins in the DOM before any pixel is written.

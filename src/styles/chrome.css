@@ -1,0 +1,111 @@
+/* --- 2.3 Host Chrome Restyling (Sidebar, Composer, Buttons) --- */
+/* ---------- canvas + hairline structure ---------- */
+body[data-dsh-claude-style] :is([data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface) {
+  --dsw-specific-sidebar-fill: #141413 !important;
+  background: #141413 !important;
+  border-right: 1px solid #242320 !important;
+}
+
+body[data-dsh-claude-style] :is([data-pane="conversation"], [class*="centerCol"]) {
+  background: #141413;
+}
+
+/* ---------- clay accent: one emphasis color, disciplined ---------- */
+body[data-dsh-claude-style] a {
+  color: #e08a6d;
+}
+
+body[data-dsh-claude-style] a:hover {
+  color: #f0a488;
+}
+
+body[data-dsh-claude-style] button[class*="brand"] {
+  color: #d97757;
+}
+
+/* The baked-in wordmark "HARNESS" badge (a pill rect + its letter paths)
+   looks crowded next to the whale + wordmark. Hide the badge entirely so
+   the brand reads as a clean whale + wordmark on the clay pill. */
+body[data-dsh-claude-style] button[class*="brand"] rect[fill="currentColor"],
+body[data-dsh-claude-style] button[class*="brand"] path[fill*="label-primary-inverted"] {
+  display: none;
+}
+
+/* pill CTAs: send + settings sidebar actions */
+body[data-dsh-claude-style] button[class*="_brand"],
+body[data-dsh-claude-style] button[class*="_primary"],
+body[data-dsh-claude-style] [data-slot="sidebar.settings"] > :is(button, [role="button"]) {
+  border-radius: 9999px;
+  background: #d97757;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+body[data-dsh-claude-style] button[class*="_brand"]:hover,
+body[data-dsh-claude-style] button[class*="_primary"]:hover,
+body[data-dsh-claude-style] [data-slot="sidebar.settings"] > :is(button, [role="button"]):hover {
+  background: #e08a6d;
+}
+
+/* Brand logo chip: drop the loud clay pill so the mark + wordmark sit on
+   the canvas. That pill also carried a 9999px radius, and together with the
+   button overflow:hidden its arc clipped the leading edge of the mark — so
+   the radius goes as well. Adaptive logo color: espresso on light, ivory
+   on dark. */
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) button[class*="brand"],
+body[data-dsh-claude-style][data-ds-dark-theme] button[class*="brand"] {
+  background: transparent !important;
+  border: none;
+  border-radius: 0;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) button[class*="brand"] {
+  color: #141413 !important;
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] button[class*="brand"] {
+  color: #faf9f5 !important;
+}
+
+/* badges: full pill */
+body[data-dsh-claude-style] :is([class*="badge"], [class*="Badge"], [class*="tag"], [class*="Tag"]) {
+  border-radius: 9999px;
+}
+
+/* ---------- chrome details ---------- */
+body[data-dsh-claude-style] * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 56, 51, 0.9) transparent;
+}
+
+body[data-dsh-claude-style] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body[data-dsh-claude-style] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body[data-dsh-claude-style] ::-webkit-scrollbar-thumb {
+  background: rgba(58, 56, 51, 0.9);
+  border-radius: 9999px;
+}
+
+body[data-dsh-claude-style] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 106, 101, 0.9);
+}
+
+body[data-dsh-claude-style] ::selection {
+  background: rgba(217, 119, 87, 0.30);
+  color: inherit;
+}
+
+body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]) {
+  outline: none;
+}
+
+body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]):focus-visible {
+  outline: 2px solid rgba(217, 119, 87, 0.75);
+  outline-offset: 1px;
+}

@@ -1,0 +1,93 @@
+/* --- 2.2 Typography & Markdown Editorial --- */
+/* ---------- typography: serif display + sans UI + mono code ---------- */
+body[data-dsh-claude-style] {
+  font-family: var(--dsw-font-family);
+  color: #faf9f5;
+  background-color: #141413;
+}
+
+body[data-dsh-claude-style] :is(h1, h2, h3, h4, [class*="headline"], [class*="title"]) {
+  font-family: var(--dsw-font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+/* display headings sit at 500; the new-conversation headline drops one step
+   further to 400, and both keep the tighter display tracking */
+body[data-dsh-claude-style] :is(h1, [class*="headline"]) {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+body[data-dsh-claude-style] :is(pre, code, kbd, samp, [class*="mono"], [class*="codeBlock"], [class*="CodeBlock"]) {
+  font-family: var(--dsw-font-code);
+}
+
+/* editorial captions */
+body[data-dsh-claude-style] :is([class*="caption"], [class*="sectionLabel"]) {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- editorial markdown ---------- */
+body[data-dsh-claude-style] blockquote {
+  font-family: var(--dsw-font-serif);
+  font-style: italic;
+  color: #b0aea5;
+  border-left: 2px solid #d97757;
+  background: rgba(217, 119, 87, 0.06);
+  border-radius: 0 8px 8px 0;
+  padding: 0.6em 1em;
+}
+
+body[data-dsh-claude-style] pre {
+  background: #1c1b1a;
+  border: 1px solid #242320;
+  border-radius: 8px;
+}
+
+body[data-dsh-claude-style] code:not(pre code) {
+  background: #2e2c29;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.88em;
+}
+
+body[data-dsh-claude-style] hr {
+  border: none;
+  border-top: 1px solid rgba(20, 20, 19, 0.14);
+  margin: 1.6em 0;
+}
+
+body[data-dsh-claude-style] table {
+  border-collapse: collapse;
+  font-size: 0.92em;
+  width: 100%;
+}
+
+body[data-dsh-claude-style] table th {
+  background: rgba(250, 249, 245, 0.06);
+  font-weight: 600;
+  text-align: left;
+}
+
+body[data-dsh-claude-style] table td, body[data-dsh-claude-style] table th {
+  border: none;
+  border-bottom: 1px solid rgba(20, 20, 19, 0.12);
+  padding: 0.6em 0.85em !important;
+}
+
+/* tabs: subtle editorial weighting */
+body[data-dsh-claude-style] [role="tab"] {
+  font-weight: 500;
+}
+
+/* technical meta (model selector, triggers) read as mono labels */
+body[data-dsh-claude-style] [class*="triggerLabel"],
+body[data-dsh-claude-style] [class*="selectLabel"],
+body[data-dsh-claude-style] [class*="monoLabel"] {
+  font-family: var(--dsw-font-code);
+  font-size: 12px;
+  letter-spacing: 0;
+}

@@ -1,0 +1,624 @@
+/* ---------- Claude Code layout: hero brand mark ---------- */
+/* The new-conversation hero ships the DeepSeek fish; swap it for the selected
+   brand mark. Every child of the hitbox is hidden — the mark can sit behind a
+   slot wrapper, not always a bare svg — and the mark is painted on the hitbox,
+   so React keeps owning its own node. The hero keeps the clay fill in both
+   brands, matching the shipped accent treatment. */
+body[data-dsh-claude-style] [class*="fishHitbox"] > * {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] [class*="fishHitbox"] svg {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] [class*="fishHitbox"]::before {
+  content: "";
+  flex: none;
+  width: 42.5px;
+  height: 42.5px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) [class*="fishHitbox"]::before {
+  background-image: %%CLAUDE_MARK_CLAY%%;
+}
+
+body[data-dsh-claude-style][%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"] [class*="fishHitbox"]::before {
+  background-image: %%ANTHROPIC_MARK%%;
+}
+
+/* The preview badge has no Claude Code counterpart. */
+body[data-dsh-claude-style] [class*="previewBadge"] {
+  display: none !important;
+}
+
+/* Headline: the shipped 26px/32px editorial display, then 15% back off that
+   (52 -> 44.2) and one weight step below the display rule. */
+body[data-dsh-claude-style] [class*="headline"]:has([class*="fishHitbox"]) {
+  font-size: 44.2px;
+  line-height: 54.4px;
+  font-weight: 400;
+}
+
+/* ---------- Claude Code layout: composer input + buttons ---------- */
+/* The composer card is the input box: one step up in type size, pure white
+   so it separates from the canvas, and an outline 4px tighter than the
+   shipped 22px. */
+body[data-dsh-claude-style] [data-composer-card] {
+  font-size: 15px;
+  border-radius: 18px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  position: relative;
+  z-index: 2;
+  gap: 8px !important;
+  padding-bottom: 2px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* Input height, by composer variant. The hero (new conversation) keeps the
+   tall 86px field it was tuned to. An active conversation instead hugs its
+   draft: the shipped 36px floor holds exactly one line, the contenteditable
+   then grows a line at a time, and .scroll caps the box at
+   --dsh-composer-text-max-height before it starts scrolling. Both hooks are
+   ancestors of the field, so :is() also keeps the tall field through the
+   settling frame, while an active composer matches neither. */
+body[data-dsh-claude-style] :is([class*="composerHero"], [data-phase="hero"]) [data-composer-input] {
+  min-height: 86px !important;
+}
+
+body[data-dsh-claude-style] [data-composer-input] {
+  min-height: 36px !important;
+  height: auto !important;
+}
+
+/* Tight bottom padding below the button controls row. The selector must
+   be `[class*="_row"]`: a bare `[class*="row"]` substring-matches the
+   shipped input growth wrapper `.p_FcLG_grow` ("grow" contains "row"),
+   which pins the composer field to the toolbar-row metrics. */
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] {
+  padding-bottom: 2px !important;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card] {
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.04), 0 1px 3px rgba(20, 20, 19, 0.02);
+}
+
+/* Focus: the shipped field has no focus face at all — only the caret moves —
+   so this adds one, and it reads as a glow rather than a neutral ring: the
+   hairline goes to the clay accent at a high alpha, a 1px warm bleed hugs the
+   edge, and the drop shadow deepens. The tray below continues the same
+   outline, so it warms its three edges whenever the card above it holds
+   focus. Dark sits on a near-black canvas, so there the glow leans on the
+   warm edge and a deeper ambient shadow instead of the light bleed. */
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card]:focus-within {
+  border-color: rgba(217, 119, 87, 0.60);
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.22), 0 6px 18px rgba(20, 20, 19, 0.10), 0 2px 6px rgba(20, 20, 19, 0.05);
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card]:focus-within {
+  border-color: rgba(217, 119, 87, 0.64);
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.30), 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:has([data-composer-card]:focus-within) > [class*="heroWorkspaceRow"] {
+  border-color: rgba(217, 119, 87, 0.60);
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:has([data-composer-card]:focus-within) > [class*="heroWorkspaceRow"] {
+  border-color: rgba(217, 119, 87, 0.64);
+}
+
+/* The workspace-trigger variant paints its dashed ring through a masked svg
+   cut with rx=22; re-cut it so the ring tracks the 18px card. */
+body[data-dsh-claude-style] [data-composer-card]:after {
+  border-radius: 18px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27%3E%3Crect width=%27100%25%27 height=%27100%25%27 fill=%27none%27 rx=%2718%27 ry=%2718%27 stroke=%27black%27 stroke-width=%272%27 stroke-dasharray=%274 4%27/%3E%3C/svg%3E");
+  mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27%3E%3Crect width=%27100%25%27 height=%27100%25%27 fill=%27none%27 rx=%2718%27 ry=%2718%27 stroke=%27black%27 stroke-width=%272%27 stroke-dasharray=%274 4%27/%3E%3C/svg%3E");
+}
+
+/* Commands and attach: 7px corners instead of the shipped full circle, no
+   resting fill, and a warm plate on hover. */
+body[data-dsh-claude-style] :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]) {
+  border-radius: 7px;
+}
+
+/* Send, and the stop/queue/steer labels that replace it while running: the
+   shipped 34px circle becomes a 7px rounded rectangle. */
+body[data-dsh-claude-style] :is(button[aria-label="发送消息"], button[aria-label="Send message"], button[aria-label="排队发送"], button[aria-label="Queue message"], button[aria-label="插话发送"], button[aria-label="Steer message"], button[aria-label="停止生成"], button[aria-label="Stop generating"]) {
+  border-radius: 7px;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]) {
+  background: transparent;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]):hover:not(:disabled) {
+  background: #f6f6f4;
+}
+
+/* Model selector: the same type size as the permission segments and the
+   same 7px corners; its chevron is dropped while the click target and the
+   menu it opens stay exactly as shipped. Its shipped hover token is only a
+   ~6% tint, so the hover plate matches the composer tool buttons. */
+body[data-dsh-claude-style] [data-composer-card] [class*="trigger"] {
+  font-size: 14px;
+  border-radius: 7px;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card] [class*="trigger"]:hover:not(:disabled) {
+  background: #f6f6f4;
+}
+
+body[data-dsh-claude-style] [data-composer-card] [class*="_chevron"] {
+  display: none !important;
+}
+
+/* ---------- Claude Code layout: composer footer bar ---------- */
+/* Reference layout: two-tier integrated tray. The top card is a pure white
+   rounded card with drop shadow (z-index: 2). The bottom tray is a seamless
+   equal-width tray (z-index: 1) attached directly to the bottom of the card,
+   with transparent background (inheriting the canvas tone #fcfcfb),
+   left/right/bottom border, and 18px rounded bottom corners. */
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) {
+  --dsh-claude-bar-h: 96px;
+}
+
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) *:has([data-composer-card]) {
+  order: 1;
+  padding-bottom: 0 !important;
+}
+
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card] {
+  gap: 8px !important;
+  padding-bottom: 2px !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) > [class*="heroWorkspaceRow"] {
+  order: 2;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  height: calc(var(--dsh-claude-bar-h) + 18px);
+  width: calc(100% - var(--dsh-composer-side-clearance, 0px) - var(--dsh-composer-side-clearance, 0px));
+  max-width: var(--dsh-composer-card-max-width, 100%);
+  margin: calc(0px - var(--dsh-composer-stack-gap, 6px) - 18px) auto 0;
+  padding: 18px 16px 0 16px;
+  background: transparent;
+  border-left: 1px solid var(--dsw-alias-border-l1);
+  border-right: 1px solid var(--dsw-alias-border-l1);
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.12s ease;
+}
+
+/* Muted typography and 7px corners for footer controls */
+body[data-dsh-claude-style] [class*="heroWorkspaceRow"] :is(button, [role="button"]) {
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary);
+  border-radius: 7px;
+}
+
+/* Hide chevrons in the footer tray for a clean, minimal Claude Code look */
+body[data-dsh-claude-style] [class*="heroWorkspaceRow"] :is([class*="chevron"], [class*="Chevron"]) {
+  display: none !important;
+}
+
+/* ---------- Claude Code layout: composer send button ---------- */
+/* An empty composer keeps the send button in place but drops it to a ghost:
+   transparent plate, a hairline in the input box border colour, and the glyph
+   in the same colour the model control uses for its effort tier (low/high), so
+   it reads as not-ready instead of vanishing. Flat by design (no shadow), and
+   border-box keeps the outer 34px so the row does not shift. The stop/queue/
+   steer labels are untouched, so a running turn keeps its control even with an
+   empty draft. */
+body[data-dsh-claude-style] [data-composer-card]:has([data-composer-placeholder]) :is(button[aria-label="发送消息"], button[aria-label="Send message"]) {
+  box-sizing: border-box;
+  background: transparent;
+  color: var(--dsw-alias-label-caption);
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* ---------- In-conversation single-line composer ---------- */
+/* In an active conversation, compress composer to a single-line input card,
+   render send button as an enter symbol ↵ inside the card on the right,
+   and display toolbar controls directly underneath on the canvas. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"],
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"]:focus-within,
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  width: 100% !important;
+  max-width: var(--dsh-composer-card-max-width, 100%) !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  height: auto !important;
+}
+/* Do NOT override the host viewArea flex contract here. In the active
+   phase the host uses `flex: 1 0 auto; min-height: auto` so the viewArea
+   is content-sized and the sticky composerSeat pins to the scrollport
+   bottom. An earlier override (`flex: 1 1 auto; min-height: 0`) let the
+   viewArea shrink to exactly viewport-minus-composer, which put the
+   composer seat near the TOP of the scroll content — sticky bottom:0
+   cannot pull an element down past its normal position, so the composer
+   appeared mid-scroll and never followed message growth. */
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) {
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"]:not([data-has-attachments="true"]) [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:not([data-has-attachments="true"]) [class*="rail"]:not([class*="trailing"]) {
+  display: none !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]) {
+  background: var(--dsw-specific-input-major, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1) !important;
+  border-bottom: none !important;
+  border-radius: 14px 14px 0 0 !important;
+  padding: 8px 12px 2px 12px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03) !important;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]) {
+  background: #ffffff !important;
+  border-color: #e8e6dc !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
+  border-color: rgba(217, 119, 87, 0.60) !important;
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.22), 0 4px 12px rgba(20, 20, 19, 0.08) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
+  border-color: rgba(217, 119, 87, 0.64) !important;
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.30), 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+}
+/* The attachment rail nests two levels: ComposerAttachments' outer rail wraps
+   AttachmentRail's scrolling inner rail, and BOTH substring-match
+   `[class*="rail"]`, so the block above would draw the card frame twice —
+   one box inside the other. Only the outer shell carries the frame; the
+   inner scrolling rail stays frameless. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]) [class*="rail"]:not([class*="trailing"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card][data-has-attachments="true"] [class*="rail"]:not([class*="trailing"]) [class*="rail"]:not([class*="trailing"]) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-input-scroll],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-input-scroll] {
+  background: var(--dsw-specific-input-major, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1) !important;
+  border-radius: 14px !important;
+  min-height: 38px !important;
+  height: auto !important;
+  max-height: var(--dsh-composer-text-max-height, 180px) !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 7px 36px 7px 14px !important;
+  margin: 0 !important;
+  position: relative !important;
+  cursor: text !important;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"] [data-input-scroll],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card][data-has-attachments="true"] [data-input-scroll] {
+  border-top: none !important;
+  border-radius: 0 0 14px 14px !important;
+  min-height: 32px !important;
+  padding: 2px 36px 6px 14px !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"] [data-input-scroll],
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-input-scroll] {
+  background: #ffffff !important;
+  border-color: #e8e6dc !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03) !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"]:focus-within [data-input-scroll],
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [data-input-scroll] {
+  border-color: rgba(217, 119, 87, 0.60) !important;
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.22), 0 4px 12px rgba(20, 20, 19, 0.08) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [data-input-scroll],
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [data-input-scroll] {
+  border-color: rgba(217, 119, 87, 0.64) !important;
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.30), 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-input-scroll] [class*="grow"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-input-scroll] [class*="grow"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 24px !important;
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-composer-input],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-composer-input] {
+  min-height: 24px !important;
+  height: auto !important;
+  line-height: 24px !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  cursor: text !important;
+  outline: none !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  overflow-x: hidden !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-composer-placeholder],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-composer-placeholder] {
+  line-height: 24px !important;
+  height: 24px !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  color: var(--dsw-alias-label-caption) !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+/* Pinned send button inside input box */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"], button[aria-label*="排队"], button[aria-label*="Queue"], button[aria-label*="插话"], button[aria-label*="Steer"], [class*="sendBtn"], [class*="sendButton"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"], button[aria-label*="排队"], button[aria-label*="Queue"], button[aria-label*="插话"], button[aria-label*="Steer"], [class*="sendBtn"], [class*="sendButton"]) {
+  position: absolute !important;
+  bottom: 40px !important;
+  right: 8px !important;
+  top: auto !important;
+  left: auto !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-caption) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: color 0.12s ease, background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"], button[aria-label*="排队"], button[aria-label*="Queue"], button[aria-label*="插话"], button[aria-label*="Steer"], [class*="sendBtn"], [class*="sendButton"]) :is(svg, [class*="chevron"], span) {
+  display: none !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"], button[aria-label*="排队"], button[aria-label*="Queue"], button[aria-label*="插话"], button[aria-label*="Steer"], [class*="sendBtn"], [class*="sendButton"])::after,
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"], button[aria-label*="排队"], button[aria-label*="Queue"], button[aria-label*="插话"], button[aria-label*="Steer"], [class*="sendBtn"], [class*="sendButton"])::after {
+  content: "↵" !important;
+  font-family: var(--dsw-font-code, monospace) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: currentColor !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"]):not(:disabled):hover,
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"]):not(:disabled):hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"]:not(:has([data-composer-placeholder])) :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:not(:has([data-composer-placeholder])) :is(button[aria-label^="发送"], button[aria-label^="Send"], button[aria-label*="发送"], button[aria-label*="Send"]) {
+  color: var(--dsw-alias-brand-primary, #d97757) !important;
+}
+/* Pinned stop button inside input box */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) {
+  position: absolute !important;
+  bottom: 40px !important;
+  right: 8px !important;
+  top: auto !important;
+  left: auto !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  background: var(--dsw-alias-interactive-bg-hover) !important;
+  color: var(--dsw-alias-brand-primary, #d97757) !important;
+  border: none !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg,
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg {
+  display: block !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::after,
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::after {
+  display: none !important;
+}
+/* Toolbar row below input card. `[class*="_row"]` on purpose: a bare
+   `[class*="row"]` substring-matches the shipped `.p_FcLG_grow` input
+   wrapper ("grow" contains "row"), and the fixed 28px height + flex
+   display here would pin the composer field to one line forever. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="_row"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="_row"] {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 4px !important;
+  margin: 6px 0 0 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+/* The context-occupancy meter renders its click-open panel INSIDE the inline
+   composer card, and its legend classes (`…_rows` / `…_row`) substring-match
+   the toolbar-row override above — which flattened the shipped definition
+   list into one 28px flex line and wrapped every label/value. Restore the
+   shipped legend layout: the list stacks vertically, each row keeps its
+   natural height and space-between distribution. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="_rows"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="_rows"] {
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 0 !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="_rows"] [class*="_row"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="_rows"] [class*="_row"] {
+  display: flex !important;
+  height: auto !important;
+  min-height: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 2px 0 !important;
+  margin: 0 !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="tools"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="tools"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="modes"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="modes"] {
+  order: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  overflow: visible !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label="指令"], button[aria-label="Commands"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label="指令"], button[aria-label="Commands"]) {
+  order: 2 !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label="添加附件"], button[aria-label="Add attachment"]),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label="添加附件"], button[aria-label="Add attachment"]) {
+  order: 3 !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]):hover:not(:disabled),
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]):hover:not(:disabled) {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="trailing"],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [class*="trailing"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+  flex: 0 0 auto !important;
+}
+/* Model trigger in trailing */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="trailing"] > :first-child,
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [class*="trailing"] :is([class*="trigger" i], [class*="model" i], [class*="Model"]) {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 13px !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"] [class*="trailing"] > :first-child:hover:not(:disabled),
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"] [class*="trailing"] :is([class*="trigger" i], [class*="model" i], [class*="Model"]):hover:not(:disabled) {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+}
+/* Separate Token stats row below the composer card */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] ~ [data-composer-stats],
+body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-stats] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  font-size: 12px !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  margin: 6px auto 0 !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  pointer-events: auto !important;
+  width: 100% !important;
+  max-width: var(--dsh-composer-card-max-width, 100%) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+@media (max-width: 820px) {
+  body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] ~ [data-composer-stats],
+  body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-stats] {
+    display: none !important;
+  }
+}

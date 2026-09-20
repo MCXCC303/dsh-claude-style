@@ -16,7 +16,8 @@ Open an issue first and describe the rationale. This theme aims to faithfully re
 
 ## Code changes
 
-- Keep the bundle hand-written plain JS (`lib/client.js`) — no build step.
+- `lib/client.js` is generated — never edit it by hand. Change `src/` and run `npm run build`, which also syntax-gates the bundle.
 - Scope every CSS rule under `body[data-dsh-claude-style]`.
 - Follow the native theme: dark tokens as the base, light overrides under `:not([data-ds-dark-theme])`.
-- Run `node --check lib/client.js` before committing.
+- See docs/STYLE.md for the source layout, fragment rules, and host-selector discipline.
+- `node scripts/probe.cjs --token <launch-token>` re-checks the composer invariants against a running DSH web GUI.

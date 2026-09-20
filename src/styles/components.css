@@ -1,0 +1,568 @@
+/* --- 2.4 Custom Components (Segments & Account Popover) --- */
+/* ---------- Claude Code layout: permission segments ---------- */
+/* The shipped access control is one popup-select button; it is replaced by
+   a Read | Edit | Auto segmented control over the same three presets. */
+body[data-dsh-claude-style] button[aria-label^="访问模式"],
+body[data-dsh-claude-style] button[aria-label^="Access mode"] {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] .dsh-claude-segments {
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--dsw-specific-selector);
+  display: inline-flex;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-segments {
+  background: #f6f6f4;
+}
+
+body[data-dsh-claude-style] .dsh-claude-segment {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  padding: 3px 12px;
+  border-radius: 7px;
+  transition: background-color .1s, color .1s;
+}
+
+body[data-dsh-claude-style] .dsh-claude-segment:hover:not([data-active]) {
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-segment[data-active] {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-segment[data-active] {
+  background: var(--dsw-alias-bg-overlay);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.08);
+}
+
+/* ---------- Claude Code layout: in-conversation permission popover ---------- */
+body[data-dsh-claude-style] .dsh-claude-perm-container {
+  position: relative !important;
+  display: inline-flex !important;
+  z-index: 20 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-perm-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  height: 24px !important;
+  padding: 0 6px 0 6px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-perm-btn {
+  color: #faf9f5 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-perm-btn:hover,
+body[data-dsh-claude-style] .dsh-claude-perm-btn[data-open="true"] {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-perm-chevron {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+body[data-dsh-claude-style] .dsh-claude-perm-chevron::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.15s ease;
+}
+body[data-dsh-claude-style] .dsh-claude-perm-btn[data-open="true"] .dsh-claude-perm-chevron::after {
+  transform: rotate(180deg);
+}
+body[data-dsh-claude-style] .dsh-claude-perm-popover {
+  position: fixed !important;
+  min-width: 220px !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(4px) scale(0.98) !important;
+  transform-origin: bottom left !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-perm-popover[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-perm-popover {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ---------- Claude Code layout: account row & floating popover ---------- */
+/* footArea positioning with crisp hairline border spanning entire sidebar */
+body[data-dsh-claude-style] [class*="footArea"] {
+  position: relative !important;
+  overflow: visible !important;
+  margin: 0 calc(-1 * var(--dsh-sidebar-inline-padding, 12px)) -6px !important;
+  padding: 8px var(--dsh-sidebar-inline-padding, 12px) 6px !important;
+  border-top: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="footArea"] {
+  border-top-color: #2e2c29 !important;
+}
+
+/* Account trigger button in sidebar */
+body[data-dsh-claude-style] .dsh-claude-account-btn {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 32px !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  background: transparent !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-btn:hover,
+body[data-dsh-claude-style] .dsh-claude-account-btn[data-open="true"] {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-avatar {
+  width: 18px;
+  height: 18px;
+  background: %%ANTHROPIC_MARK%% center / contain no-repeat;
+  flex: none;
+  margin-right: 8px;
+}
+body[data-dsh-claude-style] .dsh-claude-account-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+  font-family: var(--dsw-font-family);
+}
+body[data-dsh-claude-style] .dsh-claude-account-user {
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+body[data-dsh-claude-style] .dsh-claude-account-chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+body[data-dsh-claude-style] .dsh-claude-account-chevron::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.15s ease;
+}
+body[data-dsh-claude-style] .dsh-claude-account-btn[data-open="true"] .dsh-claude-account-chevron::after {
+  transform: rotate(180deg);
+}
+
+/* Floating Popover Container: Adaptive Width */
+body[data-dsh-claude-style] .dsh-claude-account-popover {
+  position: absolute !important;
+  bottom: calc(100% + 4px) !important;
+  left: 8px !important;
+  right: 8px !important;
+  width: auto !important;
+  max-width: calc(100% - 16px) !important;
+  min-width: 0 !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  z-index: 1000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(6px) scale(0.98) !important;
+  transform-origin: bottom left !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-account-popover {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* Hover bridge between trigger and popover */
+body[data-dsh-claude-style] .dsh-claude-account-popover::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
+}
+
+/* Popover Header */
+body[data-dsh-claude-style] .dsh-claude-account-popover-header {
+  padding: 6px 8px 6px 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  line-height: 18px !important;
+  font-family: var(--dsw-font-family) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover-divider {
+  height: 1px !important;
+  background: var(--dsw-alias-border-l1, #e8e6dc) !important;
+  margin: 2px 0 4px 0 !important;
+  flex: none !important;
+}
+
+/* Popover Body & Items */
+body[data-dsh-claude-style] .dsh-claude-account-popover-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item {
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 8px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  font-family: var(--dsw-font-family) !important;
+  transition: background-color 0.12s ease !important;
+  box-sizing: border-box !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none !important;
+  color: var(--dsw-alias-label-secondary, #787672) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item-text {
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item-shortcut {
+  margin-left: auto !important;
+  font-size: 11px !important;
+  color: var(--dsw-alias-label-tertiary, #a6a094) !important;
+  font-family: var(--ds-font-family-code, monospace) !important;
+  padding-left: 8px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item-badge {
+  margin-left: auto !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+  padding: 0 5px !important;
+  border-radius: 8px !important;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-secondary, #787672) !important;
+}
+
+/* Ensure popover items only display inside the popover */
+body[data-dsh-claude-style] [class*="footArea"] > .dsh-claude-popover-item {
+  display: none !important;
+}
+
+/* Hide original trigger buttons in footArea while keeping containers intact for modals */
+body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
+body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
+  display: none !important;
+}
+body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"],
+body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] {
+  position: static !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+  overflow: visible !important;
+}
+
+/* Generic footer-action redirection. The `sidebar.footer.action` slot accepts
+   arbitrary plugin controls, not just buttons; overrides.js marks every
+   mirrored entry (`data-dsh-claude-footer-entry`) and hides it in place
+   (`data-dsh-claude-footer-hidden`) once it is redirected into the account
+   popover. Entries that host a floating overlay (a fixed panel or dialog)
+   keep their subtree visible — the overlay must stay reachable after the
+   mirrored popover item opens it — but the entry box itself collapses so it
+   never paints inside the zero-sized footerActions container. */
+body[data-dsh-claude-style] [class*="footArea"] [data-dsh-claude-footer-hidden] {
+  display: none !important;
+}
+body[data-dsh-claude-style] [class*="footArea"] [data-dsh-claude-footer-entry] {
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* Collapsed rail mode adaptations */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-btn {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-avatar {
+  margin-right: 0 !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] :is(.dsh-claude-account-label, .dsh-claude-account-chevron) {
+  display: none !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-popover {
+  left: calc(100% + 8px) !important;
+  bottom: 0 !important;
+  right: auto !important;
+  width: 220px !important;
+  transform-origin: bottom left !important;
+}
+
+/* Embedded footer widgets: display-only plugin entries (progress bars,
+   status panels — the cost-meter balance/quota stack is the known case)
+   cannot collapse into a text menu item, so overrides.js embeds a live clone
+   of the entry into the popover. The embed sits above the action items with
+   a hairline separator; the cloned plugin markup keeps its own classes, so
+   the plugin's own stylesheet styles the content. */
+body[data-dsh-claude-style] .dsh-claude-popover-embed {
+  padding: 2px 2px 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2, #2e2c29);
+  border-radius: 7px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-popover-embed[data-clickable] {
+  cursor: pointer;
+}
+
+body[data-dsh-claude-style] .dsh-claude-popover-embed[data-clickable]:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-popover-embed {
+  border-bottom-color: #e8e6dc;
+}
+
+/* ---------- Third-party repair: dsh-agy-link run_code fallback card ---------- */
+/* The agy-link bridge replaces the host run_code tool card with its own keyed
+   toolview; its non-mirror fallback ships an unstyled header (two bare spans,
+   not even a gap) and a bare pre. Give the header the tool-row rhythm, the
+   tool name the skin's technical-meta mono voice (overriding the editorial
+   serif the `[class*="title"]` rule lends it), the variant label a real
+   pill, and the code preview card padding. */
+body[data-dsh-claude-style] .agy-tv-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+body[data-dsh-claude-style] .agy-tv-title {
+  font-family: var(--dsw-font-code);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0;
+  line-height: 24px;
+  color: var(--dsw-alias-label-secondary);
+}
+body[data-dsh-claude-style] .agy-tv-badge {
+  font-family: var(--dsw-font-code);
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-tertiary);
+}
+body[data-dsh-claude-style] .agy-tv-pre {
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+
+/* ---------- Claude Code layout: settings section (brand) ---------- */
+/* The skin's own page in the settings dialog. It borrows the composer's
+   segment language so the two controls read as one design. */
+body[data-dsh-claude-style] .dsh-claude-brand-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  max-width: 640px;
+  box-sizing: border-box;
+  font-family: var(--dsw-font-family);
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-card-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-segments {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--dsw-specific-selector);
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-brand-segments {
+  background: #f6f6f4;
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-option {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  padding: 3px 12px;
+  border-radius: 7px;
+  transition: background-color .1s, color .1s;
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-option:hover:not([data-active="true"]) {
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-brand-option[data-active="true"] {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-brand-option[data-active="true"] {
+  background: var(--dsw-alias-bg-overlay);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.08);
+}
