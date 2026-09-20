@@ -55,7 +55,7 @@ dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub 源
 
 1. **主题** —— 安装即全局生效，无需配置；亮暗跟随系统颜色模式。
 2. **权限分段** —— 输入框以 Read | Edit | Auto 三段式控制器替换原生的访问模式菜单：只读、工作区写入与完全权限（Auto 经宿主的安全确认弹窗切换）。
-3. **品牌切换** —— 设置（`Ctrl+,`）→ **Claude Style**：侧栏品牌在 Claude（官方星芒 + Claude Code 字标文本）与 Anthropic（`A\` + ANTHROPIC 字标）之间切换，新会话页标识随所选品牌保持陶烬橙星芒；选择保存在浏览器本地，默认 Claude。
+3. **品牌切换** —— 设置（`Ctrl+,`）→ **Claude Style**：侧栏品牌在 Claude（官方星芒 + Claude 字标）与 Anthropic（`A\` + ANTHROPIC 字标）之间切换，新会话页标识随所选品牌保持陶烬橙星芒；选择保存在浏览器本地，默认 Claude。
 4. **账户抽屉** —— 侧栏底栏的账户按钮悬停展开弹层，一键打开设置（`Ctrl+,`）与管理插件。
 5. **状态细节** —— 思考状态每轮从 Claude Code 的 185 个思考动词随机抽取一个稳定展示；工作区运行中状态使用 Fluent 风格的圆形加载动画。
 
@@ -82,7 +82,7 @@ dsh plugin --profile web remove dsh-claude-style   # 卸载
 | --- | --- | --- |
 | Claude 视觉 | 全局 | 象牙白/暖黑双画布、陶烬橙唯一强调色、衬线展示标题 + 无衬线界面 + 等宽代码三字体分工 |
 | 权限控制器 | 输入框浮层 / 新会话分段 | Read · Edit · Auto 三段切换会话权限，Auto 走宿主安全确认 |
-| 品牌切换 | 设置 → Claude Style | Claude（星芒 + Claude Code 字标文本）与 Anthropic（`A\`）双标识，选择持久化 |
+| 品牌切换 | 设置 → Claude Style | Claude（星芒 + Claude 字标）与 Anthropic（`A\`）双标识，选择持久化 |
 | 状态动画 | 会话运行中 | 185 个思考动词随机展示；Windows 11 Fluent 风格圆形加载器 |
 | 账户抽屉 | 侧栏底栏 | 悬停展开弹层，直达设置与管理插件 |
 

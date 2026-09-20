@@ -55,7 +55,7 @@ Only one theme should be active at a time. After installing, **restart `dsh web`
 
 1. **Theme** — applies the whole canvas automatically after install; no configuration needed. Light and dark follow the system color scheme.
 2. **Permission segments** — the composer gets a Read | Edit | Auto segmented control replacing the shipped access-mode menu: read-only, workspace write, and full access (Auto is switched through the shipped risk-confirmation dialog).
-3. **Brand switch** — Settings (`Ctrl+,`) → **Claude Style**: the sidebar brand flips between Claude (official starburst + a typeset "Claude Code" wordmark) and Anthropic (`A\` + ANTHROPIC wordmark); the hero mark follows the choice with the clay fill. The choice persists in the browser; `claude` is the default.
+3. **Brand switch** — Settings (`Ctrl+,`) → **Claude Style**: the sidebar brand flips between the Claude starburst + the official Claude wordmark and Anthropic (`A\` + ANTHROPIC wordmark); the hero mark follows the choice with the clay fill. The choice persists in the browser; `claude` is the default.
 4. **Account drawer** — the sidebar footer button opens a hover popover with quick access to Settings (`Ctrl+,`) and plugin management.
 5. **Status polish** — thinking turns pick one of Claude Code's 185 spinner verbs per turn; the workspace loading state uses a Fluent-style circular indicator.
 
