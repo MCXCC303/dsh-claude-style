@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **模型描述语更新**：id 以 `flash` 结尾的旗舰模型（如 `deepseek-flash`）显示其技术报告标题「DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression」；为 DeepSeek-V4-Pro（旗舰推理、质量优先、成本较高）与 DeepSeek-V4-Flash-Vision-Exp（实验性视觉版本、支持图像理解）补写简介。视觉实验版 id 以 `-exp` 结尾，不会被 flash 规则误捕；宿主默认目录里的 legacy `deepseek-v4-flash` 另有专门条目，不冒用 V4.1 标题。
+
 ## [0.2.4] - 2026-09-19
 
 ### Changed

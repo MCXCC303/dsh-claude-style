@@ -670,6 +670,10 @@
       function modelDescription(groupId, model) {
         var key = groupId + '/' + model.id
         if (MODEL_DESCRIPTIONS[key]) return MODEL_DESCRIPTIONS[key]
+        // A model id ending in `flash` is the flagship flash line and carries
+        // its tech-report title. The vision variant ends in `-exp`, so it is
+        // never caught here — it takes its own keyed entry above.
+        if (typeof model.id === 'string' && /flash$/i.test(model.id)) return MODEL_FLASH_DESCRIPTION
         return model.description || ''
       }
 
