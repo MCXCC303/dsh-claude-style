@@ -14,6 +14,7 @@
 ### Fixed
 - **修复权限切换在 dsh 0.2+ 上完全失效**：当前会话选中态已移出 Session Controller（`sessions.list` 快照不再有 `current` 字段，改由 `uiSession` 服务以主视图绑定投影），`currentSession` 恒返回 null，点击权限菜单任意选项都静默无效、按钮标签永远停留在 `Accept edits`，而原生触发器被皮肤隐藏，GUI 内没有任何可用的切换入口。改为优先从 `uiSession` 主视图绑定读取当前会话 id，旧版宿主回退到 `list.current`；同时兼容 `permissions` 投影在 0.2+ 直接返回裸值（旧版包一层 `{ currentValue }`）的差异。
 - **亮色用户消息气泡由蓝改灰**：宿主亮色气泡底色 token（`--dsw-specific-bubble`）是 DeepSeek 蓝（`deepseek-50`），皮肤此前未覆盖，故亮色下用户消息呈蓝色；现改取皮肤的按钮悬停灰（`--dsh-claude-hover-bg`，亮色 `rgba(0,0,0,0.08)`）。深色气泡宿主本就是中性灰，保持不变。
+- **修复模型选择弹层永远停在「正在加载模型…」**：dsh 0.2 起会话控制器移除了 `sessions.list.current`（主视图选中改由 `uiSession` 投影提供），皮肤新写的模型目录读取仍在读该已删除字段、恒得 null，导致拿不到每会话 ModelDirectory——触发器一直显示「选择模型」、弹层一直 loading。现改走 context.js 的共享 `currentSessionId()`（先读 `uiSession.current.value.key`，旧字段仅作回退），与权限切换等其余会话相关逻辑同源。
 - **深色强调色回到陶烬橙**：皮肤的深色 token 块声明在 `body[data-dsh-claude-style]` 上，与宿主的 `body[data-ds-dark-theme]` 同为 (0,1,1) 权重；宿主主题样式表若排在皮肤之后，其蓝色强调（`--dsw-alias-state-business-primary`、`--dsw-alias-button-info-fill`、`--dsw-alias-link` 与品牌 "new color"）就会盖掉暖色盘。现把深色盘限定到 `[data-ds-dark-theme]`（(0,2,1)，与样式表顺序无关），并补上此前缺失的 `--dsw-alias-link` 与品牌 "new color" 两个强调 token；亮色盘补齐原先从深色基块继承的四个 token，外观不变。
 
 ## [0.2.3] - 2026-09-19
