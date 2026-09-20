@@ -39,12 +39,13 @@ Install: double-click the `.ttf` on Windows → *Install*; on macOS import via *
 
 ## Install
 
-> Tested on dsh 0.1.5-rc.2 · not yet published to npm — install from GitHub
+> Tested on dsh 0.1.5-rc.2
 
 1. Install via terminal
 
 ```bash
-dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub source
+dsh plugin --profile web add dsh-claude-style                  # npm package (recommended)
+dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub source
 ```
 
 2. Install via [Plugin Marketplace](https://github.com/dsh-market/dsh-market)

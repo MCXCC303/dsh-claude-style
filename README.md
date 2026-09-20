@@ -39,12 +39,13 @@
 
 ## 安装
 
-> 已在 dsh 0.1.5-rc.2 上测试 · 暂未发布 npm —— 请从 GitHub 源安装
+> 已在 dsh 0.1.5-rc.2 上测试
 
 1. 通过终端安装
 
 ```bash
-dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub 源
+dsh plugin --profile web add dsh-claude-style                  # npm 包（推荐）
+dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub 源
 ```
 
 2. 通过[插件市场](https://github.com/dsh-market/dsh-market)安装
