@@ -18,6 +18,7 @@
       autoPopover: true,
       composerScope: 'all',
       username: '',
+      banLocale: DEFAULT_BAN_LOCALE,
     }
     var prefsRevision
     var prefsAvailable = false
@@ -120,6 +121,9 @@
         autoPopover: section.autoPopover !== false,
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
+        // `banLocale` is read by the browser half only; a host half that predates
+        // the field simply reports nothing, so an unknown value falls back here.
+        banLocale: BAN_LOCALES.indexOf(section.banLocale) === -1 ? DEFAULT_BAN_LOCALE : section.banLocale,
       }
     }
 

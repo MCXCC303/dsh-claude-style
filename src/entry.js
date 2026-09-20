@@ -29,6 +29,7 @@
       teardowns.push(installPermissions(ctx, ui))
       teardowns.push(installModelPicker(ctx, ui))
       teardowns.push(installAccountFooter(ctx, ui))
+      teardowns.push(installBanScreen(ctx, ui)) // 账户横条的封号彩蛋（账户弹层把点击交给 ui.ban）
       teardowns.push(installScheduler(ctx, ui)) // 最后装，回调中惰性读 ui 句柄
       var stopSettings = installSettingsSection(ctx)
 

@@ -58,6 +58,11 @@
       var index = {
         ui: doc.ui && typeof doc.ui === 'object' ? doc.ui : {},
         settings: doc.settings && typeof doc.settings === 'object' ? doc.settings : {},
+        // The account-hold easter egg's page copy rides the same document
+        // (src/overrides/ban-screen.js). Every block the document carries has to
+        // be listed here: this index IS what lookups read, so an unlisted block
+        // would silently fall back to the bundle's English constants.
+        ban: doc.ban && typeof doc.ban === 'object' ? doc.ban : {},
         exact: exact,
         aliases: doc.aliases && typeof doc.aliases === 'object' ? doc.aliases : {},
         fallback: typeof doc.fallback === 'string' && doc.fallback ? doc.fallback : MODEL_COPY_FALLBACK_LOCALE,

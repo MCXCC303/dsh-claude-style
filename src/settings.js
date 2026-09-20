@@ -150,6 +150,10 @@
         { value: 'conversation', label: settingsCopy('scopeConversation', 'Conversation only') },
         { value: 'all', label: settingsCopy('scopeAll', 'All') },
       ]
+      var banLocaleOptions = [
+        { value: BAN_LOCALE_ZH, label: settingsCopy('banLocaleZh', '中文') },
+        { value: BAN_LOCALE_EN, label: settingsCopy('banLocaleEn', 'English') },
+      ]
 
       var rows = [
         row(
@@ -204,6 +208,12 @@
           settingsCopy('composerTitle', 'Composer restyle'),
           settingsCopy('composerDesc', 'Which input area the skin restyles: the new-conversation page, the conversation, or both.'),
           segment(scopeOptions, prefs.composerScope, function (value) { write({ composerScope: value }) }),
+        ),
+        row(
+          'banLocale',
+          settingsCopy('banLocaleTitle', 'Account-hold easter egg language'),
+          settingsCopy('banLocaleDesc', 'The language the account-hold page (click the account row in the sidebar footer popover) is written in. It is its own choice, so the page reads the way Claude wrote it whatever the interface language is.'),
+          segment(banLocaleOptions, prefs.banLocale, function (value) { write({ banLocale: value }) }),
         ),
       ]
 

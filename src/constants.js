@@ -155,6 +155,17 @@
 
     /** Present while the skin takes over the sidebar footer (settings area + account row). */
     var FOOTER_ATTR = 'data-dsh-claude-footer-takeover'
+    /**
+     * The language the account-hold easter egg (src/overrides/ban-screen.js) is
+     * written in. It is its own preference rather than "follow the shell",
+     * because the page reproduces a real Claude screen: the point is to read it
+     * in the language Claude actually used, whatever the shell is set to. The
+     * default is English for that reason.
+     */
+    var BAN_LOCALE_EN = 'en'
+    var BAN_LOCALE_ZH = 'zh'
+    var BAN_LOCALES = [BAN_LOCALE_EN, BAN_LOCALE_ZH]
+    var DEFAULT_BAN_LOCALE = BAN_LOCALE_EN
     /** Present while the composer restyle applies to the page currently shown. */
     var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
     /**

@@ -7,6 +7,12 @@
       var accountPopover = null
       var popoverBody = null
       var popoverHoverIntent = createHoverIntent(openPopover, closePopover, 150)
+      // Whether the popover is up because it was CLICKED (rather than hovered).
+      // Clicking the account row opens the ban-screen easter egg and leaves the
+      // pointer inside the popover, so without this the row's own mouseleave
+      // would tear the popover down behind the overlay; a click-opened popover
+      // instead stays until the pointer leaves the whole footer.
+      var popoverOpenedByClick = false
 
       function openPopover() {
         if (!accountPopover || !accountBtn) return
@@ -29,6 +35,7 @@
       function closePopover() {
         if (!accountPopover || !accountBtn) return
         cancelClosePopover()
+        popoverOpenedByClick = false
         accountPopover.setAttribute('data-open', 'false')
         accountBtn.setAttribute('data-open', 'false')
         accountBtn.setAttribute('aria-expanded', 'false')
@@ -40,6 +47,10 @@
         if (isOpen) {
           closePopover()
         } else {
+          // The pointer stays on the trigger after a click, and the popover
+          // hangs below it, so the trigger's mouseleave must not close what the
+          // click just opened — otherwise the panel is unreachable with a mouse.
+          popoverOpenedByClick = true
           openPopover()
         }
       }
@@ -603,7 +614,7 @@
             if (readPrefs().autoPopover) openPopover()
           })
           accountBtn.addEventListener('mouseleave', function () {
-            if (readPrefs().autoPopover) scheduleClosePopover()
+            if (readPrefs().autoPopover && !popoverOpenedByClick) scheduleClosePopover()
           })
           accountBtn.addEventListener('click', function (e) {
             e.stopPropagation()
@@ -629,8 +640,21 @@
             scheduleClosePopover()
           })
 
+          // The account row is the ban-screen easter egg's trigger
+          // (src/overrides/ban-screen.js). The marker attribute stays on the
+          // header (it is the row's stable hook, and the row keeps its
+          // semantics), but the header is only a WRAPPER: the clickable strip is
+          // the inner `.…-row`, and the divider is its SIBLING so the hover
+          // plate covers the name alone instead of swallowing the rule.
           var header = document.createElement('div')
           header.className = 'dsh-claude-account-popover-header'
+          header.setAttribute('data-dsh-claude-ban-row', '')
+
+          var rowEl = document.createElement('div')
+          rowEl.className = 'dsh-claude-account-popover-row'
+          rowEl.setAttribute('role', 'button')
+          rowEl.setAttribute('tabindex', '0')
+          rowEl.setAttribute('aria-haspopup', 'dialog')
 
           var nameEl = document.createElement('div')
           nameEl.className = 'dsh-claude-account-popover-name'
@@ -639,7 +663,8 @@
           var divider = document.createElement('div')
           divider.className = 'dsh-claude-account-popover-divider'
 
-          header.appendChild(nameEl)
+          rowEl.appendChild(nameEl)
+          header.appendChild(rowEl)
           header.appendChild(divider)
           accountPopover.appendChild(header)
 
@@ -651,6 +676,37 @@
         } else {
           var nameEl2 = accountPopover.querySelector('.dsh-claude-account-popover-name')
           if (nameEl2 && nameEl2.textContent !== username) nameEl2.textContent = username
+        }
+
+        // The account row is the ban-screen easter egg's trigger (ban-screen.js).
+        // Bound OUTSIDE the build/refresh branch above so the pass that creates
+        // the popover already wires the row — inside the `else` the very first
+        // render would leave it dead until the next sync. `__dshBanBound` keeps
+        // a later pass from binding it twice, which would open the overlay twice
+        // per click.
+        var banRow = accountPopover.querySelector('[data-dsh-claude-ban-row]')
+        if (banRow && !banRow.__dshBanBound) {
+          banRow.__dshBanBound = true
+          banRow.addEventListener('click', function (e) {
+            // The row's gesture is the easter egg, not a popover selection.
+            e.preventDefault()
+            e.stopPropagation()
+            // Leave the popover up: the overlay is a full-window surface, so
+            // what is behind it does not matter, and the footer is left as the
+            // user had it once the screen is dismissed. The pointer is still
+            // parked on the trigger, so the mouseleave close stays suspended
+            // (popoverOpenedByClick) and the panel does not blink out from under
+            // the overlay.
+            popoverOpenedByClick = true
+            if (ui.ban) ui.ban.open()
+          })
+          banRow.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return
+            e.preventDefault()
+            e.stopPropagation()
+            popoverOpenedByClick = true
+            if (ui.ban) ui.ban.open()
+          })
         }
 
         syncPopoverItems(footArea)

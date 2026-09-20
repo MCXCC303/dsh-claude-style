@@ -224,9 +224,11 @@ body[data-dsh-claude-style] .dsh-claude-model-cell-chevron {
   color: var(--dsw-alias-label-caption, #a6a094) !important;
 }
 
-/* Popover Header */
+/* Popover Header. Vertical padding only: the clickable account row carries its
+   own inline padding (components/account-footer.css), and the divider below is a
+   full-bleed rule that must not be inset by this box. */
 body[data-dsh-claude-style] .dsh-claude-account-popover-header {
-  padding: 6px 8px 6px 8px !important;
+  padding: 6px 0 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
@@ -241,7 +243,7 @@ body[data-dsh-claude-style] .dsh-claude-account-popover-name {
 body[data-dsh-claude-style] .dsh-claude-account-popover-divider {
   height: 1px !important;
   background: var(--dsw-alias-border-l1, #e8e6dc) !important;
-  margin: 2px 0 4px 0 !important;
+  margin: 2px 0 !important;
   flex: none !important;
 }
 

@@ -61,6 +61,7 @@ const FRAGMENTS = [
   'overrides/permissions.js',
   'overrides/model-picker.js',
   'overrides/account-footer.js',
+  'overrides/ban-screen.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',
@@ -76,6 +77,7 @@ const STYLE_FILES = [
   { file: 'sidebar.css' },
   { file: 'components/permissions.css' },
   { file: 'components/account-footer.css' },
+  { file: 'components/ban-screen.css' },
   { file: 'components/model-picker.css' },
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },
@@ -368,7 +370,7 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
   }
 
   for (const [id, pair] of Object.entries(doc.exact)) requirePair(`exact["${id}"]`, pair)
-  for (const group of ['ui', 'settings']) {
+  for (const group of ['ui', 'settings', 'ban']) {
     for (const [key, pair] of Object.entries(doc[group] ?? {})) requirePair(`${group}["${key}"]`, pair)
   }
   for (const [from, to] of Object.entries(doc.aliases ?? {})) {

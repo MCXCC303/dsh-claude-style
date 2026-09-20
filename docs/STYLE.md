@@ -114,6 +114,7 @@ assembles the bundle:
 | `src/styles/sidebar.css` | sidebar brand, new-session row, workspace tree |
 | `src/styles/components/permissions.css` | permission segments and popover |
 | `src/styles/components/account-footer.css` | account row and floating popover |
+| `src/styles/components/ban-screen.css` | the account-hold easter egg (full-window overlay) |
 | `src/styles/components/model-picker.css` | model picker popovers |
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
@@ -127,6 +128,7 @@ assembles the bundle:
 | `src/overrides/permissions.js` | permission segments/popover installer |
 | `src/overrides/model-picker.js` | model picker installer |
 | `src/overrides/account-footer.js` | account footer/popover installer |
+| `src/overrides/ban-screen.js` | account-hold easter egg installer |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |

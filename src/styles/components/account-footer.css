@@ -123,3 +123,26 @@ body[data-dsh-claude-style] .dsh-claude-account-popover::after {
   background: transparent;
 }
 
+/* The account row is the ban-screen easter egg's trigger
+   (src/overrides/ban-screen.js). The header is only the wrapper — the clickable
+   strip is the inner row, so the hover plate covers the name and not the divider
+   that follows it. */
+body[data-dsh-claude-style] .dsh-claude-account-popover-row {
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover-row:hover,
+body[data-dsh-claude-style] .dsh-claude-account-popover-row:focus-visible {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  outline: none !important;
+}
+
+/* The rule under the account name belongs to the POPOVER, not to the row: it
+   spans the panel's full width (the negative inline margins cancel the popover's
+   6px padding) and sits outside the hover plate above. */
+body[data-dsh-claude-style] .dsh-claude-account-popover-header .dsh-claude-account-popover-divider {
+  margin: 0 -6px !important;
+}
+

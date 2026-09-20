@@ -19,6 +19,10 @@
           if (ui.footer) ui.footer.close()
           if (ui.permissions) ui.permissions.closeMenu()
           if (ui.model) ui.model.close()
+          // The account-hold overlay is the one layer that does NOT close on a
+          // window blur (it is meant to be read, and reading it may mean
+          // switching windows), so Esc is its keyboard way out.
+          if (ui.ban) ui.ban.close()
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
           e.preventDefault()
@@ -104,6 +108,9 @@
       var prefsUnsubscribe = null
       prefsUnsubscribe = subscribePrefs(function () {
         if (ui.model) ui.model.invalidateCopy()
+        // The account-hold page is assembled once per open, so a language change
+        // has to rebuild an open one (a no-op while it is closed).
+        if (ui.ban) ui.ban.refresh()
         schedule()
       })
       loadPrefs()
@@ -212,7 +219,7 @@
         document.removeEventListener('compositionend', onComposerInput, true)
         // Safety-net DOM sweep. Feature teardowns run after this and tolerate
         // nodes already being detached.
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, [data-dsh-synthetic-placeholder]')
+        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, .dsh-claude-ban, [data-dsh-synthetic-placeholder]')
         for (var li = 0; li < leftoverItems.length; li++) {
           if (leftoverItems[li].parentElement) {
             leftoverItems[li].parentElement.removeChild(leftoverItems[li])

@@ -53,3 +53,23 @@
       return text || fallback
     }
 
+    /**
+     * One account-hold easter-egg string, in the language the `banLocale`
+     * preference names — NOT the shell's language. The page reproduces a real
+     * Claude screen, so it is read in the language Claude wrote it in whatever
+     * the rest of the UI is set to; `localized` is bypassed on purpose rather
+     * than fed a fake locale, so a missing translation still falls through the
+     * document's own fallback locale.
+     */
+    function banCopy(key, fallback, params) {
+      var pair = modelCopy === null || !modelCopy.ban ? null : modelCopy.ban[key]
+      var want = readPrefs().banLocale
+      var text = pair && typeof pair === 'object' && typeof pair[want] === 'string' ? pair[want] : ''
+      if (!text) text = localized(pair)
+      if (!text) text = fallback
+      if (!params) return text
+      return text.replace(/\{(\w+)\}/g, function (match, name) {
+        return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+      })
+    }
+
