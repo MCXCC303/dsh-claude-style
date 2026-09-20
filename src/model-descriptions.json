@@ -294,6 +294,43 @@
     },
 
     {
+      "match": "muse-spark",
+      "note": "Meta's agentic/coding line, separate from the Llama open-weight line — it must not inherit the Llama rule's copy.",
+      "text": {
+        "zh": "Meta 的 Agent 与编码线：面向 agentic 工作流与竞技编程，首答准确率更高。",
+        "en": "Meta's agentic and coding line: built for agent workflows and competitive programming, with higher first-attempt accuracy."
+      }
+    },
+    {
+      "match": "celeris",
+      "note": "Diffusion LLM, so the copy leads with latency rather than the usual capability framing.",
+      "text": {
+        "zh": "扩散式 LLM：实时级响应（实测中位约 1600 token/s），智能接近 GPT-5。",
+        "en": "Diffusion LLM: real-time responses (about 1,600 tokens/s median) at near-GPT-5 intelligence."
+      }
+    },
+    {
+      "match": "mercury-?\\d|inception",
+      "text": {
+        "zh": "Inception Labs 扩散式 LLM：首个带推理的扩散模型，输出超 1000 token/s。",
+        "en": "Inception Labs diffusion LLM: the first diffusion model with reasoning, over 1,000 tokens/s."
+      }
+    },
+    {
+      "match": "apodex",
+      "text": {
+        "zh": "面向复杂专业工作的 Agent 模型：金融与科研场景见长。",
+        "en": "Agentic model for complex professional work, strong in finance and scientific research."
+      }
+    },
+    {
+      "match": "motif",
+      "text": {
+        "zh": "韩国 Motif Technologies 全自研开源权重 MoE：314B 总参 / 13.2B 激活。",
+        "en": "Korea's Motif Technologies in-house open-weight MoE: 314B total / 13.2B active."
+      }
+    },
+    {
       "match": "grok",
       "text": {
         "zh": "xAI Grok：风格直接，编程与实时知识强。",

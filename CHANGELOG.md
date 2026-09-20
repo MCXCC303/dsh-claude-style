@@ -4,6 +4,7 @@
 
 ### Added
 - **模型文案改为运行时读取的数据文件**：文案表迁出 bundle，落到 `src/model-descriptions.json`（构建时校验后随包发布为 `lib/model-descriptions.json`）；宿主半边新增 `/dsh-claude-style/model-descriptions.json` 路由按请求读取该文件，浏览器半边在首次绘制模型选择器时 fetch 并按需缓存。此后扩充文案表无需重新构建、也不进 bundle（产物内已无任何模型文案）。解析按「精确条目 → 家族规则 → 档位规则 → 目录自带文本」逐级降级；精确条目按**归一化模型 id** 建键，同一模型被多个 provider 转售（`deepseek-v4-flash` 同时在 deepseek-official 与 opencode-go）折叠为一条；家族规则有序且锚定，且**一律不带最高级**——「最强/旗舰」只写在钉住版本的精确条目里，否则旧版本（如 `gemini-1.5-pro`）会被误称旗舰。取不到文档时静默回退目录自带文本，不影响选择器可用。
+- **补充新模型线文案**：为 Artificial Analysis 榜单上此前未收录的模型线补写家族规则——Meta Muse Spark（Agent 与编码线，与 Llama 开源线区分）、Celeris-1 与 Inception Labs Mercury 2（扩散式 LLM，措辞按延迟而非能力展开）、Apodex（复杂专业工作的 Agent）、Motif 3（韩国 Motif Technologies 全自研开源权重 MoE，314B 总参 / 13.2B 激活）。榜单头部 40 个模型现已 100% 命中；仍未收录的新模型线按设计回退到目录自带文本，不编造文案。
 
 ### Fixed
 - **模型文案的两处误判**：其一，参数量档位规则 `\d+b` 未锚定，把 MoE 命名里的激活参数当成总参——`qwen3.8-2.4t-a95b`（2.4T 总参）与 `k2-horizon-375b-a23b` 都被读成「小尺寸稠密模型」；现拆出 `a\d+b` 激活参数规则并让稠密规则要求数字前有分隔符。其二，provider 兜底对多产品线厂商过于宽松，`north-mini-code` 被按 provider 名匹配成 Cohere Command；现补 `north` 家族规则。另补 `gpt-oss` 开源权重系列规则，并去掉家族规则里的最高级表述（见上）。
