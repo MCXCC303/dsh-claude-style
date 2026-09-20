@@ -67,6 +67,54 @@
           }
           if (idle && text !== targetHint) node.textContent = targetHint
         }
+        syncAttachmentPlaceholder()
+      }
+
+      function syncAttachmentPlaceholder() {
+        if (!isComposerActive()) {
+          var synths = document.querySelectorAll('[data-dsh-synthetic-placeholder]')
+          for (var si = 0; si < synths.length; si++) {
+            if (synths[si].parentElement) synths[si].parentElement.removeChild(synths[si])
+          }
+          return
+        }
+        var isHero = document.querySelector('[class*="heroWorkspaceRow"], [class*="titleGroup"]') !== null
+        var targetHint = isHero ? COMPOSER_HINT : 'Type / for commands'
+        var cards = document.querySelectorAll('[data-composer-card]')
+        for (var ci = 0; ci < cards.length; ci++) {
+          var card = cards[ci]
+          var input = card.querySelector('[data-composer-input]')
+          if (!input) continue
+          var text = (input.textContent || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim()
+          var isEmpty = text.length === 0
+          var placeholder = card.querySelector('[data-composer-placeholder]')
+          var grow = input.closest ? input.closest('[class*="grow"]') : input.parentElement
+
+          if (isEmpty) {
+            if (!placeholder && grow) {
+              placeholder = document.createElement('div')
+              placeholder.setAttribute('data-composer-placeholder', '')
+              placeholder.setAttribute('data-dsh-synthetic-placeholder', 'true')
+              placeholder.textContent = targetHint
+              grow.appendChild(placeholder)
+            } else if (placeholder) {
+              if (placeholder.style.display === 'none') placeholder.style.display = ''
+              var curText = placeholder.textContent || ''
+              var idle = false
+              for (var j = 0; j < HINT_SOURCES.length; j++) {
+                if (curText.indexOf(HINT_SOURCES[j]) === 0) {
+                  idle = true
+                  break
+                }
+              }
+              if (idle && curText !== targetHint) placeholder.textContent = targetHint
+            }
+          } else {
+            if (placeholder && placeholder.hasAttribute('data-dsh-synthetic-placeholder')) {
+              if (placeholder.parentElement) placeholder.parentElement.removeChild(placeholder)
+            }
+          }
+        }
       }
 
       /**
@@ -361,6 +409,7 @@
             }
           }
         }
+        syncAttachmentPlaceholder()
       }
 
       /**
@@ -1872,9 +1921,19 @@
         }
       }
 
+      function onComposerInput(e) {
+        var target = e.target
+        if (!target) return
+        if (target.hasAttribute && (target.hasAttribute('data-composer-input') || (target.closest && target.closest('[data-composer-input]')))) {
+          syncAttachmentPlaceholder()
+        }
+      }
+
       document.addEventListener('pointerdown', onGlobalPointerDown)
       document.addEventListener('pointerdown', onCardPointerDown)
       document.addEventListener('keydown', onGlobalKeyDown, true)
+      document.addEventListener('input', onComposerInput, true)
+      document.addEventListener('compositionend', onComposerInput, true)
 
       // Both fixed popovers are anchored to their trigger; scroll of the page
       // (not the conversation's own auto-stick) and resizes move the anchor, so
@@ -2026,6 +2085,8 @@
         document.removeEventListener('pointerdown', onGlobalPointerDown)
         document.removeEventListener('pointerdown', onCardPointerDown)
         document.removeEventListener('keydown', onGlobalKeyDown, true)
+        document.removeEventListener('input', onComposerInput, true)
+        document.removeEventListener('compositionend', onComposerInput, true)
         if (permDocPointerListener) {
           document.removeEventListener('pointerdown', permDocPointerListener)
           permDocPointerListener = null
@@ -2053,7 +2114,7 @@
           accountBtn.parentElement.removeChild(accountBtn)
         }
         accountBtn = null
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover')
+        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, [data-dsh-synthetic-placeholder]')
         for (var li = 0; li < leftoverItems.length; li++) {
           if (leftoverItems[li].parentElement) {
             leftoverItems[li].parentElement.removeChild(leftoverItems[li])
