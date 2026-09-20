@@ -468,10 +468,200 @@
       }
 
 
+      /**
+       * Merge the host's time and usage pills into one compact sentence and
+       * write it into CSS variables. The host keeps ownership of the data and
+       * the two click targets; CSS hides its icons/labels and renders the
+       * combined text, so React never sees its own DOM rewritten.
+       */
+      var statsPopover = null
+      var statsHideTimer = null
+
+      function statsEscape(value) {
+        return String(value === void 0 || value === null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+      }
+
+      function statsRowsFrom(panel) {
+        var rows = []
+        if (panel === null) return rows
+        var dts = panel.querySelectorAll('dt')
+        for (var i = 0; i < dts.length; i++) {
+          var dd = dts[i].nextElementSibling
+          rows.push({
+            label: (dts[i].textContent || '').trim(),
+            value: dd === null ? '' : (dd.textContent || '').trim(),
+          })
+        }
+        return rows
+      }
+
+      function statsPanelData(selector) {
+        var panel = document.querySelector(selector)
+        return {
+          title: panel === null ? '' : (panel.getAttribute('aria-label') || ''),
+          rows: statsRowsFrom(panel),
+        }
+      }
+
+      function withStatsPanel(button, selector, done) {
+        if (button === null) { done({ title: '', rows: [] }); return }
+        if (button.getAttribute('aria-expanded') !== 'true') button.click()
+        var attempts = 0
+        function read() {
+          var panel = document.querySelector(selector)
+          if (panel === null && attempts < 15) {
+            attempts += 1
+            setTimeout(read, 20)
+            return
+          }
+          var data = statsPanelData(selector)
+          if (button.getAttribute('aria-expanded') === 'true') button.click()
+          done(data)
+        }
+        setTimeout(read, 20)
+      }
+
+      function collectStatsData(done) {
+        var root = document.querySelector('[data-composer-stats]')
+        if (root === null) { done([]); return }
+        var buttons = root.querySelectorAll('button')
+        var timeBtn = null
+        var usageBtn = null
+        for (var i = 0; i < buttons.length; i++) {
+          var aria = buttons[i].getAttribute('aria-label') || ''
+          if (/轮|步|turns?|steps?/i.test(aria)) timeBtn = buttons[i]
+          else usageBtn = buttons[i]
+        }
+        withStatsPanel(timeBtn, '[role="dialog"]:has([data-session-stats-details])', function (timeData) {
+          withStatsPanel(usageBtn, '[role="dialog"]:has([data-session-stats-usage])', function (usageData) {
+            var sections = []
+            if (timeData.rows.length > 0) sections.push(timeData)
+            if (usageData.rows.length > 0) sections.push(usageData)
+            done(sections)
+          })
+        })
+      }
+
+      function ensureStatsPopover() {
+        if (statsPopover !== null) return statsPopover
+        statsPopover = document.createElement('div')
+        statsPopover.className = 'dsh-claude-stats-popover'
+        statsPopover.setAttribute('data-open', 'false')
+        statsPopover.addEventListener('mouseenter', function () {
+          if (statsHideTimer) {
+            clearTimeout(statsHideTimer)
+            statsHideTimer = null
+          }
+        })
+        statsPopover.addEventListener('mouseleave', scheduleHideStatsPopover)
+        document.body.appendChild(statsPopover)
+        return statsPopover
+      }
+
+      function hideStatsPopover() {
+        if (statsPopover !== null) statsPopover.setAttribute('data-open', 'false')
+      }
+
+      function scheduleHideStatsPopover() {
+        if (statsHideTimer) clearTimeout(statsHideTimer)
+        statsHideTimer = setTimeout(function () {
+          statsHideTimer = null
+          hideStatsPopover()
+        }, 160)
+      }
+
+      function renderStatsPopover(sections) {
+        var pop = ensureStatsPopover()
+        var html = '<div class="dsh-claude-stats-popover-body">'
+        for (var sIndex = 0; sIndex < sections.length; sIndex++) {
+          var section = sections[sIndex]
+          if (section.rows.length === 0) continue
+          if (section.title) html += '<div class="dsh-claude-stats-popover-section">' + statsEscape(section.title) + '</div>'
+          html += '<div class="dsh-claude-stats-popover-grid">'
+          for (var r = 0; r < section.rows.length; r++) {
+            html += '<div class="dsh-claude-stats-popover-item">'
+              + '<div class="dsh-claude-stats-popover-label">' + statsEscape(section.rows[r].label) + '</div>'
+              + '<div class="dsh-claude-stats-popover-value">' + statsEscape(section.rows[r].value) + '</div>'
+              + '</div>'
+          }
+          html += '</div>'
+        }
+        html += '</div>'
+        pop.innerHTML = html
+      }
+
+      function showStatsPopover(anchor) {
+        if (statsHideTimer) {
+          clearTimeout(statsHideTimer)
+          statsHideTimer = null
+        }
+        collectStatsData(function (sections) {
+          if (sections.length === 0) return
+          renderStatsPopover(sections)
+          var pop = ensureStatsPopover()
+          pop.setAttribute('data-open', 'true')
+          var live = document.querySelector('[data-composer-stats]') || anchor
+          var rect = live.getBoundingClientRect()
+          var width = pop.offsetWidth
+          var height = pop.offsetHeight
+          var left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8))
+          var top = Math.max(8, rect.top - height - 8)
+          pop.style.left = left + 'px'
+          pop.style.top = top + 'px'
+        })
+      }
+
+      function bindStatsHover(root) {
+        if (root.__dshStatsHoverBound) return
+        root.__dshStatsHoverBound = true
+        root.addEventListener('mouseenter', function () { showStatsPopover(root) })
+        root.addEventListener('mouseleave', scheduleHideStatsPopover)
+      }
+
+      function syncStatsSummary() {
+        var root = document.querySelector('[data-composer-stats]')
+        if (root === null) return
+        var buttons = root.querySelectorAll('button')
+        var timeText = ''
+        var usageText = ''
+        for (var i = 0; i < buttons.length; i++) {
+          var button = buttons[i]
+          var aria = button.getAttribute('aria-label') || ''
+          var parts = aria.split(' · ')
+          var isTime = /轮|步|turns?|steps?/i.test(aria)
+          if (isTime) {
+            var counts = (parts[0] || '').match(/\d[\d,]*/g) || []
+            var turns = counts[0] || '0'
+            var steps = counts[1] || '0'
+            var tps = (parts[1] || '').match(/([\d.,]+[KMB]?)\s*tok\/s/i)
+            timeText = turns + '轮' + steps + '步' + (tps ? ' · ' + tps[1] + 'tok/s' : '')
+          } else {
+            var total = (parts[0] || '').match(/([\d.,]+[KMB]?)\s*tok/i)
+            var cache = (parts[1] || '').match(/([\d.]+)\s*%/)
+            usageText = (total ? total[1] + ' tok' : (parts[0] || '')) + (cache ? ' · ' + cache[1] + '% Cache' : '')
+          }
+        }
+        if (buttons.length === 1) {
+          var only = timeText || usageText
+          timeText = only
+          usageText = only
+        }
+        // content: var(...) needs a quoted <string>; an unquoted token stream
+        // is invalid and computes to `none`.
+        root.style.setProperty('--dsh-stats-time', JSON.stringify(timeText))
+        root.style.setProperty('--dsh-stats-usage', JSON.stringify(usageText))
+        bindStatsHover(root)
+      }
+
       ui.permissions = {
         sync: function () {
           syncAttachmentState()
           mergeStatsIntoRow()
+          syncStatsSummary()
           syncSegments()
           syncChatTabComposer()
         },
@@ -479,6 +669,12 @@
       }
 
       return function () {
+        if (statsHideTimer) {
+          clearTimeout(statsHideTimer)
+          statsHideTimer = null
+        }
+        if (statsPopover !== null && statsPopover.parentElement !== null) statsPopover.parentElement.removeChild(statsPopover)
+        statsPopover = null
         if (permHoverIntent) permHoverIntent.cancel()
         if (permDocPointerListener) {
           document.removeEventListener('pointerdown', permDocPointerListener)

@@ -440,11 +440,6 @@ body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"]
   visibility: visible !important;
   opacity: 1 !important;
 }
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"] [class*="trailing"] > :first-child:hover:not(:disabled),
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"] [class*="trailing"] :is([class*="trigger" i], [class*="model" i], [class*="Model"]):hover:not(:disabled) {
-  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
-  color: var(--dsw-alias-label-primary) !important;
-}
 /* The skin's own model trigger replaces the host's model seat (the host's
    root is marked and hidden by syncModelControl). One button, one hover
    background — the shipped seat stacks an icon + label + effort + chevron,
@@ -458,7 +453,7 @@ body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn {
   gap: 2px !important;
   height: 28px !important;
   max-width: 280px !important;
-  padding: 0 6px 0 8px !important;
+  padding: 0 8px !important;
   border: none !important;
   border-radius: 7px !important;
   background: transparent !important;
@@ -477,6 +472,12 @@ body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
   color: var(--dsw-alias-label-primary) !important;
 }
+
+/* Only the whole trigger gets the hover plate; its label/effort spans stay
+   transparent so no smaller inner background appears. */
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn > * {
+  background: transparent !important;
+}
 body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-label {
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -487,12 +488,6 @@ body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-effort {
   flex: none !important;
   color: var(--dsw-alias-label-caption, #a6a094) !important;
   font-weight: 400 !important;
-}
-body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-chevron {
-  flex: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  color: var(--dsw-alias-label-caption, #a6a094) !important;
 }
 /* Token stats pills — merged into the toolbar row (one line with the
    controls). The base rule below is the fallback for the host's own
@@ -534,8 +529,10 @@ body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorks
   padding: 0 !important;
   height: auto !important;
   line-height: 20px !important;
-  justify-content: flex-start !important;
-  flex: 0 1 auto !important;
+  /* Fill the space between the left tool cluster and the trailing model
+     group, then center the sentence in it: equal air on both sides. */
+  justify-content: center !important;
+  flex: 1 1 auto !important;
   min-width: 0 !important;
 }
 /* The stats pills are on-demand: hidden unless the chat window (the composer)
@@ -548,7 +545,8 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-
   pointer-events: none !important;
   transition: opacity 0.15s ease, visibility 0.15s ease !important;
 }
-body[data-dsh-claude-style] [data-composer-card]:hover [class*="_row"] [data-composer-stats] {
+body[data-dsh-claude-style] [data-phase="active"]:hover [data-composer-card] [class*="_row"] [data-composer-stats],
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:hover {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
@@ -558,4 +556,164 @@ body[data-dsh-claude-style] [data-composer-card]:hover [class*="_row"] [data-com
   body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-stats] {
     display: none !important;
   }
+}
+
+/* ---------- combined composer stats ---------- */
+/* The host ships two pills (time / usage) with icons and its own spacing.
+   We keep the two click targets but hide their internals and render one
+   centered sentence from the CSS variables syncStatsSummary() writes. */
+body[data-dsh-claude-style] [data-composer-stats] {
+  gap: 0 !important;
+  justify-content: center !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+  color: var(--dsw-alias-label-tertiary) !important;
+}
+
+body[data-dsh-claude-style] [data-composer-stats] svg {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] [data-composer-stats] button > span {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] [data-composer-stats] button {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font: inherit !important;
+}
+
+/* Let the first segment shrink and ellipsize (e.g. 20轮...), while the
+   usage segment and the separator keep their width. */
+body[data-dsh-claude-style] [data-composer-stats] > span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+body[data-dsh-claude-style] [data-composer-stats] > span:first-child {
+  flex: 0 1 auto !important;
+}
+body[data-dsh-claude-style] [data-composer-stats] > span:last-child {
+  flex: 0 0 auto !important;
+}
+body[data-dsh-claude-style] [data-composer-stats] button {
+  display: block !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+body[data-dsh-claude-style] [data-composer-stats] button:hover,
+body[data-dsh-claude-style] [data-composer-stats] button[aria-expanded="true"] {
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary) !important;
+}
+
+body[data-dsh-claude-style] [data-composer-stats] > span:first-child button::after {
+  content: var(--dsh-stats-time, '');
+}
+
+body[data-dsh-claude-style] [data-composer-stats] > span:last-child button::after {
+  content: var(--dsh-stats-usage, '');
+}
+
+body[data-dsh-claude-style] [data-composer-stats] > span + span::before {
+  content: ' · ';
+  color: var(--dsw-alias-separator-primary);
+}
+
+/* The two buttons stay transparent; the hover plate belongs to the whole
+   merged line so the stats area has one feedback surface. */
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats] {
+  transition: background-color 0.12s ease;
+}
+
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  border-radius: 6px !important;
+}
+
+/* The host renders two separate stat dialogs; hide them and use one custom
+   combined popover instead. */
+body[data-dsh-claude-style] [role="dialog"]:has([data-session-stats-details]),
+body[data-dsh-claude-style] [role="dialog"]:has([data-session-stats-usage]) {
+  display: none !important;
+}
+
+/* Combined stats popover, styled like the permission popover: title on top,
+   content below, roomy type. */
+body[data-dsh-claude-style] .dsh-claude-stats-popover {
+  position: fixed !important;
+  z-index: 100000 !important;
+  min-width: 260px !important;
+  max-width: min(380px, calc(100vw - 16px)) !important;
+  box-sizing: border-box !important;
+  padding: 8px !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(4px) scale(0.98) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+  font-family: var(--dsw-font-family) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-stats-popover {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px 8px !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-section {
+  padding: 6px 6px 2px !important;
+  color: var(--dsw-alias-label-tertiary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-item:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-label {
+  color: var(--dsw-alias-label-tertiary) !important;
+  font-size: 12px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-stats-popover-value {
+  color: var(--dsw-alias-label-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  font-variant-numeric: tabular-nums !important;
 }

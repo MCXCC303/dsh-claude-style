@@ -253,7 +253,6 @@
 
       var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
       var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
-      var MODEL_CHEVRON_DOWN_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>'
 
       /** One selectable model row: name, description line and a check when current. */
       function buildModelOption(group, model, selected) {
@@ -368,6 +367,26 @@
             }
           }
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
+          // When the active model is not on the official service, surface it
+          // under the official list as `provider/model` so the current seat is
+          // still visible before the effort/More rows.
+          if (current !== null && current.group.id !== MODEL_OFFICIAL_GROUP) {
+            var currentRow = modelEl('button', 'dsh-claude-model-option')
+            currentRow.type = 'button'
+            currentRow.setAttribute('role', 'menuitemradio')
+            currentRow.setAttribute('aria-checked', 'true')
+            var currentCopy = modelEl('span', 'dsh-claude-model-copy')
+            currentCopy.appendChild(modelEl('span', 'dsh-claude-model-name', current.group.id + '/' + current.model.id))
+            currentRow.appendChild(currentCopy)
+            var currentCheck = modelEl('span', 'dsh-claude-model-check')
+            currentCheck.innerHTML = MODEL_CHECK_SVG
+            currentRow.appendChild(currentCheck)
+            currentRow.addEventListener('click', function (e) {
+              e.stopPropagation()
+              closeModelPopovers()
+            })
+            modelBody.appendChild(currentRow)
+          }
           if (effort) modelBody.appendChild(buildModelCell(copyLabel('effortLabel', MODEL_EFFORT_LABEL), effort.label, 'effort'))
           modelBody.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL), '', 'more'))
         }
@@ -523,9 +542,7 @@
           modelBtn.type = 'button'
           modelBtn.className = 'dsh-claude-model-btn'
           modelBtn.setAttribute('aria-haspopup', 'menu')
-          modelBtn.innerHTML =
-            '<span class="dsh-claude-model-btn-label"></span>' +
-            '<span class="dsh-claude-model-btn-chevron">' + MODEL_CHEVRON_DOWN_SVG + '</span>'
+          modelBtn.innerHTML = '<span class="dsh-claude-model-btn-label"></span>'
           // Same contract as the account trigger: hover unless the preference
           // says click-only.
           modelBtn.addEventListener('mouseenter', function () {

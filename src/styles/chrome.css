@@ -132,3 +132,11 @@ body[data-dsh-claude-style] [data-slot="conversation.session.header.actions"] > 
   position: relative;
   z-index: 100 !important;
 }
+
+/* The shipped queue dock cancels the stack gap AND pulls 3px further, so the
+   composer card overlaps its open bottom edge and the card shadow reads as a
+   line across the dock. Cancel only the gap: the dock bottom then lands on
+   the card border and the two tiers share one seam. */
+body[data-dsh-claude-style] [data-queue-dock] {
+  margin-bottom: calc(0px - var(--dsh-composer-stack-gap, 6px)) !important;
+}
