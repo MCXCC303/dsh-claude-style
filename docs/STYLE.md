@@ -12,7 +12,7 @@ Design tokens for `dsh-claude-style`, recreating the Claude Code Desktop aesthet
 | ivory dark | `#E8E6DC` | hover / section bg |
 | slate dark | `#141413` | text (light mode), canvas (dark mode) |
 | warm gray | `#B0AEA5` | metadata |
-| clay | `#D97757` | single accent — CTA / links / focus |
+| clay | `#D97757` | single accent — CTA / links |
 | accent deep | `#C6613F` | accent hover |
 | hairline | `#1414131a` | 1px warm border |
 
@@ -32,9 +32,11 @@ Rules:
 - Radius: 4 / 8 / 16 px; pills for CTAs (`9999px`).
 - Borders: 1px warm hairline.
 - Spacing: 4 px rhythm.
-- Focus: the composer field lights up — its hairline goes to clay at ~60% alpha
-  with a 1px warm bleed and a deeper drop shadow. The footer tray below follows
-  the same hairline so the two tiers stay one outline.
+- Focus: the composer field lights up — its hairline takes the input box's own
+  shadow colour (espresso `#141413` in light, black in dark), with a 1px halo
+  in the same tone and a deeper drop shadow. The footer tray below follows the
+  same hairline so the two tiers stay one outline. Accent is never used for
+  focus strokes.
 
 ## Implementation notes
 
