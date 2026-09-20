@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.5] - 2026-09-20
 
 ### Added
 - **模型文案改为运行时读取的数据文件**：文案表迁出 bundle，落到 `src/model-descriptions.json`（构建时校验后随包发布为 `lib/model-descriptions.json`）；宿主半边新增 `/dsh-claude-style/model-descriptions.json` 路由按请求读取该文件，浏览器半边在首次绘制模型选择器时 fetch 并按需缓存。此后扩充文案表无需重新构建、也不进 bundle（产物内已无任何模型文案）。解析按「精确条目 → 家族规则 → 档位规则 → 目录自带文本」逐级降级；精确条目按**归一化模型 id** 建键，同一模型被多个 provider 转售（`deepseek-v4-flash` 同时在 deepseek-official 与 opencode-go）折叠为一条；家族规则有序且锚定，且**一律不带最高级**——「最强/旗舰」只写在钉住版本的精确条目里，否则旧版本（如 `gemini-1.5-pro`）会被误称旗舰。取不到文档时静默回退目录自带文本，不影响选择器可用。
@@ -10,6 +10,7 @@
 - **模型文案的两处误判**：其一，参数量档位规则 `\d+b` 未锚定，把 MoE 命名里的激活参数当成总参——`qwen3.8-2.4t-a95b`（2.4T 总参）与 `k2-horizon-375b-a23b` 都被读成「小尺寸稠密模型」；现拆出 `a\d+b` 激活参数规则并让稠密规则要求数字前有分隔符。其二，provider 兜底对多产品线厂商过于宽松，`north-mini-code` 被按 provider 名匹配成 Cohere Command；现补 `north` 家族规则。另补 `gpt-oss` 开源权重系列规则，并去掉家族规则里的最高级表述（见上）。
 
 ### Changed
+- **源码按特性级分片重构**：`src/overrides.js` 拆为 `overrides/*.js`（copy / permissions / model-picker / account-footer / scheduler + 共享 popover-utils），`src/context.js` 拆为 `context/*.js`（host / prefs / model-copy / i18n），CSS 按 composer 与 components 拆为独立文件；build.mjs 改为清单驱动并新增碎片守门（禁 import/export、强制 4 空格缩进）。调度器不再读取特性闭包变量，改为通过 `ui` 句柄注册表调用各特性的 sync/close/owns/reposition/invalidateCopy 等接口；`settings.js` 不再重复调用 `loadPrefs()`。构建产物 `lib/client.js` 仍为单文件，不引入新依赖。
 - **模型文案跟随全局语言、单行显示**：描述按 shell 自身的 `locale` 服务取当前语言（`zh` / `en`），每行只渲染一条，不再中英两行叠加；并订阅 locale 变更，切换语言时已渲染的弹层即时重绘。选择器自身的 UI 文案（触发按钮 aria、加载中、空目录、推理等级、More models）走同一路径，bundle 内只保留取不到文档时的中性英文兜底。
 
 ### Fixed

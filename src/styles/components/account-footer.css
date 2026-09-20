@@ -1,0 +1,125 @@
+/* ---------- Claude Code layout: account row & floating popover ---------- */
+/* footArea positioning with crisp hairline border spanning entire sidebar */
+body[data-dsh-claude-style] [class*="footArea"] {
+  position: relative !important;
+  overflow: visible !important;
+  margin: 0 calc(-1 * var(--dsh-sidebar-inline-padding, 12px)) -6px !important;
+  padding: 8px var(--dsh-sidebar-inline-padding, 12px) 6px !important;
+  border-top: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="footArea"] {
+  border-top-color: #2e2c29 !important;
+}
+
+/* Account trigger button in sidebar */
+body[data-dsh-claude-style] .dsh-claude-account-btn {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 32px !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  background: transparent !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-btn:hover,
+body[data-dsh-claude-style] .dsh-claude-account-btn[data-open="true"] {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-avatar {
+  width: 18px;
+  height: 18px;
+  background: %%ANTHROPIC_MARK%% center / contain no-repeat;
+  flex: none;
+  margin-right: 8px;
+}
+body[data-dsh-claude-style] .dsh-claude-account-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+  font-family: var(--dsw-font-family);
+}
+body[data-dsh-claude-style] .dsh-claude-account-user {
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+body[data-dsh-claude-style] .dsh-claude-account-chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+body[data-dsh-claude-style] .dsh-claude-account-chevron::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.15s ease;
+}
+body[data-dsh-claude-style] .dsh-claude-account-btn[data-open="true"] .dsh-claude-account-chevron::after {
+  transform: rotate(180deg);
+}
+
+/* Floating Popover Container: Adaptive Width */
+body[data-dsh-claude-style] .dsh-claude-account-popover {
+  position: absolute !important;
+  bottom: calc(100% + 4px) !important;
+  left: 8px !important;
+  right: 8px !important;
+  width: auto !important;
+  max-width: calc(100% - 16px) !important;
+  min-width: 0 !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  z-index: 1000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(6px) scale(0.98) !important;
+  transform-origin: bottom left !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-account-popover {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* Hover bridge between trigger and popover */
+body[data-dsh-claude-style] .dsh-claude-account-popover::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
+}
+

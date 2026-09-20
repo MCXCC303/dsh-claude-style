@@ -84,6 +84,7 @@ Then restart `dsh web`; remove hand-added rows for this theme from `cordis.patch
 | [Design Tokens](docs/STYLE.md) | Palette, typography, shapes, plus the bundle source layout and host-selector discipline |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Contributing](CONTRIBUTING.md) | How to build from `src/`, commit rules, and the screenshot/regression tooling |
+| [AGENTS.md](AGENTS.md) | Development guide for AI assistants: build commands, fragment rules, host-selector discipline, and the release flow (Chinese) |
 
 ## Related Links
 

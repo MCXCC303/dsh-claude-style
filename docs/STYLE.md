@@ -51,21 +51,36 @@ The shipped bundle `lib/client.js` is **generated** — never edit it directly.
 Source lives in `src/` and `node scripts/build.mjs` (or `npm run build`)
 assembles the bundle:
 
-| Source | Zone | Content |
-|---|---|---|
-| `src/constants.js` | 1 | constants & spinner verbs (evaluated at build time to fill `%%TOKEN%%` placeholders) |
-| `src/assets/*.svg` | — | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
-| `src/styles/tokens.css` | 2.1 | design tokens (dark base + ivory light) |
-| `src/styles/typography.css` | 2.2 | serif display / sans UI / mono code, editorial markdown |
-| `src/styles/chrome.css` | 2.3 | canvas, hairlines, clay accent, chrome details |
-| `src/styles/composer.css` | 2.3 | hero + in-conversation composer |
-| `src/styles/sidebar.css` | 2.3 | sidebar brand, new-session row, workspace tree |
-| `src/styles/components.css` | 2.4 | segments, permission popover, account drawer, settings section |
-| `src/context.js` | 3 | host context & helpers |
-| `src/overrides.js` | 4+5 | DOM overrides, MutationObserver scheduler, teardown |
-| `src/settings.js` | 4.4 | settings section (brand switch) |
-| `src/entry.js` | 6 | `apply()` + exports |
-| `src/model-descriptions.json` | — | model copy (picker labels + per-model descriptions); validated at build time and **copied** to `lib/`, not inlined |
+| Source | Content |
+|---|---|
+| `src/constants.js` | constants, spinner verbs, shared token values (evaluated at build time to fill `%%TOKEN%%` placeholders) |
+| `src/assets/*.svg` | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
+| `src/styles/tokens.css` | design tokens (dark base + ivory light) |
+| `src/styles/typography.css` | serif display / sans UI / mono code, editorial markdown |
+| `src/styles/chrome.css` | canvas, hairlines, clay accent, chrome details |
+| `src/styles/composer/hero.css` | hero brand mark and headline |
+| `src/styles/composer/card.css` | composer input card and footer tray (gated by composer preference) |
+| `src/styles/composer/inline.css` | in-conversation single-line composer (gated by composer preference) |
+| `src/styles/sidebar.css` | sidebar brand, new-session row, workspace tree |
+| `src/styles/components/permissions.css` | permission segments and popover |
+| `src/styles/components/account-footer.css` | account row and floating popover |
+| `src/styles/components/model-picker.css` | model picker popovers |
+| `src/styles/components/footer-takeover.css` | host footer takeover rules |
+| `src/styles/components/third-party.css` | agy-link repair rules |
+| `src/styles/components/settings.css` | settings page section |
+| `src/context/host.js` | host accessors and helpers |
+| `src/context/prefs.js` | preference store |
+| `src/context/model-copy.js` | model copy document store |
+| `src/context/i18n.js` | localized copy lookups |
+| `src/overrides/popover-utils.js` | shared anchor positioning and hover intent |
+| `src/overrides/copy.js` | composer/copy rewrites installer |
+| `src/overrides/permissions.js` | permission segments/popover installer |
+| `src/overrides/model-picker.js` | model picker installer |
+| `src/overrides/account-footer.js` | account footer/popover installer |
+| `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
+| `src/settings.js` | settings section (brand switch) |
+| `src/entry.js` | `apply()` orchestrator + exports |
+| `src/model-descriptions.json` | model copy (picker labels + per-model descriptions); validated at build time and **copied** to `lib/`, not inlined |
 
 Fragments share one factory scope at runtime: keep the 4-space base
 indentation and do not use `import`/`export` inside fragments. The build

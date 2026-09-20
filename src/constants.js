@@ -1,5 +1,5 @@
     // ============================================================================
-    // Zone 1: 常量与配置定义 (Constants & Tokens)
+    // 常量与配置定义 (Constants & Tokens)
     // ============================================================================
     var STYLE_ID = 'dsh-claude-style-style'
 
@@ -139,7 +139,7 @@
 
     /**
      * Preferences, persisted in the host settings namespace `claude-style`
-     * (lib/index.js owns it; src/context.js reads and writes it). Each value is
+     * (lib/index.js owns it; src/context/prefs.js reads and writes it). Each value is
      * mirrored onto the document as an attribute so the stylesheet decides what
      * a preference means, and the defaults here are the shipped behaviour.
      */

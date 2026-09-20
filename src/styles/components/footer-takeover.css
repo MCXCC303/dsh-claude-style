@@ -1,0 +1,147 @@
+/* ---------- Footer takeover ----------
+   Everything in this block modifies the HOST's own footer (it hides entries and
+   zeroes the containers that host them) and exists only because the skin
+   replaces that footer with its account row. The "Collapse the sidebar settings
+   area" preference turns the whole takeover off, so each rule below carries
+   %%FOOTER_ATTR%% — the skin sets it on <body> only while the takeover is on,
+   and with it absent the host footer renders exactly as shipped. */
+/* Hide original trigger buttons in footArea while keeping containers intact for modals */
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
+  display: none !important;
+}
+/* Both containers stay mounted at zero size so the overlays they host keep
+   painting, but the collapse must stay geometric. font-size and line-height
+   inherit, and the settings dialog mounts IN PLACE inside settingsArea (the
+   host renders its overlay as a sibling of the trigger row — no portal): the
+   dialog inherited font-size: 0 with line-height: 0px, so every text line
+   that sets an explicit font-size without its own line-height (the SubAgent
+   page's rows, the onboarding overlay) collapsed to a 0px line box and
+   vanished. settingsArea hosts nothing besides its display:none'd trigger row
+   and those in-place overlays, so it keeps only the geometric collapse and
+   hands real inherited metrics down; footerActions still hosts plain plugin
+   entries whose stray in-flow text only the zeroing keeps invisible, so the
+   full collapse stays there. */
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] {
+  position: static !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] {
+  position: static !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+  overflow: visible !important;
+}
+
+/* Generic footer-action redirection. The `sidebar.footer.action` slot accepts
+   arbitrary plugin controls, not just buttons; overrides.js marks every
+   mirrored entry (`data-dsh-claude-footer-entry`) and hides it in place
+   (`data-dsh-claude-footer-hidden`) once it is redirected into the account
+   popover. Entries that host a floating overlay (a fixed panel or dialog)
+   keep their subtree visible — the overlay must stay reachable after the
+   mirrored popover item opens it — but the entry box itself collapses so it
+   never paints inside the zero-sized footerActions container. */
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] [data-dsh-claude-footer-hidden] {
+  display: none !important;
+}
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] [data-dsh-claude-footer-entry] {
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* Collapsed rail mode adaptations */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-btn {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-avatar {
+  margin-right: 0 !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] :is(.dsh-claude-account-label, .dsh-claude-account-chevron) {
+  display: none !important;
+}
+/* The rail's popover cannot stay an absolutely positioned child of the footer.
+   The sidebar column is 56px wide with `overflow: hidden`, so a panel anchored
+   past the rail edge is cut off the moment it crosses it — and the base rule's
+   percentage max-width, measured against the 59px footer, squashed it to 43px.
+   Fixed positioning lifts it out of that clip (no ancestor is a containing block
+   for it), and overrides.js anchors it to the trigger from there. left/right/
+   bottom are reset so the base rule's own `!important` anchors cannot fight the
+   resolved coordinates. */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-popover {
+  position: fixed !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  width: 220px !important;
+  max-width: min(220px, calc(100vw - 16px)) !important;
+  transform-origin: bottom left !important;
+}
+/* The rail opens the panel beside the trigger, not above it, so the hover bridge
+   has to span the horizontal gap: the base rule's downward strip would sit under
+   the panel and leave the pointer's 8px crossing uncovered. */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-popover::after {
+  top: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+  right: 100% !important;
+  width: 12px !important;
+  height: auto !important;
+}
+/* In the rail the account button is the only control; the settings entry lives
+   in the popover. The settings container is zero-sized rather than hidden (its
+   dialog must stay reachable), which is enough while the sidebar is wide — the
+   entry is squeezed to a 4px sliver. A plugin that ships its own rail variant
+   escapes that box instead: the settings plugin's `…_rail` trigger keeps its
+   full 36px square and lands straight on top of the Claude mark. Hide the entry
+   in the rail. Reachability is unaffected — the popover's settings item opens
+   the real trigger programmatically (`realTrigger.click()`), which
+   display:none does not block. */
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]) {
+  display: none !important;
+}
+
+/* Embedded footer widgets: display-only plugin entries (progress bars,
+   status panels — the cost-meter balance/quota stack is the known case)
+   cannot collapse into a text menu item, so overrides.js embeds a live clone
+   of the entry into the popover. The embed sits above the action items with
+   a hairline separator; the cloned plugin markup keeps its own classes, so
+   the plugin's own stylesheet styles the content. */
+body[data-dsh-claude-style] .dsh-claude-popover-embed {
+  padding: 2px 2px 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2, #2e2c29);
+  border-radius: 7px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-popover-embed[data-clickable] {
+  cursor: pointer;
+}
+
+body[data-dsh-claude-style] .dsh-claude-popover-embed[data-clickable]:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-popover-embed {
+  border-bottom-color: #e8e6dc;
+}
+

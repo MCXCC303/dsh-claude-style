@@ -95,6 +95,7 @@ dsh plugin --profile web remove dsh-claude-style   # 卸载
 | [设计令牌](docs/STYLE.md) | 调色板、字体、形状，源码结构与宿主选择器纪律（英文） |
 | [更新日志](CHANGELOG.md) | 版本历史 |
 | [贡献指南](CONTRIBUTING.md) | 如何从 `src/` 构建、提交规范与截图/回归工具（英文） |
+| [AGENTS.md](AGENTS.md) | AI 助手的开发指南：构建命令、碎片规则、宿主选择器纪律与发布流程 |
 
 ## 友链
 

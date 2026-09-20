@@ -1,11 +1,11 @@
     // ============================================================================
-    // Zone 4.4: 设置页 (Settings Section)
+    // 设置页 (Settings Section)
     // ============================================================================
     /**
      * The settings page section, mounted by the host into the `settings.section`
      * slot. That slot hands a section only `{ close }` plus the standard hooks,
      * so this component owns no store of its own: it reads and writes the skin
-     * preferences through src/context.js, which owns the host round trip, and
+     * preferences through src/context/prefs.js, which owns the host round trip, and
      * follows changes the same way the rest of the skin does.
      *
      * Copy comes from the model copy document's `settings` block, so the page
@@ -177,7 +177,6 @@
      */
     function installSettingsSection(ctx) {
       loadModelCopy()
-      loadPrefs()
       if (typeof ctx.inject !== 'function') return function () {}
       var fiber = ctx.inject(['slots'], function (scope) {
         var slots = scope.get('slots')

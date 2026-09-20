@@ -6,13 +6,13 @@
  * loader has no relative requires and no asset URLs for plugin clients), so the
  * source is split for maintenance and inlined back at build time:
  *
- *   src/constants.js   Zone 1 — constants & tokens (evaluated to substitute
- *                      %%TOKEN%% placeholders); brand SVGs live in src/assets/
- *   src/styles/*.css   Zone 2 — plain CSS with %%TOKEN%% placeholders
- *   src/context.js     Zone 3 — host context & helpers
- *   src/overrides.js   Zone 4+5 — UI overrides, scheduler & teardown
- *   src/settings.js    Zone 4.4 — settings section (brand)
- *   src/entry.js       Zone 6 — apply() + exports
+ *   src/constants.js             constants & tokens (evaluated to substitute
+ *                                %%TOKEN%% placeholders); brand SVGs live in src/assets/
+ *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
+ *   src/context/*.js             host accessors, prefs, model copy, i18n
+ *   src/overrides/*.js           feature installers, shared popover utils, scheduler
+ *   src/settings.js              settings section (brand)
+ *   src/entry.js                 apply() + exports
  *
  * `src/model-descriptions.json` is not a fragment: it is validated here and
  * copied to `lib/`, where the host half serves it to the browser half at
@@ -40,28 +40,56 @@ const OUT = path.join(LIB, 'client.js')
  */
 const MODEL_COPY = 'model-descriptions.json'
 
-const STYLE_FILES = [
-  'tokens.css',
-  'typography.css',
-  'chrome.css',
-  'composer.css',
-  'sidebar.css',
-  'components.css',
+const FRAGMENTS = [
+  'constants.js',
+  'context/host.js',
+  'context/prefs.js',
+  'context/model-copy.js',
+  'context/i18n.js',
+  'overrides/popover-utils.js',
+  'overrides/copy.js',
+  'overrides/permissions.js',
+  'overrides/model-picker.js',
+  'overrides/account-footer.js',
+  'overrides/scheduler.js',
+  'settings.js',
+  'entry.js',
 ]
 
-const HEADER = `/**
+const STYLE_FILES = [
+  { file: 'tokens.css' },
+  { file: 'typography.css' },
+  { file: 'chrome.css' },
+  { file: 'composer/hero.css' },
+  { file: 'composer/card.css', gate: true },
+  { file: 'composer/inline.css', gate: true },
+  { file: 'sidebar.css' },
+  { file: 'components/permissions.css' },
+  { file: 'components/account-footer.css' },
+  { file: 'components/model-picker.css' },
+  { file: 'components/footer-takeover.css' },
+  { file: 'components/third-party.css' },
+  { file: 'components/settings.css' },
+]
+
+const HEADER = (() => {
+  const jsFragments = FRAGMENTS.map((name) => ` *   - src/${name}`).join('\n')
+  const styleSheets = STYLE_FILES.map((fileDef) => {
+    const file = typeof fileDef === 'string' ? fileDef : fileDef.file
+    return ` *   - src/styles/${file}`
+  }).join('\n')
+  return `/**
  * Claude Style — Claude Code Desktop theme for the DeepSeek Harness web GUI.
  *
- * GENERATED FILE — do not edit. Source lives in src/ (JS zones as fragments,
- * stylesheets as plain CSS); \`node scripts/build.mjs\` assembles this bundle.
- *   - src/constants.js   Zone 1: Constants & Tokens
+ * GENERATED FILE — do not edit. Source lives in src/ as feature fragments;
+ * \`node scripts/build.mjs\` assembles this bundle.
+ *
+ * JS fragments (in assembly order):
  *   - src/assets/*.svg   Brand marks (inlined as CSS url() data URIs at build time)
- *   - src/styles/*.css   Zone 2: Stylesheets (tokens, typography, chrome,
- *                        composer, sidebar, components)
- *   - src/context.js     Zone 3: DSH Context & Helpers
- *   - src/overrides.js   Zone 4+5: UI Overrides, Scheduler & Teardown
- *   - src/settings.js    Settings Section (Brand)
- *   - src/entry.js       Zone 6: Plugin Entry & Export
+ * ${jsFragments}
+ *
+ * Stylesheets (in assembly order):
+ * ${styleSheets}
  */
 window.__ModuleLoader__.load({
   id: 'dsh-claude-style',
@@ -72,7 +100,9 @@ window.__ModuleLoader__.load({
 
     // React is resolved through the module loader's graph, so the settings
     // section can be a real component without a host half.
-    var React = require('react')`
+    var React = require('react')
+`
+})()
 
 const FOOTER = `  },
 })
@@ -124,8 +154,13 @@ function gateComposerScope(file, text) {
   const markerAt = text.indexOf(COMPOSER_GATE_MARKER)
   if (markerAt === -1) throw new Error(`build: src/styles/${file} is missing the ${COMPOSER_GATE_MARKER} marker`)
   const gate = `[%%COMPOSER_ATTR%%]`
-  const head = text.slice(0, markerAt + COMPOSER_GATE_MARKER.length)
-  const body = text.slice(markerAt + COMPOSER_GATE_MARKER.length)
+  // inline.css previously lived entirely below the one gate marker in
+  // composer/card.css + composer/inline.css. The inline marker is synthetic (added only so the build's
+  // "all gated stylesheets carry the marker" guard is uniform), so it must
+  // not be emitted into the bundle.
+  const syntheticMarker = file === 'composer/inline.css'
+  const head = syntheticMarker ? '' : text.slice(0, markerAt + COMPOSER_GATE_MARKER.length)
+  const body = syntheticMarker ? text.slice(markerAt + COMPOSER_GATE_MARKER.length) : text.slice(markerAt + COMPOSER_GATE_MARKER.length)
 
   let inComment = false
   let stamped = 0
@@ -153,7 +188,7 @@ function gateComposerScope(file, text) {
   if (missed.length > 0) {
     throw new Error(`build: src/styles/${file} left ${missed.length} rule(s) ungated: ${missed[0].trim().slice(0, 80)}`)
   }
-  return head + gated
+  return syntheticMarker ? gated.replace(/^\n/, '') : head + gated
 }
 
 /**
@@ -244,32 +279,44 @@ function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
 
   const cssText = STYLE_FILES
-    .map((file) => {
+    .map((fileDef) => {
+      const file = typeof fileDef === 'string' ? fileDef : fileDef.file
+      const gated = typeof fileDef !== 'string' && fileDef.gate === true
       let text = fs.readFileSync(path.join(SRC, 'styles', file), 'utf8').replace(/\r\n/g, '\n')
-      if (file === 'composer.css') text = gateComposerScope(file, text)
+      if (gated) text = gateComposerScope(file, text)
       return substitute(file, text, tokens).replace(/\n+$/, '')
     })
     .join('\n\n')
 
   const cssDecl = [
     '    // ============================================================================',
-    '    // Zone 2: 样式表（由 src/styles/*.css 内联生成，勿手改） (CSS Stylesheet)',
+    '    // 样式表（由 src/styles/*.css 内联生成，勿手改） (CSS Stylesheet)',
     '    // ============================================================================',
     '    var CSS = [',
     ...cssText.split('\n').map((line) => '      ' + JSON.stringify(line) + ','),
     "    ].join('\\n')",
   ].join('\n')
 
-  const fragment = (name) => fs.readFileSync(path.join(SRC, name), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '')
+  const fragment = (name) => {
+    const text = fs.readFileSync(path.join(SRC, name), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '')
+    const lines = text.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (/^[ \t]*(import|export)[ \t]/m.test(line)) {
+        throw new Error(`build: src/${name} uses import/export at line ${i + 1}`)
+      }
+      if (line.trim() !== '' && !/^ {4}/.test(line) && !/^ \* /.test(line)) {
+        throw new Error(`build: src/${name} line ${i + 1} is not 4-space indented: ${line.trim().slice(0, 60)}`)
+      }
+    }
+    return text
+  }
 
   const bundle = [
     HEADER,
-    fragment('constants.js'),
+    fragment(FRAGMENTS[0]),
     cssDecl,
-    fragment('context.js'),
-    fragment('overrides.js'),
-    fragment('settings.js'),
-    fragment('entry.js'),
+    ...FRAGMENTS.slice(1).map(fragment),
     FOOTER,
   ].join('\n\n')
 
@@ -285,7 +332,7 @@ function main() {
 
   fs.writeFileSync(OUT, bundle)
   const lines = bundle.split('\n').length
-  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + 5 fragments)`)
+  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments)`)
 
   const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
   const exact = validateModelCopy(copy)

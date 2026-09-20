@@ -1,0 +1,93 @@
+/* ---------- Claude Code layout: settings page ---------- */
+/* The skin's own page in the settings dialog. Its segmented controls reuse the
+   composer permission picker's classes (`.dsh-claude-segments` /
+   `.dsh-claude-segment`), so the two are literally one control rather than two
+   lookalikes; only the row shell and the switch are new here. */
+body[data-dsh-claude-style] .dsh-claude-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  max-width: 640px;
+  box-sizing: border-box;
+  font-family: var(--dsw-font-family);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-row-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-error {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-state-error-primary, #c0392b);
+}
+
+/* The switch borrows the segment track's palette and radius so a page of rows
+   reads as one control set rather than two. */
+body[data-dsh-claude-style] .dsh-claude-settings-switch {
+  flex: none;
+  appearance: none;
+  margin: 0;
+  border: 0;
+  cursor: pointer;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--dsw-specific-selector);
+  transition: background-color .12s ease;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-settings-switch {
+  background: #f6f6f4;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-switch[data-on] {
+  background: var(--dsw-alias-brand-primary, #d97757);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-switch-knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-overlay, #ffffff);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.18);
+  transition: transform .12s ease;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-switch[data-on] .dsh-claude-settings-switch-knob {
+  transform: translateX(16px);
+}
