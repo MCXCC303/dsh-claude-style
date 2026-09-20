@@ -1,10 +1,10 @@
 # DSH Claude Style
 
-**为 DeepSeek Harness (DSH) Web 客户端复刻 Claude Code Desktop 视觉与交互体验的主题插件 —— 暖调象牙画布、陶烬橙强调色，以及在 DSH 上重筑的 Claude Code 交互模型。**
+**为 DeepSeek Harness Web 复刻 Claude Code Desktop 风格与交互体验的主题插件。**
 
 <div align="center">
 
-> **咖啡与 Claude 的下午茶时光。**
+> **Coffee and Claude time?**
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
