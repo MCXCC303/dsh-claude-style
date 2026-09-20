@@ -114,7 +114,9 @@ body[data-dsh-claude-style] .dsh-claude-perm-popover {
   z-index: 99999 !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 2px !important;
+  /* Two-line preset rows (label + description) need air between them: the
+     2px gap read as one solid block, so each row is separated by 6px. */
+  gap: 6px !important;
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateY(4px) scale(0.98) !important;
