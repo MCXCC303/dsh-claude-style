@@ -748,8 +748,12 @@
        * subtrees are stripped from the copy: it must never be re-hidden by
        * the footArea hiding rule, double-register an id, or duplicate an
        * open panel next to the real one. Event listeners do not survive
-       * cloning, so when the entry has a trigger the embed forwards clicks
-       * to it (marked `data-clickable` for the cursor).
+       * cloning, so the embed forwards clicks back into the live entry —
+       * path-mapped to the clicked sub-control (see resolveEmbedActivator) —
+       * and deliberately leaves the popover open so the widget's response
+       * stays visible; it still closes on pointer-leave as usual. The embed
+       * is marked `data-clickable` for the cursor when the entry has a
+       * trigger at all.
        */
       function syncEmbedMirror(entry, idx, forward) {
         var embed = popoverBody.querySelector('[data-embed-index="' + idx + '"]')
@@ -758,13 +762,14 @@
           embed.className = 'dsh-claude-popover-embed'
           embed.setAttribute('data-embed-index', idx)
           embed.addEventListener('click', function (e) {
-            if (!embed.__dshForward) return
+            if (!embed.__dshEntry) return
             e.stopPropagation()
-            closePopover()
-            embed.__dshForward.click()
+            var activator = resolveEmbedActivator(e.target, embed)
+            if (activator) activator.click()
           })
           popoverBody.insertBefore(embed, settingsItem)
         }
+        embed.__dshEntry = entry
         embed.__dshForward = forward || null
         if (forward) {
           embed.setAttribute('data-clickable', '')
@@ -793,13 +798,77 @@
         }
       }
 
+      var INTERACTIVE_SELECTOR = 'button, [role="button"], a[href], [tabindex], input, select, summary'
+
+      /**
+       * Map a click inside the embedded clone back to the matching control
+       * of the live entry. Forwarding every embed click to the entry's FIRST
+       * trigger misfires for multi-control widgets (the cost-meter stack
+       * carries refresh / collapse / tab buttons): the user clicks the
+       * balance box but the first button in tree order fires. The clone
+       * preserves the entry's tree shape, so the clicked node's child-index
+       * path replays onto the original (tag-checked per level — overlay
+       * stripping can shift siblings); the nearest interactive element at or
+       * above the mapped node wins, and any mismatch falls back to the
+       * entry's primary trigger.
+       */
+      function resolveEmbedActivator(clicked, embed) {
+        var entry = embed.__dshEntry
+        var cloneRoot = embed.firstChild
+        if (!entry || !cloneRoot || !clicked || clicked.nodeType !== 1) return embed.__dshForward
+        if (clicked === embed || clicked === cloneRoot) return embed.__dshForward
+        // Child-index path from the clicked clone node up to the clone root.
+        var path = []
+        var node = clicked
+        while (node && node !== cloneRoot) {
+          var parent = node.parentElement
+          if (!parent) return embed.__dshForward
+          path.unshift(Array.prototype.indexOf.call(parent.children, node))
+          node = parent
+        }
+        // Replay the path on the live entry, verifying shape level by level.
+        var original = entry
+        var cloneNode = cloneRoot
+        for (var i = 0; i < path.length; i++) {
+          var nextClone = cloneNode.children[path[i]]
+          var nextOrig = original.children[path[i]]
+          if (!nextClone || !nextOrig || nextClone.tagName !== nextOrig.tagName) {
+            return embed.__dshForward
+          }
+          cloneNode = nextClone
+          original = nextOrig
+        }
+        // Nearest interactive element at or above the mapped original,
+        // bounded by the entry and never inside an overlay subtree.
+        var target = original
+        while (target) {
+          if (target !== entry && target.matches && target.matches(INTERACTIVE_SELECTOR) &&
+              !hasOverlayAncestor(target, entry)) {
+            return target
+          }
+          if (target === entry) break
+          target = target.parentElement
+        }
+        return embed.__dshForward
+      }
+
+      /** Whether `el` sits inside an overlay-marked subtree above `entry`. */
+      function hasOverlayAncestor(el, entry) {
+        var node = el
+        while (node && node !== entry) {
+          if (node.hasAttribute && node.hasAttribute('data-dsh-claude-footer-overlay')) return true
+          node = node.parentElement
+        }
+        return false
+      }
+
       /**
        * First interactive element of a footer entry that is not part of an
        * overlay subtree (an open panel may render action buttons of its own,
        * and those must never become the popover item's activation target).
        */
       function findFooterTrigger(entry) {
-        var selector = 'button, [role="button"], a[href], [tabindex], input, select, summary'
+        var selector = INTERACTIVE_SELECTOR
         if (entry.matches && entry.matches(selector) &&
             !entry.hasAttribute('data-dsh-claude-footer-overlay')) {
           return entry
