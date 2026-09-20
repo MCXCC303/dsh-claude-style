@@ -115,6 +115,10 @@ body[data-dsh-claude-style] [class*="tableScroll"] {
   padding-left: 0 !important;
   padding-right: 0 !important;
   background-clip: padding-box;
+  /* Narrow tables hug their content instead of being stretched by the
+     host's .tableFill variant; wide tables cap at the container and scroll. */
+  width: fit-content !important;
+  max-width: 100% !important;
 }
 
 body[data-dsh-claude-style] [class*="tableScroll"] table {
@@ -124,6 +128,8 @@ body[data-dsh-claude-style] [class*="tableScroll"] table {
   padding-right: 0 !important;
   border-spacing: 0 !important;
   border-collapse: collapse !important;
+  width: max-content !important;
+  max-width: max-content !important;
 }
 
 /* Every first/last cell, whatever element the renderer used (th or td). */
