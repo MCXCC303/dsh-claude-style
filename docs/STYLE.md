@@ -53,7 +53,8 @@ assembles the bundle:
 
 | Source | Zone | Content |
 |---|---|---|
-| `src/constants.js` | 1 | constants, spinner verbs, SVG masks (evaluated at build time to fill `%%TOKEN%%` placeholders in the stylesheets) |
+| `src/constants.js` | 1 | constants & spinner verbs (evaluated at build time to fill `%%TOKEN%%` placeholders) |
+| `src/assets/*.svg` | — | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
 | `src/styles/tokens.css` | 2.1 | design tokens (dark base + ivory light) |
 | `src/styles/typography.css` | 2.2 | serif display / sans UI / mono code, editorial markdown |
 | `src/styles/chrome.css` | 2.3 | canvas, hairlines, clay accent, chrome details |

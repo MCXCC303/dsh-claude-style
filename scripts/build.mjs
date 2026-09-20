@@ -6,8 +6,8 @@
  * loader has no relative requires and no asset URLs for plugin clients), so the
  * source is split for maintenance and inlined back at build time:
  *
- *   src/constants.js   Zone 1 — constants, masks, tokens (evaluated here to
- *                      substitute %%TOKEN%% placeholders in the stylesheets)
+ *   src/constants.js   Zone 1 — constants & tokens (evaluated to substitute
+ *                      %%TOKEN%% placeholders); brand SVGs live in src/assets/
  *   src/styles/*.css   Zone 2 — plain CSS with %%TOKEN%% placeholders
  *   src/context.js     Zone 3 — host context & helpers
  *   src/overrides.js   Zone 4+5 — UI overrides, scheduler & teardown
@@ -24,6 +24,7 @@ import vm from 'node:vm'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = path.join(ROOT, 'src')
+const ASSETS = path.join(SRC, 'assets')
 const OUT = path.join(ROOT, 'lib', 'client.js')
 
 const STYLE_FILES = [
@@ -41,6 +42,7 @@ const HEADER = `/**
  * GENERATED FILE — do not edit. Source lives in src/ (JS zones as fragments,
  * stylesheets as plain CSS); \`node scripts/build.mjs\` assembles this bundle.
  *   - src/constants.js   Zone 1: Constants & Tokens
+ *   - src/assets/*.svg   Brand marks (inlined as CSS url() data URIs at build time)
  *   - src/styles/*.css   Zone 2: Stylesheets (tokens, typography, chrome,
  *                        composer, sidebar, components)
  *   - src/context.js     Zone 3: DSH Context & Helpers
@@ -70,12 +72,34 @@ function loadTokens() {
     ${constants}
     return {
       SANS, SERIF, MONO, BRAND_ATTR, BRAND_ANTHROPIC,
-      CLAUDE_MARK, CLAUDE_WORD, CLAUDE_MARK_CLAY,
-      ANTHROPIC_MARK, ANTHROPIC_BRAND_MARK, ANTHROPIC_BRAND_WORD,
       CLAUDE_WORD_WIDTH: (18 * CLAUDE_WORD_ASPECT).toFixed(1),
     }
   `)
   return factory()
+}
+
+/**
+ * Brand marks ship as runtime-inlined data URIs (the DSH loader exposes no
+ * relative requires / asset URLs), so each src/assets/*.svg is encoded into a
+ * CSS url() %%TOKEN%% value here, at build time.
+ */
+const SVG_TOKENS = {
+  CLAUDE_MARK: 'claude-mark.svg',
+  CLAUDE_WORD: 'claude-word.svg',
+  CLAUDE_MARK_CLAY: 'claude-mark-clay.svg',
+  ANTHROPIC_MARK: 'anthropic-mark.svg',
+  ANTHROPIC_BRAND_MARK: 'anthropic-brand-mark.svg',
+  ANTHROPIC_BRAND_WORD: 'anthropic-brand-word.svg',
+}
+
+/** Read one SVG source and wrap it as a CSS url() data URI. */
+function loadSvgAssets() {
+  const out = {}
+  for (const [token, file] of Object.entries(SVG_TOKENS)) {
+    const svg = fs.readFileSync(path.join(ASSETS, file), 'utf8').replace(/\r\n/g, '\n').trim()
+    out[token] = 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'
+  }
+  return out
 }
 
 /** Substitute %%TOKEN%% placeholders in one stylesheet; throws on leftovers. */
@@ -89,7 +113,7 @@ function substitute(file, text, tokens) {
 }
 
 function main() {
-  const tokens = loadTokens()
+  const tokens = { ...loadTokens(), ...loadSvgAssets() }
 
   const cssText = STYLE_FILES
     .map((file) => {
