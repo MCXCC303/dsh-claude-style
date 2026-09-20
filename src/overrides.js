@@ -25,6 +25,7 @@
       ]
 
       function rewriteHeadline() {
+        var greeting = pickHeroGreeting(getUsername(ctx))
         var groups = document.querySelectorAll('[class*="titleGroup"]')
         for (var i = 0; i < groups.length; i++) {
           var spans = groups[i].children
@@ -32,7 +33,7 @@
             var span = spans[j]
             var cls = span.getAttribute('class') || ''
             if (cls.indexOf('previewBadge') !== -1) continue
-            if (span.textContent !== HERO_HEADLINE) span.textContent = HERO_HEADLINE
+            if (span.textContent !== greeting) span.textContent = greeting
             break
           }
         }
@@ -1073,7 +1074,16 @@
       })
       schedule()
 
+      // The hero greeting follows the clock: re-apply it every minute so the
+      // line rolls over on the hour while the app stays open. rewriteHeadline
+      // skips identical text, so this cannot feed the observer.
+      var greetingTimer = setInterval(function () {
+        rewriteHeadline()
+      }, 60000)
+
       return function () {
+        clearInterval(greetingTimer)
+        greetingTimer = null
         observer.disconnect()
         if (composerCardObserver) {
           composerCardObserver.disconnect()

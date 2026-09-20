@@ -3,8 +3,27 @@
     // ============================================================================
     var STYLE_ID = 'dsh-claude-style-style'
 
-    var HERO_HEADLINE = 'Coffee and Claude time?'
     var COMPOSER_HINT = 'How can I help you today?'
+
+    /** English weekday names, indexed by Date#getDay() (0 = Sunday). */
+    var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+    /**
+     * Time-of-day hero greeting, à la Claude Code's rotating welcomes. Slots
+     * cover all 24 hours; the eight o'clock slot salutes the current weekday
+     * instead ("Happy Monday."). `username` fills the Good morning slot.
+     */
+    function pickHeroGreeting(username) {
+      var now = new Date()
+      var hour = now.getHours()
+      if (hour >= 6 && hour < 8) return 'Good morning, ' + (username || 'User') + '!'
+      if (hour >= 8 && hour < 9) return 'Happy ' + WEEKDAY_NAMES[now.getDay()] + '.'
+      if (hour >= 9 && hour < 12) return 'What are you working on?'
+      if (hour >= 12 && hour < 14) return 'What’s on the agenda today?'
+      if (hour >= 14 && hour < 18) return 'Coffee and Claude time?'
+      if (hour >= 18) return 'Evening, how are things?'
+      return 'You are here!'
+    }
 
     /**
      * Claude Code's 185 playful spinner verbs displayed while thinking / executing.
