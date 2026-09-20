@@ -215,6 +215,34 @@ body[data-dsh-claude-style] [class*="linkIcon"] {
   display: none;
 }
 
+/* Inline file mentions (and URL-promoted inline code) are links, not code: the
+   host resolves a file path inside an inline code span to a button and paints
+   it with its own link alias. This rule has to name them because the generic
+   inline-code chip above is more specific than the host's own class, so without
+   it a path like `CHANGELOG.md` kept the chip's warm red while real links were
+   blue. The class is hashed (`_fileMention_kcgor_304`), hence the longest
+   stable fragment. Same link material as anchors — the link blue, the same
+   weight, and the host's dotted underline on hover — with the chip's wash and
+   hairline recoloured to match. No underline at rest: inside a monospace chip
+   it collides with the descenders and the pill's own bottom edge, which is the
+   same reason the host keeps it hover-only. */
+body[data-dsh-claude-style] :is(code:not(pre code) > [class*="_fileMention"], code:not(pre code) > a) {
+  color: var(--dsh-claude-link);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+body[data-dsh-claude-style] :is(code:not(pre code) > [class*="_fileMention"], code:not(pre code) > a):hover,
+body[data-dsh-claude-style] :is(code:not(pre code) > [class*="_fileMention"], code:not(pre code) > a):focus-visible {
+  text-decoration: underline dotted var(--dsh-claude-link);
+  text-underline-offset: 3px;
+}
+
+body[data-dsh-claude-style] code:not(pre code):has(> :is([class*="_fileMention"], a)) {
+  background: var(--dsh-claude-quote-bg);
+  border-color: var(--dsh-claude-quote-border);
+}
+
 body[data-dsh-claude-style] [class*="markdown"] :is(a, a:focus) {
   color: var(--dsh-claude-link);
   text-decoration: underline;

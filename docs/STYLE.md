@@ -70,6 +70,15 @@ unchanged. The quote's `padding` is pinned with `!important`: the host's own
 `.markdown blockquote` sets `padding-left` on a class, which would otherwise
 leave the wash lopsided.
 
+**Inline file mentions are links, not code.** The host resolves a file path
+inside an inline code span to a button (`.fileMention`, hashed — match it with
+`[class*="_fileMention"]`) and paints it with its link alias. The generic
+inline-code chip rule is more specific than that class, so a mention inherits
+the chip's warm red unless a rule names it: mentions take the link blue, weight
+500, and the link wash for the chip's fill and hairline, with the host's dotted
+underline on hover only (an underline at rest collides with monospace
+descenders and the pill's bottom edge). Plain inline code keeps the warm chip.
+
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
