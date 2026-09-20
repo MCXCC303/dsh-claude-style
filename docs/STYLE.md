@@ -61,14 +61,12 @@ selection itself survives the blur.
 
 ## Markdown material
 
-A markdown quote and a markdown link are the same signal — a passage that came
-from somewhere else — so the quote wears the link's material: the link blue
-(`--dsh-claude-link`), the link's resting underline (1.5px, offset 2px), a wash
-of that blue for the fill and a matching bar (`--dsh-claude-quote-bg` /
-`--dsh-claude-quote-border`, tuned per theme). The prose serif face is
-unchanged. The quote's `padding` is pinned with `!important`: the host's own
-`.markdown blockquote` sets `padding-left` on a class, which would otherwise
-leave the wash lopsided.
+A quote is a **container**, not a link: it keeps the prose face on a neutral bar
+and wash (text `#B0AEA5`, light `#6E6A60`), and whatever sits inside it keeps its
+own material — links stay blue, inline-code chips stay warm red, file mentions
+stay link-blue. Never paint the quote itself with the link colour: the colour
+inherits into the block's inline code and mentions, which is exactly the leak
+that made every path inside a quote read as a link.
 
 **Inline file mentions are links, not code.** The host resolves a file path
 inside an inline code span to a button (`.fileMention`, hashed — match it with
@@ -76,9 +74,19 @@ inside an inline code span to a button (`.fileMention`, hashed — match it with
 inline-code chip rule is more specific than that class, so a mention inherits
 the chip's warm red unless a rule names it. A mention takes the link blue, weight
 500, and the link's underline (solid in the link tone at rest, solid and fully
-opaque on hover — the same treatment the skin gives an anchor); the chip itself
-is left alone — the same fill, hairline, radius and padding as any other inline
-code. Plain inline code keeps its warm text.
+opaque on hover, same thickness and offset — the same treatment the skin gives an
+anchor); the chip itself is left alone — the same fill, hairline, radius and
+padding as any other inline code. Plain inline code keeps its warm text. Note the
+hover rule must set only `text-decoration-color`: the `text-decoration` shorthand
+resets `text-decoration-thickness` to `auto` and thins the line mid-hover.
+
+## Inline code
+
+The chip hugs its glyphs. The host builds it as an `inline-flex` box that
+inherits the prose line box — 23px for a 15px code size — which left ~5px of
+empty wash above and below the text. The skin sets `line-height: 1.2` on inline
+code (27px → 22px, with the 1px padding as the visible inset); lower values
+start clipping descenders. The fill, hairline, radius and size are unchanged.
 
 ## Implementation notes
 
