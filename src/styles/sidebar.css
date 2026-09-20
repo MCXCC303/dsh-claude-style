@@ -5,10 +5,11 @@
    document attribute rather than by swapping the stylesheet, so the settings
    page only has to flip one attribute and the whole UI follows.
 
-   Sizing: both marks are set to an 18px cap height to match the shipped
-   brandName box, and each wordmark takes its natural width from that height
-   via the artwork aspect ratios (Claude 4.214:1, ANTHROPIC ~8.94:1). The
-   wordmark keeps a max-width so a longer brand can never clip the row. */
+   Sizing: the marks sit on an 18px baseline to match the shipped brandName box.
+   Claude preset: the starburst is the official mask and the wordmark is typeset
+   "Claude Code" text — the artwork has a "Claude" wordmark but no "Code" variant,
+   so no mask can cover it. Anthropic preset wordmark keeps an 18px mask at its
+   natural aspect; both carry a max-width so a longer brand can never clip. */
 body[data-dsh-claude-style] :is([class*="brandMark"], [class*="railMark"]) > * {
   display: none !important;
 }
@@ -23,7 +24,7 @@ body[data-dsh-claude-style] :is([class*="brandMark"], [class*="railMark"])::befo
   background-size: contain;
 }
 
-/* Claude (default): starburst mark + the Claude wordmark. */
+/* Claude (default): the official starburst mark mask. */
 body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) :is([class*="brandMark"], [class*="railMark"])::before {
   width: 18px;
   height: 18px;
@@ -45,12 +46,20 @@ body[data-dsh-claude-style] [class*="brandIdentity"] > [class*="brandName"]::bef
   background-size: contain;
 }
 
+/* Claude (default): official starburst mask + typeset "Claude Code" wordmark.
+   The text inherits the host brandName's own type style — no skin-side font
+   overrides, so it renders like the rest of the brand row. */
 body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) [class*="brandIdentity"] > [class*="brandName"]::before {
-  width: %%CLAUDE_WORD_WIDTH%%px;
+  content: "Claude Code";
+  width: auto;
   max-width: 100%;
   height: 18px;
-  -webkit-mask: %%CLAUDE_WORD%% center / contain no-repeat;
-  mask: %%CLAUDE_WORD%% center / contain no-repeat;
+  line-height: 18px;
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+  color: currentColor;
+  white-space: nowrap;
 }
 
 /* Anthropic (alternate): the A\ lockup + the ANTHROPIC wordmark. */

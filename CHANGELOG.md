@@ -7,10 +7,12 @@
 - **输入框焦点样式**：获得焦点时描边转为陶土色细线，外扩 1px 暖色晕边并加深投影，形成发光感；底栏托盘同步跟随，整体轮廓一体。深浅主题分别调校。
 - **模型思考状态重塑**：收录 Claude Code 的 185 种思考动词（如 `Smooshing...`、`Boogieing...`、`Clauding...`、`Noodling...`），每轮思考随机抽取一个动词稳定展示；扫光从 DeepSeek 蓝渐变换为陶土橙与蜜桃暖色高光。
 - **工作区运行中状态重塑**：会话运行时，侧栏会话状态加载动画从 DeepSeek 方形蓝色 LED 矩阵替换为 Windows 11 Fluent 风格的圆形圆弧旋转，深浅主题自适应。
-- **可切换品牌标识**：设置页新增「Claude Style」分区，用分段控件在 Claude（默认，官方星芒 + Claude 字标）与 Anthropic（`A\` + ANTHROPIC 字标）两套品牌标识间切换，新会话页品牌标识随之切换并保持陶烬橙填充；选择保存在本地，重启应用后保持。
+- **可切换品牌标识**：设置页新增「Claude Style」分区，用分段控件在 Claude（默认，官方星芒）与 Anthropic（`A\` + ANTHROPIC 字标）两套品牌标识间切换，新会话页品牌标识随之切换并保持陶烬橙填充；选择保存在本地，重启应用后保持。
 
 ### Changed
+- **侧栏 Claude 预设字标改为文本**：品牌区星芒保持官方遮罩，字标改为 "Claude Code" 文本——官方 Claude 字标没有 "Code" 变体；字体样式完全继承宿主品牌行自身的排版，不做皮肤侧覆盖。Anthropic 预设字标保持官方遮罩不变。相应移除了不再被引用的官方 Claude 字标矢量数据（约 2.7KB）。
 - **源码拆分与构建化**：`lib/client.js` 改为构建产物（勿手改），源码拆分至 `src/`（五个 JS 片段 + `src/styles/` 六个纯 CSS 文件）；`npm run build` 内联拼装并做语法与令牌自检，发布前自动构建。新增 `scripts/probe.cjs` 无头浏览器回归探针，断言输入框吸底、单行起步、随内容增长等关键不变量（`npm run probe -- --token <launch-token>`）。
+- **Anthropic 字体入仓库**：`fonts/` 提供 Anthropic Sans Web Text / Serif Web Text / Mono Variable 三个字体文件，随 Git 仓库分发、**不随 npm 包分发**（`files` 白名单排除）；安装到系统后皮肤字体栈即可生效——版权归 Anthropic，仅供个人使用，不适用 MIT 许可（见 LICENSE 字体声明）。
 
 ### Fixed
 - 修复会话页输入框脱离底部、不随消息流跟随滚动的问题：移除皮肤对宿主 `viewArea` 布局契约的覆盖，恢复 `composerSeat` 的 sticky 吸底语义。

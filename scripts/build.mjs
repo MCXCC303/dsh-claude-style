@@ -70,9 +70,8 @@ function loadTokens() {
     ${constants}
     return {
       SANS, SERIF, MONO, BRAND_ATTR, BRAND_ANTHROPIC,
-      CLAUDE_MARK, CLAUDE_WORD, CLAUDE_MARK_CLAY,
+      CLAUDE_MARK, CLAUDE_MARK_CLAY,
       ANTHROPIC_MARK, ANTHROPIC_BRAND_MARK, ANTHROPIC_BRAND_WORD,
-      CLAUDE_WORD_WIDTH: (18 * CLAUDE_WORD_ASPECT).toFixed(1),
     }
   `)
   return factory()

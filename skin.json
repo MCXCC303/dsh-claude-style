@@ -1,7 +1,7 @@
 {
   "id": "claude-style",
-  "name": "Claude Style · 暖象牙",
-  "tagline": "Claude Code Desktop 主题 · 暖调象牙 · 权限控制器 · 账户抽屉",
+  "name": "Claude Code Style",
+  "tagline": "Claude Code Desktop 深度定制化主题",
   "accent": "#d97757",
   "bodyAttr": "data-dsh-claude-style",
   "package": "dsh-claude-style",

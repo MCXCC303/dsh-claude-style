@@ -1,61 +1,103 @@
-# dsh-claude-style · Claude Code Desktop 主题
+<div align="center">
+# DSH Claude Style
 
-[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+**为 DeepSeek Harness (DSH) Web 客户端复刻 Claude Code Desktop 视觉与交互体验的主题插件 —— 暖调象牙画布、陶烬橙强调色，以及在 DSH 上重筑的 Claude Code 交互模型。**
 
-为 DeepSeek Harness (DSH) Web 客户端复刻 Claude Code Desktop 视觉与交互体验的主题插件。
+> **咖啡与 Claude 的下午茶时光。**
 
-![light 亮色](docs/light.png)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
-## 特性
+[![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
+[![license](https://img.shields.io/badge/license-MIT-2EA44F?style=flat)](LICENSE)
 
-### 1. Claude 经典暖调视觉
-- **象牙白 / 暖黑双画布**：亮色象牙白（`#FCFCFB`）与浅色侧栏（`#FBFBF9`），暗色暖黑（`#141413`），遵循系统亮暗模式切换。
-- **陶烬橙强调色**：经典陶烬橙（`#D97757`，hover `#C6613F`）作为唯一操作强调色。
-- **三种字体分工**：衬线展示标题（Serif）+ 无衬线界面（Sans）+ 等宽代码（Mono）。
-- **细致质感**：精致发丝边框、8px 卡片圆角、全圆角胶囊 CTA 按钮。
+</div>
 
-### 2. Claude Code 交互复刻
-- **Read / Edit / Auto 三段式权限控制器**：替换原生访问模式菜单，平滑切换只读（Read）、工作区写入（Edit）与完全权限（Auto，带安全确认弹窗）。
-- **桌面端问候语与占位符**：专属对话问候语与输入框引导文案。
-- **侧栏账户抽屉**：侧栏底部集成账户按钮与抽屉菜单，支持一键打开设置（快捷键 `Ctrl+,`）与管理插件。
+## 预览
 
-### 3. 可切换品牌标识
-- **设置页「Claude Style」分区**：在设置对话框中新增独立分区，用分段控件在 **Claude** 与 **Anthropic** 两套品牌标识间切换。
-- **默认 Claude**：侧栏使用 Claude 星芒 + Claude 字标，新会话页使用陶烬橙星芒。
-- **Anthropic 备选**：切回 `A\` 标志 + ANTHROPIC 字标，保留原有观感。
-- 选择写入浏览器本地存储，重启应用后保持。
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="./docs/light.png" alt="亮色画布 —— 暖调象牙" /></td>
+    <td align="center" width="50%"><img src="./docs/dark.png" alt="暗色画布 —— 暖调黑" /></td>
+  </tr>
+</table>
 
-![dark 暗色](docs/dark.png)
+> 亮色：象牙白画布 `#FCFCFB` 与浅色侧栏 `#FBFBF9`；暗色：暖黑 `#141413`。主题遵循系统亮暗模式切换，陶烬橙 `#D97757` 是两套画布唯一的操作强调色。
+
+## 字体
+
+> **重要：npm 包不随包分发字体文件。** 字体文件放在仓库 [`fonts/`](fonts/) 供下载；安装到系统后皮肤的字体栈（Anthropic Sans UI / Serif 正文 / Mono 代码）才会生效，安装后刷新 / 重启 web。
+
+| 字体 | 用途 | 文件 |
+|---|---|---|
+| Anthropic Sans Web Text | 界面 / UI | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
+| Anthropic Serif Web Text | 对话正文 / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
+| Anthropic Mono Variable | 代码 / 代码块 | [`fonts/AnthropicMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicMonoVariable.ttf) |
+
+安装：Windows 双击 `.ttf` → 「安装」；macOS 用「字体册」导入。安装后刷新页面生效。
+
+> 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可（详见 [LICENSE](LICENSE) 字体声明）。
 
 ## 安装
 
-```sh
+> 已在 dsh 0.1.5-rc.2 上测试 · 暂未发布 npm —— 请从 GitHub 源安装
+
+1. 通过终端安装
+
+```bash
 dsh plugin --profile web add Nwflower/dsh-claude-style   # GitHub 源
-# 或（若已发布到 npm）
-dsh plugin --profile web add dsh-claude-style                    # npm 源
 ```
 
-安装命令会把主题自动接入 profile 组合，无需手工配置。安装后**重启 `dsh web`**，刷新页面即生效。
+2. 通过[插件市场](https://github.com/dsh-market/dsh-market)安装
 
-## 禁用与切换
+同一时刻建议只启用一个主题。安装后**重启 `dsh web`** 并刷新页面即生效。
 
-同一时刻建议只启用一个主题。停用本主题时，在 profile 的 `cordis.patch.yml`（`~/.dsh/profiles/web/cordis.patch.yml`）中加入：
+## 使用
+
+1. **主题** —— 安装即全局生效，无需配置；亮暗跟随系统颜色模式。
+2. **权限分段** —— 输入框以 Read | Edit | Auto 三段式控制器替换原生的访问模式菜单：只读、工作区写入与完全权限（Auto 经宿主的安全确认弹窗切换）。
+3. **品牌切换** —— 设置（`Ctrl+,`）→ **Claude Style**：侧栏品牌在 Claude（官方星芒 + Claude Code 字标文本）与 Anthropic（`A\` + ANTHROPIC 字标）之间切换，新会话页标识随所选品牌保持陶烬橙星芒；选择保存在浏览器本地，默认 Claude。
+4. **账户抽屉** —— 侧栏底栏的账户按钮悬停展开弹层，一键打开设置（`Ctrl+,`）与管理插件。
+5. **状态细节** —— 思考状态每轮从 Claude Code 的 185 个思考动词随机抽取一个稳定展示；工作区运行中状态使用 Fluent 风格的圆形加载动画。
+
+## 停用与卸载
+
+不停用安装、先暂停主题 —— 在 profile 的 `cordis.patch.yml`（`~/.dsh/profiles/web/cordis.patch.yml`）中加入：
 
 ```yaml
 - id: ui-skin-claude-style
   disabled: true
 ```
 
-保存后约 1 秒内热生效，刷新页面即回到原生外观。也可以安装 [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager)，在设置页一键切换所有已安装的主题。
+保存后约 1 秒内热生效，刷新页面即回到原生外观。
 
-## 卸载
-
-```sh
-dsh plugin --profile web remove dsh-claude-style
+```bash
+dsh plugin --profile web remove dsh-claude-style   # 卸载
 ```
 
-然后重启 `dsh web`。若曾在 `cordis.patch.yml` 手工添加过本主题的条目，一并删除。
+然后重启 `dsh web`；若曾在 `cordis.patch.yml` 手工添加过本主题的条目，一并删除。
 
-## 许可
+## 功能一览
 
-MIT
+| 能力 | 入口 | 说明 |
+| --- | --- | --- |
+| Claude 视觉 | 全局 | 象牙白/暖黑双画布、陶烬橙唯一强调色、衬线展示标题 + 无衬线界面 + 等宽代码三字体分工 |
+| 权限控制器 | 输入框浮层 / 新会话分段 | Read · Edit · Auto 三段切换会话权限，Auto 走宿主安全确认 |
+| 品牌切换 | 设置 → Claude Style | Claude（星芒 + Claude Code 字标文本）与 Anthropic（`A\`）双标识，选择持久化 |
+| 状态动画 | 会话运行中 | 185 个思考动词随机展示；Windows 11 Fluent 风格圆形加载器 |
+| 账户抽屉 | 侧栏底栏 | 悬停展开弹层，直达设置与管理插件 |
+
+## 文档
+
+| 文档 | 说明 |
+| --- | --- |
+| [设计令牌](docs/STYLE.md) | 调色板、字体、形状，源码结构与宿主选择器纪律（英文） |
+| [更新日志](CHANGELOG.md) | 版本历史 |
+| [贡献指南](CONTRIBUTING.md) | 如何从 `src/` 构建、提交规范与截图/回归工具（英文） |
+
+## 友链
+
+> 同时启用多个主题？推荐 [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager)，在其设置页一键切换所有已安装主题。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://www.star-history.com/?type=date&repos=Nwflower%2Fdsh-claude-style)
