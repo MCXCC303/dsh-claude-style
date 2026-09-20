@@ -4,10 +4,15 @@ body[data-dsh-claude-style] {
   --dsw-font-family: %%SANS%%;
   --dsw-font-serif: %%SERIF%%;
   --dsw-font-code: %%MONO%%;
-  --dsw-font-markdown-h1-font-family: var(--dsw-font-serif);
-  --dsw-font-markdown-h2-font-family: var(--dsw-font-serif);
-  --dsw-font-markdown-h3-font-family: var(--dsw-font-serif);
-  --dsw-font-markdown-h4-font-family: var(--dsw-font-serif);
+  /* Markdown document headings keep the UI sans at 700 — the face the host
+     ships and the one Claude uses. The host's markdown heading rule is a
+     `font:` shorthand (`--dsw-font-markdown-hN`) that names --dsw-font-family
+     directly, so overriding the four `-font-family` sub-tokens never reached
+     the page; these re-declare the shorthand itself. The ladder is steepened
+     from the host's 21/19/18 toward Claude's measured ≈21/17/15; h1 and h4
+     keep the host's values. */
+  --dsw-font-markdown-h2: 700 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h3: 700 calc(16px + var(--dsh-content-font-delta)) / calc(24px + var(--dsh-content-font-delta)) var(--dsw-font-family);
   --dsw-font-markdown-base-font-family: var(--dsw-font-family);
   --dsw-font-markdown-small-font-family: var(--dsw-font-family);
   --dsw-font-markdown-table-font-family: var(--dsw-font-family);
@@ -144,8 +149,8 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-slot="sidebar.settin
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) blockquote {
   color: #6e6a60;
-  border-left-color: #c6613f;
-  background: rgba(198, 97, 63, 0.05);
+  border-left-color: var(--dsw-alias-label-caption);
+  background: rgba(20, 20, 19, 0.04);
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) pre {

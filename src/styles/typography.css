@@ -20,6 +20,35 @@ body[data-dsh-claude-style] :is(h1, [class*="headline"]) {
   letter-spacing: -0.015em;
 }
 
+/* ---------- markdown document headings ---------- */
+/* The serif display face above is for UI headlines. Document headings are body
+   text: re-assert the host's own markdown heading shorthand (sans, 700) at a
+   weight that beats that rule, so the host's size ladder and line-heights
+   apply untouched. */
+body[data-dsh-claude-style] [class*="markdown"] h1 { font: var(--dsw-font-markdown-h1); }
+body[data-dsh-claude-style] [class*="markdown"] h2 { font: var(--dsw-font-markdown-h2); }
+body[data-dsh-claude-style] [class*="markdown"] h3 { font: var(--dsw-font-markdown-h3); }
+body[data-dsh-claude-style] [class*="markdown"] h4 { font: var(--dsw-font-markdown-h4); }
+
+/* Heading rhythm. The host gives every heading a 32px top margin, which stacks
+   on the previous heading's 16px bottom margin: two consecutive headings open
+   ~36px of air where Claude keeps ~12px, and in the sample document that alone
+   pushed the last list past the viewport. A heading that directly follows
+   another tightens further, so a run of headings reads as one block. */
+body[data-dsh-claude-style] [class*="markdown"] :is(h1, h2, h3) {
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
+body[data-dsh-claude-style] [class*="markdown"] :is(h1, h2, h3) + :is(h1, h2, h3) {
+  margin-top: 8px;
+}
+
+body[data-dsh-claude-style] [class*="markdown"] :is(h4, h5, h6) {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
 body[data-dsh-claude-style] :is(pre, code, kbd, samp, [class*="mono"], [class*="codeBlock"], [class*="CodeBlock"]) {
   font-family: var(--dsw-font-code);
 }
@@ -31,12 +60,14 @@ body[data-dsh-claude-style] :is([class*="caption"], [class*="sectionLabel"]) {
 }
 
 /* ---------- editorial markdown ---------- */
+/* Claude's quote keeps the serif face but stands upright on a neutral bar and
+   wash; the warm accent stays reserved for links and controls. */
 body[data-dsh-claude-style] blockquote {
   font-family: var(--dsw-font-serif);
-  font-style: italic;
+  font-style: normal;
   color: #b0aea5;
-  border-left: 2px solid #d97757;
-  background: rgba(217, 119, 87, 0.06);
+  border-left: 2px solid var(--dsw-alias-label-caption);
+  background: rgba(250, 249, 245, 0.06);
   border-radius: 0 8px 8px 0;
   padding: 0.6em 1em;
 }
