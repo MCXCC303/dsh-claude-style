@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.7] - 2026-09-20
 
 ### Added
 - **模型选择器厂商标识**：模型行显示**模型所属厂商**的标识（而非转售该模型的 provider），「更多模型」的 provider 分组标题显示该 provider 的标识。标识取自 [Lobe Icons](https://lobehub.com/icons) 的静态 SVG（`@lobehub/icons-static-svg`，MIT），按仓库既有架构在构建期内联进 bundle——`@lobehub/icons` 是 React 组件包，装它就要破坏「零依赖、零打包器、单文件产物」这条约束。用单色字形（`fill="currentColor"`）随主题文字色绘制，亮暗两画布都清晰，也不与「陶烬橙唯一强调色」冲突；彩色变体不做——OpenAI、Anthropic、xAI、Moonshot、Z.ai、Vercel、Groq 等 12 家上游本就没有彩色版，且部分厂商色在 `#141413` 画布上不可见。绑定关系仍是数据：`model-descriptions.json` 的 `brands.providers` / `brands.models`，构建期校验引用的标识都已 vendored，写错即构建失败。
