@@ -585,13 +585,20 @@
               item.addEventListener('click', function (e) {
                 e.stopPropagation()
                 closePopover()
-                activator.click()
+                // The activator is rebound on every sync pass
+                // (`item.__dshActivator`), never captured at creation — the
+                // host re-sorts list slots by `order` on each render, so the
+                // entry behind an index changes over time.
+                var live = item.__dshActivator
+                if (live && typeof live.click === 'function') live.click()
               })
               popoverBody.insertBefore(item, settingsItem)
             } else {
-              // Entries are reused by index, so a slot reorder can seat a
-              // different plugin under an existing item — the icon must be
-              // re-synced too, not just the text and badge.
+              // Entries are reused by index: the host re-sorts list slots by
+              // `order` on every render, so a re-sort can seat a different
+              // plugin under an existing item — icon, text, badge AND the
+              // click target must all re-sync, or the label shows one entry
+              // while the click fires the previous occupant's trigger.
               var iEl = item.querySelector('.dsh-claude-popover-item-icon')
               if (iEl && iEl.innerHTML !== iconHtml) iEl.innerHTML = iconHtml
               var tEl = item.querySelector('.dsh-claude-popover-item-text')
@@ -599,7 +606,34 @@
               var bEl = item.querySelector('.dsh-claude-popover-item-badge')
               if (bEl && bEl.textContent !== badge) bEl.textContent = badge
             }
+            // Rebind the click target to the entry currently behind this
+            // index. Done on every pass, for new and reused items alike.
+            item.__dshActivator = activator
           })(footerEntries[f], f)
+        }
+
+        // The host re-sorts list-slot outlets by `order` on every render
+        // (stable, ties keep registration order), and plugins mount
+        // progressively at startup — so the mirror nodes must track the live
+        // footer order on every pass: a later re-sort would otherwise leave
+        // the popover frozen in a stale order that no longer matches the
+        // real controls. Re-append action items and embedded widgets in
+        // entry-index order.
+        var mirrors = []
+        for (var mi = 0; mi < popoverBody.children.length; mi++) {
+          var mirrorNode = popoverBody.children[mi]
+          if (mirrorNode === settingsItem) continue
+          if (mirrorNode.hasAttribute('data-action-index') || mirrorNode.hasAttribute('data-embed-index')) {
+            mirrors.push(mirrorNode)
+          }
+        }
+        mirrors.sort(function (a, b) {
+          var ai = parseInt(a.getAttribute('data-action-index') || a.getAttribute('data-embed-index'), 10) || 0
+          var bi = parseInt(b.getAttribute('data-action-index') || b.getAttribute('data-embed-index'), 10) || 0
+          return ai - bi
+        })
+        for (var mr = 0; mr < mirrors.length; mr++) {
+          popoverBody.insertBefore(mirrors[mr], settingsItem)
         }
       }
 
