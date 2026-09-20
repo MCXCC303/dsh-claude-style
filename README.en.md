@@ -25,17 +25,17 @@
 
 ## Fonts
 
-> **Important: the npm package does NOT ship the font files.** They live in the repository's [`fonts/`](fonts/) folder for download; the skin's font stack (Anthropic Sans UI / Serif body / Mono code) only takes effect once the fonts are installed into the system, then refresh / restart the web GUI.
+> **Important: the Anthropic Sans/Serif fonts are NOT shipped with the npm package** and remain in the repository [`fonts/`](fonts/) for download. The JetBrains Mono code font is now distributed with the plugin. Install the fonts on your system, then refresh / restart web.
 
 | Font | Used for | File |
 |---|---|---|
 | Anthropic Sans Web Text | UI chrome | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
 | Anthropic Serif Web Text | Conversation body / markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
-| Anthropic Mono Variable | Code / code blocks | [`fonts/AnthropicMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicMonoVariable.ttf) |
+| JetBrains Mono Variable | Code / code blocks | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf), [`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
 Install: double-click the `.ttf` on Windows → *Install*; on macOS import via *Font Book*. Refresh the page afterwards.
 
-> The typefaces are Anthropic's property, provided for personal use only and not covered by the MIT license above (see the font notice in [LICENSE](LICENSE)).
+> JetBrains Mono is distributed under the [SIL Open Font License](fonts/OFL.txt). The Anthropic Sans/Serif typefaces are Anthropic's property, provided for personal use only and not covered by the MIT license above. See [LICENSE](LICENSE) for the font notice.
 
 ## Install
 

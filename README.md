@@ -26,17 +26,17 @@
 
 ## 字体
 
-> **重要：npm 包不随包分发字体文件。** 字体文件放在仓库 [`fonts/`](fonts/) 供下载；安装到系统后皮肤的字体栈（Anthropic Sans UI / Serif 正文 / Mono 代码）才会生效，安装后刷新 / 重启 web。
+> **重要：Anthropic 字体（Sans/Serif）不随 npm 包分发，仅在仓库 [`fonts/`](fonts/) 供下载；JetBrains Mono 代码字体已随插件库分发。** 安装到系统后皮肤的字体栈（Anthropic Sans UI / Serif 正文 / JetBrains Mono 代码）才会完整生效，安装后刷新 / 重启 web。
 
 | 字体 | 用途 | 文件 |
 |---|---|---|
 | Anthropic Sans Web Text | 界面 / UI | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
 | Anthropic Serif Web Text | 对话正文 / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
-| Anthropic Mono Variable | 代码 / 代码块 | [`fonts/AnthropicMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicMonoVariable.ttf) |
+| JetBrains Mono Variable | 代码 / 代码块 | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf)、[`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
 安装：Windows 双击 `.ttf` → 「安装」；macOS 用「字体册」导入。安装后刷新页面生效。
 
-> 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可（详见 [LICENSE](LICENSE) 字体声明）。
+> JetBrains Mono 以 [SIL Open Font License](fonts/OFL.txt) 分发；Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可（详见 [LICENSE](LICENSE) 字体声明）。
 
 ## 安装
 

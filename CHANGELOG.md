@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **链接与行内代码样式对齐 Claude**：Markdown 链接下划线静止态 60% 不透明度、hover/focus-visible 恢复 100%，下划线加粗到 1.5px 并保留下划线避让；行内代码与代码块均改用 JetBrains Mono、字号强制与正文一致，行内代码背景矩形 padding 缩到 1px、背景色进一步减淡，边框与 composer 输入卡片非焦点态一致（1px solid --dsw-alias-border-l1）；Markdown 正文行高 -1px、段落间距 -4px。新对话页 composer 卡片去掉填充与阴影。
+- **代码字体从 Anthropic Mono Variable 替换为 JetBrains Mono Variable**：选用 JetBrains Mono 可变字体（含 Italic）作为代码字体，随插件库一并分发，并保留 SIL OFL 许可证。
+- **权限弹层改为 hover 态打开**：权限分段按钮悬停时打开权限弹层，移入弹层取消关闭，移出后延迟关闭；`autoPopover` 关闭时仍保持点击打开/关闭。
+
 ## [0.2.5] - 2026-09-20
 
 ### Added

@@ -26,6 +26,13 @@ body[data-dsh-claude-style] :is(h1, [class*="headline"]) {
    above stays for UI headlines. */
 body[data-dsh-claude-style] [class*="markdown"] {
   font-family: var(--dsw-font-prose);
+  line-height: calc(23px + var(--dsh-content-font-delta, 0px));
+}
+
+/* Claude keeps paragraph rhythm tight: 12px between blocks, not the host’s
+   16px. First/last-child zeroing stays with the host’s !important rules. */
+body[data-dsh-claude-style] [class*="markdown"] p {
+  margin: 12px 0;
 }
 
 /* The host gives its markdown elements their own `font:` shorthand, so the
@@ -91,14 +98,23 @@ body[data-dsh-claude-style] pre {
   border-radius: 8px;
 }
 
+/* Claude sets code blocks at the same size as body copy; the host sizes
+   pre/code itself, so force both to the surrounding body size. */
+body[data-dsh-claude-style] pre,
+body[data-dsh-claude-style] pre code {
+  font-size: 1em !important;
+}
+
 /* Claude's inline-code chip: warm red on the same neutral gray the components
    hover with — both resolve per theme from the palette blocks. */
 body[data-dsh-claude-style] code:not(pre code) {
-  background: var(--dsh-claude-hover-bg);
+  font-family: var(--dsw-font-code);
+  background: var(--dsh-claude-inline-code-bg);
   color: var(--dsh-claude-inline-code-fg);
+  border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 4px;
-  padding: 0.15em 0.4em;
-  font-size: 0.88em;
+  padding: 1px;
+  font-size: 1em !important;
 }
 
 /* Claude's links: blue, underlined at rest, and without the host's
@@ -107,11 +123,16 @@ body[data-dsh-claude-style] [class*="linkIcon"] {
   display: none;
 }
 
-body[data-dsh-claude-style] [class*="markdown"] :is(a, a:hover, a:focus) {
+body[data-dsh-claude-style] [class*="markdown"] :is(a, a:focus) {
   color: var(--dsh-claude-link);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
+  text-decoration-color: var(--dsh-claude-link-underline);
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 2px;
+}
+
+body[data-dsh-claude-style] [class*="markdown"] :is(a:hover, a:focus-visible) {
+  text-decoration-color: var(--dsh-claude-link);
 }
 
 body[data-dsh-claude-style] hr {

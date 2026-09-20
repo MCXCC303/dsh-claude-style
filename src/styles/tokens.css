@@ -42,8 +42,10 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
   --dsw-alias-button-info-hover: #e08a6d;
   --dsw-alias-interactive-bg-active: rgba(217, 119, 87, 0.30);
   --dsh-claude-hover-bg: rgba(255, 255, 255, 0.08);
+  --dsh-claude-inline-code-bg: rgba(255, 255, 255, 0.05);
   --dsh-claude-inline-code-fg: #e8a08a;
   --dsh-claude-link: #8ab4f8;
+  --dsh-claude-link-underline: rgba(138, 180, 248, 0.6);
   /* The host pins the code-block surface on `pre.shiki` with !important, so it
      is only reachable through its own token; #1c1b1a is the value the skin's
      (inert) `pre { background }` rule always meant. */
@@ -96,6 +98,7 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-specific-selector: #f0eee6;
   --dsw-specific-sidebar-fill: #fbfbf9;
   --dsh-claude-hover-bg: rgba(0, 0, 0, 0.08);
+  --dsh-claude-inline-code-bg: rgba(0, 0, 0, 0.05);
   --dsw-alias-interactive-bg-hover: var(--dsh-claude-hover-bg);
   --dsw-shadow-lv2: 0 4px 18px rgba(20, 20, 19, 0.10), 0 1px 3px rgba(20, 20, 19, 0.05);
   --dsw-alias-brand-primary-new-colorprimary-new-color: #d97757;
@@ -115,6 +118,7 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-alias-markdown-code-block-banner: #ffffff;
   --dsh-claude-inline-code-fg: #943333;
   --dsh-claude-link: #184f95;
+  --dsh-claude-link-underline: rgba(24, 79, 149, 0.6);
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) {

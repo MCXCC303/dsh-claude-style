@@ -22,9 +22,14 @@ SOFTWARE.
 
 ---
 
-Font files notice: `fonts/AnthropicSansWebText.ttf`, `fonts/AnthropicSerifWebText.ttf`
-and `fonts/AnthropicMonoVariable.ttf` are proprietary typefaces of Anthropic,
-extracted from Anthropic's web products. They are included in this repository
-for personal use only and are **not** covered by the MIT license above; all
-rights remain with Anthropic. The npm package does not ship these files.
+Font files notice:
+
+- `fonts/AnthropicSansWebText.ttf` and `fonts/AnthropicSerifWebText.ttf` are
+  proprietary typefaces of Anthropic, extracted from Anthropic's web products.
+  They are included in this repository for personal use only and are **not**
+  covered by the MIT license above; all rights remain with Anthropic. The npm
+  package does not ship these files.
+- `fonts/JetBrainsMonoVariable.ttf` and `fonts/JetBrainsMonoItalicVariable.ttf`
+  are JetBrains Mono, distributed under the SIL Open Font License
+  (`fonts/OFL.txt`). They may be redistributed with this plugin.
 

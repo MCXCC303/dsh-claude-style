@@ -31,7 +31,11 @@
     "CHANGELOG.md",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "fonts/JetBrainsMonoVariable.ttf",
+    "fonts/JetBrainsMonoItalicVariable.ttf",
+    "fonts/OFL.txt",
+    "fonts/AUTHORS.txt"
   ],
   "keywords": [
     "dsh",

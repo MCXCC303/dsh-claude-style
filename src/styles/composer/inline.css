@@ -68,7 +68,7 @@ body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorks
   min-height: 162px !important;
   height: auto !important;
   overflow: visible !important;
-  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
   position: relative !important;
   z-index: 4 !important;
   transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
@@ -81,12 +81,12 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:n
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
   border-color: rgba(20, 20, 19, 0.18) !important;
-  box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.065), 0 4px 12px rgba(20, 20, 19, 0.025), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.065), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
   border-color: rgba(250, 249, 245, 0.22) !important;
-  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 4px 16px rgba(0, 0, 0, 0.20), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
 }
 /* The attachment rail nests two levels: ComposerAttachments' outer rail wraps
    AttachmentRail's scrolling inner rail, and BOTH substring-match

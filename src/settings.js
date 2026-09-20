@@ -133,7 +133,7 @@
         row(
           'autoPopover',
           settingsCopy('autoPopoverTitle', 'Open popovers on hover'),
-          settingsCopy('autoPopoverDesc', 'Hover opens the account and model popovers. Off switches them to click-to-open.'),
+          settingsCopy('autoPopoverDesc', 'Hover opens the account, model, and permission popovers. Off switches them to click-to-open.'),
           toggle(prefs.autoPopover, function (value) { write({ autoPopover: value }) }),
         ),
         row(

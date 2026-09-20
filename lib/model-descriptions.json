@@ -58,7 +58,7 @@
     },
     "autoPopoverDesc": {
       "zh": "鼠标移入即展开账户、模型和权限弹层。",
-      "en": "Hover opens the account and model popovers. Off switches them to click-to-open."
+      "en": "Hover opens the account, model, and permission popovers. Off switches them to click-to-open."
     },
     "composerTitle": {
       "zh": "对话框样式改动范围",

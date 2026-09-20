@@ -73,6 +73,19 @@ body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card]:focus-withi
   box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 6px 24px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.11), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base);
 }
 
+/* New-conversation composer: the card keeps its outline and the
+   card→footer-tray seam, but drops the fill and shadow. */
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card],
+body[data-dsh-claude-style] :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card]:focus-within,
+body[data-dsh-claude-style] :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card]:focus-within {
+  box-shadow: none !important;
+}
+
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:has([data-composer-card]:focus-within) > [class*="heroWorkspaceRow"] {
   border-color: rgba(20, 20, 19, 0.18);
 }

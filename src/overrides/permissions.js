@@ -8,6 +8,7 @@
       var permBtn = null
       var permLabel = null
       var permPopover = null
+      var permHoverIntent = null
 
       function buildSegments(onPick) {
         var group = document.createElement('div')
@@ -111,6 +112,7 @@
         }
 
         function openPerm() {
+          if (permHoverIntent) permHoverIntent.cancel()
           var rect = btn.getBoundingClientRect()
           popover.style.left = Math.max(8, rect.left) + 'px'
           popover.style.bottom = Math.max(8, window.innerHeight - rect.top + 6) + 'px'
@@ -118,6 +120,21 @@
           btn.setAttribute('aria-expanded', 'true')
           popover.setAttribute('data-open', 'true')
         }
+
+        permHoverIntent = createHoverIntent(openPerm, closePermMenu, 150)
+
+        btn.addEventListener('mouseenter', function () {
+          if (readPrefs().autoPopover) openPerm()
+        })
+        btn.addEventListener('mouseleave', function () {
+          if (readPrefs().autoPopover) permHoverIntent.scheduleClose()
+        })
+        popover.addEventListener('mouseenter', function () {
+          permHoverIntent.cancel()
+        })
+        popover.addEventListener('mouseleave', function () {
+          permHoverIntent.scheduleClose()
+        })
 
         btn.addEventListener('click', function (e) {
           e.stopPropagation()
@@ -462,6 +479,7 @@
       }
 
       return function () {
+        if (permHoverIntent) permHoverIntent.cancel()
         if (permDocPointerListener) {
           document.removeEventListener('pointerdown', permDocPointerListener)
           permDocPointerListener = null
