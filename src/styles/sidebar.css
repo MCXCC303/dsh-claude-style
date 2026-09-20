@@ -9,11 +9,11 @@
    brandName box, and each wordmark takes its natural width from that height
    via the artwork aspect ratios (Claude 4.214:1, ANTHROPIC ~8.94:1). The
    wordmark keeps a max-width so a longer brand can never clip the row. */
-body[data-dsh-claude-style] :is([class*="brandMark"], [class*="railMark"]) > * {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% :is([class*="brandMark"], [class*="railMark"]) > * {
   display: none !important;
 }
 
-body[data-dsh-claude-style] :is([class*="brandMark"], [class*="railMark"])::before {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% :is([class*="brandMark"], [class*="railMark"])::before {
   content: "";
   display: block;
   flex: none;
@@ -24,18 +24,18 @@ body[data-dsh-claude-style] :is([class*="brandMark"], [class*="railMark"])::befo
 }
 
 /* Claude (default): starburst mark + the Claude wordmark. */
-body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) :is([class*="brandMark"], [class*="railMark"])::before {
+body[data-dsh-claude-style][%%BRAND_ATTR%%="%%BRAND_CLAUDE%%"] :is([class*="brandMark"], [class*="railMark"])::before {
   width: 18px;
   height: 18px;
   -webkit-mask: %%CLAUDE_MARK%% center / contain no-repeat;
   mask: %%CLAUDE_MARK%% center / contain no-repeat;
 }
 
-body[data-dsh-claude-style] [class*="brandIdentity"] > [class*="brandName"] > * {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% [class*="brandIdentity"] > [class*="brandName"] > * {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [class*="brandIdentity"] > [class*="brandName"]::before {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% [class*="brandIdentity"] > [class*="brandName"]::before {
   content: "";
   display: block;
   flex: none;
@@ -45,7 +45,7 @@ body[data-dsh-claude-style] [class*="brandIdentity"] > [class*="brandName"]::bef
   background-size: contain;
 }
 
-body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) [class*="brandIdentity"] > [class*="brandName"]::before {
+body[data-dsh-claude-style][%%BRAND_ATTR%%="%%BRAND_CLAUDE%%"] [class*="brandIdentity"] > [class*="brandName"]::before {
   width: %%CLAUDE_WORD_WIDTH%%px;
   max-width: 100%;
   height: 18px;

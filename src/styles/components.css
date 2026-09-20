@@ -499,9 +499,16 @@ body[data-dsh-claude-style] [class*="footArea"] > .dsh-claude-popover-item {
   display: none !important;
 }
 
+/* ---------- Footer takeover ----------
+   Everything in this block modifies the HOST's own footer (it hides entries and
+   zeroes the containers that host them) and exists only because the skin
+   replaces that footer with its account row. The "Collapse the sidebar settings
+   area" preference turns the whole takeover off, so each rule below carries
+   %%FOOTER_ATTR%% — the skin sets it on <body> only while the takeover is on,
+   and with it absent the host footer renders exactly as shipped. */
 /* Hide original trigger buttons in footArea while keeping containers intact for modals */
-body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
-body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
   display: none !important;
 }
 /* Both containers stay mounted at zero size so the overlays they host keep
@@ -516,7 +523,7 @@ body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] :is([
    hands real inherited metrics down; footerActions still hosts plain plugin
    entries whose stray in-flow text only the zeroing keeps invisible, so the
    full collapse stays there. */
-body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] {
   position: static !important;
   width: 0 !important;
   height: 0 !important;
@@ -524,7 +531,7 @@ body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] {
   padding: 0 !important;
   overflow: visible !important;
 }
-body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] {
   position: static !important;
   width: 0 !important;
   height: 0 !important;
@@ -543,10 +550,10 @@ body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] {
    keep their subtree visible — the overlay must stay reachable after the
    mirrored popover item opens it — but the entry box itself collapses so it
    never paints inside the zero-sized footerActions container. */
-body[data-dsh-claude-style] [class*="footArea"] [data-dsh-claude-footer-hidden] {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] [data-dsh-claude-footer-hidden] {
   display: none !important;
 }
-body[data-dsh-claude-style] [class*="footArea"] [data-dsh-claude-footer-entry] {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] [data-dsh-claude-footer-entry] {
   width: 0 !important;
   height: 0 !important;
   min-width: 0 !important;
@@ -610,7 +617,7 @@ body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-acco
    in the rail. Reachability is unaffected — the popover's settings item opens
    the real trigger programmatically (`realTrigger.click()`), which
    display:none does not block. */
-body[data-dsh-claude-style] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]) {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]) {
   display: none !important;
 }
 
@@ -674,10 +681,12 @@ body[data-dsh-claude-style] .agy-tv-pre {
   overflow-x: auto;
 }
 
-/* ---------- Claude Code layout: settings section (brand) ---------- */
-/* The skin's own page in the settings dialog. It borrows the composer's
-   segment language so the two controls read as one design. */
-body[data-dsh-claude-style] .dsh-claude-brand-section {
+/* ---------- Claude Code layout: settings page ---------- */
+/* The skin's own page in the settings dialog. Its segmented controls reuse the
+   composer permission picker's classes (`.dsh-claude-segments` /
+   `.dsh-claude-segment`), so the two are literally one control rather than two
+   lookalikes; only the row shell and the switch are new here. */
+body[data-dsh-claude-style] .dsh-claude-settings {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -687,13 +696,13 @@ body[data-dsh-claude-style] .dsh-claude-brand-section {
   font-family: var(--dsw-font-family);
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-title {
+body[data-dsh-claude-style] .dsh-claude-settings-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-card {
+body[data-dsh-claude-style] .dsh-claude-settings-row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -702,65 +711,66 @@ body[data-dsh-claude-style] .dsh-claude-brand-card {
   border-radius: 12px;
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-card-text {
+body[data-dsh-claude-style] .dsh-claude-settings-row-text {
   flex: 1;
   min-width: 0;
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-card-title {
+body[data-dsh-claude-style] .dsh-claude-settings-row-title {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
   color: var(--dsw-alias-label-primary);
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-card-desc {
+body[data-dsh-claude-style] .dsh-claude-settings-row-desc {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--dsw-alias-label-tertiary);
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-segments {
+body[data-dsh-claude-style] .dsh-claude-settings-error {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-state-error-primary, #c0392b);
+}
+
+/* The switch borrows the segment track's palette and radius so a page of rows
+   reads as one control set rather than two. */
+body[data-dsh-claude-style] .dsh-claude-settings-switch {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 7px;
-  background: var(--dsw-specific-selector);
-}
-
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-brand-segments {
-  background: #f6f6f4;
-}
-
-body[data-dsh-claude-style] .dsh-claude-brand-option {
   appearance: none;
   margin: 0;
   border: 0;
   cursor: pointer;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-  padding: 3px 12px;
-  border-radius: 7px;
-  transition: background-color .1s, color .1s;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--dsw-specific-selector);
+  transition: background-color .12s ease;
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-option:hover:not([data-active="true"]) {
-  color: var(--dsw-alias-label-primary);
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-settings-switch {
+  background: #f6f6f4;
 }
 
-body[data-dsh-claude-style] .dsh-claude-brand-option[data-active="true"] {
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-layer-3);
+body[data-dsh-claude-style] .dsh-claude-settings-switch[data-on] {
+  background: var(--dsw-alias-brand-primary, #d97757);
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-brand-option[data-active="true"] {
-  background: var(--dsw-alias-bg-overlay);
-  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.08);
+body[data-dsh-claude-style] .dsh-claude-settings-switch-knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-overlay, #ffffff);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.18);
+  transition: transform .12s ease;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-switch[data-on] .dsh-claude-settings-switch-knob {
+  transform: translateX(16px);
 }

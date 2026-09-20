@@ -4,15 +4,15 @@
    slot wrapper, not always a bare svg — and the mark is painted on the hitbox,
    so React keeps owning its own node. The hero keeps the clay fill in both
    brands, matching the shipped accent treatment. */
-body[data-dsh-claude-style] [class*="fishHitbox"] > * {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% [class*="fishHitbox"] > * {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [class*="fishHitbox"] svg {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% [class*="fishHitbox"] svg {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [class*="fishHitbox"]::before {
+body[data-dsh-claude-style]%%BRAND_ACTIVE%% [class*="fishHitbox"]::before {
   content: "";
   flex: none;
   width: 42.5px;
@@ -22,7 +22,7 @@ body[data-dsh-claude-style] [class*="fishHitbox"]::before {
   background-size: contain;
 }
 
-body[data-dsh-claude-style]:not([%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"]) [class*="fishHitbox"]::before {
+body[data-dsh-claude-style][%%BRAND_ATTR%%="%%BRAND_CLAUDE%%"] [class*="fishHitbox"]::before {
   background-image: %%CLAUDE_MARK_CLAY%%;
 }
 
@@ -44,6 +44,13 @@ body[data-dsh-claude-style] [class*="headline"]:has([class*="fishHitbox"]) {
 }
 
 /* ---------- Claude Code layout: composer input + buttons ---------- */
+/* @composer-gate */
+/* Everything from here down is the "Composer restyle" preference's territory:
+   the build stamps `[data-dsh-claude-composer-active]` onto every rule below
+   this marker, and the skin sets that attribute on <body> only while the page
+   on screen is a surface the preference covers. Above the marker sits the hero
+   brand mark and headline, which belong to the brand preference instead — a
+   composer scope of "conversation only" must not revert them. */
 /* The composer card is the input box: one step up in type size, pure white
    so it separates from the canvas, and an outline 4px tighter than the
    shipped 22px. */

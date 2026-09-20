@@ -84,11 +84,76 @@ function loadTokens() {
   const factory = new Function(`
     ${constants}
     return {
-      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC,
+      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC, BRAND_CLAUDE, FOOTER_ATTR, COMPOSER_ATTR,
+      // "a skin brand is selected": the brand preference's third value is
+      // "off", which must match neither variant — so the shared rules that
+      // hide the host's mark and paint the ::before are gated on this rather
+      // than on :not(anthropic), which "off" would satisfy.
+      BRAND_ACTIVE: ':is([' + BRAND_ATTR + '="' + BRAND_CLAUDE + '"], [' + BRAND_ATTR + '="' + BRAND_ANTHROPIC + '"])',
       CLAUDE_WORD_WIDTH: (18 * CLAUDE_WORD_ASPECT).toFixed(1),
     }
   `)
   return factory()
+}
+
+/** Marker delimiting the region of a stylesheet the composer preference gates. */
+const COMPOSER_GATE_MARKER = '/* @composer-gate */'
+/** The selector root every skin rule hangs off; the gate is stamped onto it. */
+const SELECTOR_ROOT = 'body[data-dsh-claude-style]'
+
+/**
+ * Stamp the composer gate onto every rule below the `@composer-gate` marker.
+ *
+ * The "Composer restyle" preference decides which surfaces the skin may
+ * repaint, and both surfaces are mutually exclusive per view — the new
+ * conversation page renders the hero composer, a session renders the inline
+ * one — so the decision is page-level and one attribute on `<body>` carries it.
+ * That keeps this a per-rule stamp rather than a selector rewrite: every rule
+ * below the marker is turned on and off together, and the skin decides whether
+ * the page on screen is a surface the preference covers.
+ *
+ * Lines inside comments are skipped, and a rule that carries the root but no
+ * gate after the pass is a hard error — a silently ungated rule would ignore
+ * the preference.
+ *
+ * @param file - stylesheet name, for diagnostics.
+ * @param text - stylesheet source (LF-normalised).
+ * @returns the gated source.
+ */
+function gateComposerScope(file, text) {
+  const markerAt = text.indexOf(COMPOSER_GATE_MARKER)
+  if (markerAt === -1) throw new Error(`build: src/styles/${file} is missing the ${COMPOSER_GATE_MARKER} marker`)
+  const gate = `[%%COMPOSER_ATTR%%]`
+  const head = text.slice(0, markerAt + COMPOSER_GATE_MARKER.length)
+  const body = text.slice(markerAt + COMPOSER_GATE_MARKER.length)
+
+  let inComment = false
+  let stamped = 0
+  const out = body.split('\n').map((line) => {
+    if (inComment) {
+      if (line.includes('*/')) inComment = false
+      return line
+    }
+    const commentAt = line.indexOf('/*')
+    if (commentAt !== -1 && !line.includes('*/', commentAt)) {
+      inComment = true
+      return line
+    }
+    // A selector line starts a block (`{`) or continues a selector list (`,`).
+    if (!/[,{]\s*$/.test(line) || !line.includes(SELECTOR_ROOT)) return line
+    stamped += 1
+    return line.split(SELECTOR_ROOT).join(SELECTOR_ROOT + gate)
+  })
+
+  const gated = out.join('\n')
+  if (stamped === 0) throw new Error(`build: src/styles/${file} has no rules below ${COMPOSER_GATE_MARKER}`)
+  const missed = gated
+    .split('\n')
+    .filter((line) => /[,{]\s*$/.test(line) && line.includes(SELECTOR_ROOT) && !line.includes(gate))
+  if (missed.length > 0) {
+    throw new Error(`build: src/styles/${file} left ${missed.length} rule(s) ungated: ${missed[0].trim().slice(0, 80)}`)
+  }
+  return head + gated
 }
 
 /**
@@ -152,7 +217,9 @@ function validateModelCopy(doc) {
   }
 
   for (const [id, pair] of Object.entries(doc.exact)) requirePair(`exact["${id}"]`, pair)
-  for (const [key, pair] of Object.entries(doc.ui ?? {})) requirePair(`ui["${key}"]`, pair)
+  for (const group of ['ui', 'settings']) {
+    for (const [key, pair] of Object.entries(doc[group] ?? {})) requirePair(`${group}["${key}"]`, pair)
+  }
   for (const [from, to] of Object.entries(doc.aliases ?? {})) {
     if (typeof to !== 'string' || !(to in doc.exact)) fail(`alias "${from}" points at unknown entry "${to}"`)
   }
@@ -178,8 +245,9 @@ function main() {
 
   const cssText = STYLE_FILES
     .map((file) => {
-      const raw = fs.readFileSync(path.join(SRC, 'styles', file), 'utf8')
-      return substitute(file, raw.replace(/\r\n/g, '\n'), tokens).replace(/\n+$/, '')
+      let text = fs.readFileSync(path.join(SRC, 'styles', file), 'utf8').replace(/\r\n/g, '\n')
+      if (file === 'composer.css') text = gateComposerScope(file, text)
+      return substitute(file, text, tokens).replace(/\n+$/, '')
     })
     .join('\n\n')
 

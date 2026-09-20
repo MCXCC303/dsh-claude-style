@@ -137,14 +137,30 @@
     var SEGMENTS_CLASS = 'dsh-claude-segments'
     var SEGMENT_CLASS = 'dsh-claude-segment'
 
+    /**
+     * Preferences, persisted in the host settings namespace `claude-style`
+     * (lib/index.js owns it; src/context.js reads and writes it). Each value is
+     * mirrored onto the document as an attribute so the stylesheet decides what
+     * a preference means, and the defaults here are the shipped behaviour.
+     */
+
     /** Brand marks selectable from the settings page. `claude` is the default. */
     var BRAND_CLAUDE = 'claude'
     var BRAND_ANTHROPIC = 'anthropic'
+    /** Leave the brand area entirely to the host: neither brand variant matches. */
+    var BRAND_OFF = 'off'
     var DEFAULT_BRAND = BRAND_CLAUDE
-    /** localStorage key holding the chosen brand. */
-    var BRAND_STORAGE_KEY = 'dsh-claude-style:brand'
     /** The document attribute the stylesheet switches on. */
     var BRAND_ATTR = 'data-dsh-claude-brand'
+
+    /** Present while the skin takes over the sidebar footer (settings area + account row). */
+    var FOOTER_ATTR = 'data-dsh-claude-footer-takeover'
+    /** Present while the composer restyle applies to the page currently shown. */
+    var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
+    /** Composer surfaces the restyle may cover, in settings order. */
+    var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
+    /** Route the browser half reads and writes preferences through (lib/index.js). */
+    var PREFS_ROUTE = '/dsh-claude-style/prefs'
 
     /** Wordmark aspect ratio; scripts/build.mjs sizes the sidebar word height from it (geometry lives in src/assets/claude-word.svg). */
     var CLAUDE_WORD_ASPECT = 512.22 / 121.54

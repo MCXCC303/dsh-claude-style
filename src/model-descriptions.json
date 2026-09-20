@@ -10,6 +10,40 @@
     "moreLabel": { "zh": "More models", "en": "More models" },
     "noEffort": { "zh": "当前模型未提供推理等级。", "en": "This model offers no reasoning levels." }
   },
+  "settings": {
+    "title": { "zh": "Claude Style", "en": "Claude Style" },
+    "brandTitle": { "zh": "修改品牌标识", "en": "Brand mark" },
+    "brandDesc": {
+      "zh": "侧栏显示哪个品牌标；选「关闭」则保持宿主原有的品牌区不动。",
+      "en": "Which brand mark the sidebar shows. \"Off\" leaves the host's own brand area untouched."
+    },
+    "collapseTitle": { "zh": "收起侧栏设置区", "en": "Collapse the sidebar settings area" },
+    "collapseDesc": {
+      "zh": "把侧栏底栏的设置入口收进账户弹层。关闭后底栏完全交还宿主——不做账户行，也不镜像弹层项。",
+      "en": "Fold the sidebar footer's settings entry into the account popover. Off hands the footer back to the host entirely: no account row, no mirrored popover entries."
+    },
+    "autoPopoverTitle": { "zh": "弹层自动弹出", "en": "Open popovers on hover" },
+    "autoPopoverDesc": {
+      "zh": "鼠标移入即展开账户与模型弹层。关闭后改为点击展开。",
+      "en": "Hover opens the account and model popovers. Off switches them to click-to-open."
+    },
+    "composerTitle": { "zh": "对话框修改", "en": "Composer restyle" },
+    "composerDesc": {
+      "zh": "皮肤对输入区的重绘范围：新会话页、对话内，或两者。首页品牌区与标题不受影响。",
+      "en": "Which input area the skin restyles: the new-conversation page, the conversation, or both. The hero brand mark and headline are unaffected."
+    },
+    "brandOff": { "zh": "关闭", "en": "Off" },
+    "brandClaude": { "zh": "Claude", "en": "Claude" },
+    "brandAnthropic": { "zh": "Anthropic", "en": "Anthropic" },
+    "scopeOff": { "zh": "关闭", "en": "Off" },
+    "scopeHero": { "zh": "仅首页", "en": "Home only" },
+    "scopeConversation": { "zh": "仅对话", "en": "Conversation only" },
+    "scopeAll": { "zh": "全部", "en": "All" },
+    "unavailable": {
+      "zh": "设置存储不可用，改动不会被保存。",
+      "en": "The settings store is unavailable, so changes will not be saved."
+    }
+  },
   "exact": {
     "deepseek-flash": {
       "zh": "最新旗舰 Flash：百万上下文，长程 Agent 的 KV 缓存成本降到约 1/4。",

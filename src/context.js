@@ -55,45 +55,150 @@
     }
 
     /**
-     * Read the persisted brand choice.
+     * Skin preferences.
      *
-     * Storage is the renderer's own localStorage, which DSH backs with the
-     * `persist:dsh-desktop-renderer` partition, so the value survives an app
-     * restart. Every access is guarded: a locked-down or full store must not
-     * break the theme, so an unreadable value simply falls back to the default.
+     * The authoritative store is the host settings namespace `claude-style`,
+     * reached through this plugin's own route: the configuration client
+     * (`settingsScope`) only reaches namespaces the api-proxy exposes to it, and
+     * a plugin's own namespace is not on that list. `src/../lib/index.js` owns
+     * the namespace and the route; this side only reads and writes it.
      *
-     * @returns one of BRAND_CLAUDE / BRAND_ANTHROPIC.
+     * Every value is mirrored onto the document as an attribute, so the
+     * stylesheet — not this module — decides what a preference means visually.
+     * Until the first read settles (and if it fails) the defaults below hold,
+     * which is exactly the shipped behaviour.
      */
-    function readStoredBrand() {
-      try {
-        var raw = window.localStorage.getItem(BRAND_STORAGE_KEY)
-        if (raw === BRAND_ANTHROPIC) return BRAND_ANTHROPIC
-        if (raw === BRAND_CLAUDE) return BRAND_CLAUDE
-      } catch (error) {
-        /* storage unavailable — fall through to the default */
-      }
-      return DEFAULT_BRAND
+    var prefs = {
+      brand: DEFAULT_BRAND,
+      collapseFooter: true,
+      autoPopover: true,
+      composerScope: 'all',
+    }
+    var prefsRevision
+    var prefsAvailable = false
+    var prefsListeners = []
+
+    /** The current preferences (live object; treat as read-only). */
+    function readPrefs() {
+      return prefs
     }
 
-    /** Persist the brand choice, ignoring a store that refuses writes. */
-    function writeStoredBrand(brand) {
-      try {
-        window.localStorage.setItem(BRAND_STORAGE_KEY, brand)
-      } catch (error) {
-        /* storage unavailable — the session still shows the chosen brand */
+    /** Observe preference changes; returns the unsubscriber. */
+    function subscribePrefs(listener) {
+      prefsListeners.push(listener)
+      return function () {
+        var index = prefsListeners.indexOf(listener)
+        if (index !== -1) prefsListeners.splice(index, 1)
       }
     }
 
     /**
-     * Apply a brand to the document. The stylesheet keys off the attribute, so
-     * this is the single mutation that repaints the sidebar brand; keeping it to
-     * one attribute write is what makes the switch cheap and idempotent.
+     * Adopt a preference set: mirror it onto the document, then notify.
+     * @param next - resolved preferences from the host.
+     */
+    function adoptPrefs(next) {
+      prefs = next
+      // The brand is one attribute write; the other preferences gate rules the
+      // stylesheet and the scheduler read directly.
+      document.body.setAttribute(BRAND_ATTR, next.brand)
+      if (next.collapseFooter) document.body.setAttribute(FOOTER_ATTR, '')
+      else document.body.removeAttribute(FOOTER_ATTR)
+      var listeners = prefsListeners.slice()
+      for (var i = 0; i < listeners.length; i++) {
+        try {
+          listeners[i](next)
+        } catch (error) { /* one bad listener must not stop the rest */ }
+      }
+    }
+
+    /**
+     * Read the preferences once. A failure keeps the defaults and leaves the
+     * settings page to report that the store is unavailable.
+     */
+    function loadPrefs() {
+      if (typeof fetch !== 'function') return
+      try {
+        fetch(PREFS_ROUTE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: '{}',
+        })
+          .then(function (response) {
+            return response.json()
+          })
+          .then(function (data) {
+            if (!data || data.ok !== true) return
+            prefsRevision = data.revision
+            prefsAvailable = data.available === true
+            adoptPrefs(normalizePrefs(data.value))
+          })
+          .catch(function () { /* defaults stay */ })
+      } catch (error) { /* no fetch: defaults stay */ }
+    }
+
+    /** Clamp one host value into the preference shape (the host already did this). */
+    function normalizePrefs(value) {
+      var section = value && typeof value === 'object' ? value : {}
+      return {
+        brand: section.brand === BRAND_ANTHROPIC || section.brand === BRAND_OFF ? section.brand : BRAND_CLAUDE,
+        collapseFooter: section.collapseFooter !== false,
+        autoPopover: section.autoPopover !== false,
+        composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
+      }
+    }
+
+    /**
+     * Write a partial preference change.
      *
-     * @param brand - the brand to show; unknown values fall back to the default.
+     * The revision travels with the write so a concurrent move of the namespace
+     * is rejected rather than silently overwritten; on that rejection the
+     * authoritative value is re-read.
+     *
+     * @param patch - preference keys to change.
+     * @returns a promise for the resolved preferences, or null when unavailable.
+     */
+    function savePrefs(patch) {
+      if (typeof fetch !== 'function') return Promise.resolve(null)
+      var body = { revision: prefsRevision }
+      for (var key in patch) body[key] = patch[key]
+      return fetch(PREFS_ROUTE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            return { status: response.status, data: data }
+          })
+        })
+        .then(function (result) {
+          var data = result.data
+          if (data && data.ok === true) {
+            prefsRevision = data.revision
+            prefsAvailable = data.available === true
+            adoptPrefs(normalizePrefs(data.value))
+            return prefs
+          }
+          // Conflict or refusal: re-read rather than guess.
+          loadPrefs()
+          return null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    /**
+     * The brand to show. `off` leaves the brand area entirely to the host, so
+     * the stylesheet matches neither brand variant for it.
+     *
+     * @param brand - the stored choice.
      * @returns the brand actually applied.
      */
     function applyBrand(brand) {
-      var next = brand === BRAND_ANTHROPIC ? BRAND_ANTHROPIC : BRAND_CLAUDE
+      var next = brand === BRAND_ANTHROPIC || brand === BRAND_OFF ? brand : BRAND_CLAUDE
       document.body.setAttribute(BRAND_ATTR, next)
       return next
     }
@@ -126,3 +231,150 @@
       } catch (e) {}
       return 'User'
     }
+
+    /**
+     * Host context reference for services that need to read host state
+     * (e.g. locale) outside of apply(ctx)'s direct call stack.
+     */
+    var hostCtx = null
+    function setHostContext(ctx) {
+      hostCtx = ctx
+    }
+
+    /**
+     * Model & settings localized copy.
+     *
+     * The copy document ships as `model-descriptions.json` beside the bundle.
+     * Both the model picker (src/overrides.js) and the settings section
+     * (src/settings.js) consume this copy, so the state lives here in Zone 3
+     * where both zones can reach it.
+     */
+    var modelCopy = null
+    var modelCopyRequested = false
+    var modelCopyListeners = []
+
+    function onModelCopyLoaded(listener) {
+      modelCopyListeners.push(listener)
+      return function () {
+        var index = modelCopyListeners.indexOf(listener)
+        if (index !== -1) modelCopyListeners.splice(index, 1)
+      }
+    }
+
+    /**
+     * Fetch the model copy document the host half serves.
+     */
+    function loadModelCopy() {
+      if (modelCopyRequested) return
+      modelCopyRequested = true
+      if (typeof fetch !== 'function') return
+      try {
+        fetch(MODEL_COPY_ROUTE, { credentials: 'same-origin' })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status)
+            return response.json()
+          })
+          .then(function (doc) {
+            modelCopy = indexModelCopy(doc)
+            if (modelCopy === null) return
+            var listeners = modelCopyListeners.slice()
+            for (var i = 0; i < listeners.length; i++) {
+              try {
+                listeners[i](modelCopy)
+              } catch (error) { /* listener error */ }
+            }
+          })
+          .catch(function () { /* fallback copy stays */ })
+      } catch (error) { /* no fetch: fallback copy stays */ }
+    }
+
+    /**
+     * Compile a copy document into the shape lookups want: a folded id index,
+     * the alias table, and the rule lists with their regexps built once.
+     * @param doc - parsed document; anything malformed is dropped, not fatal.
+     * @returns the index, or null when the document is unusable.
+     */
+    function indexModelCopy(doc) {
+      if (!doc || typeof doc !== 'object') return null
+      var exact = doc.exact && typeof doc.exact === 'object' ? doc.exact : {}
+      var index = {
+        ui: doc.ui && typeof doc.ui === 'object' ? doc.ui : {},
+        settings: doc.settings && typeof doc.settings === 'object' ? doc.settings : {},
+        exact: exact,
+        aliases: doc.aliases && typeof doc.aliases === 'object' ? doc.aliases : {},
+        fallback: typeof doc.fallback === 'string' && doc.fallback ? doc.fallback : MODEL_COPY_FALLBACK_LOCALE,
+        folded: {},
+        families: [],
+        tiers: [],
+      }
+      for (var id in exact) index.folded[normalizeModelId(id)] = exact[id]
+      var compile = function (rules) {
+        var out = []
+        for (var i = 0; i < (rules || []).length; i++) {
+          var rule = rules[i]
+          if (!rule || typeof rule.match !== 'string') continue
+          try {
+            out.push({ re: new RegExp(rule.match, 'i'), key: rule.key, text: rule.text })
+          } catch (error) { /* a malformed rule is skipped, not fatal */ }
+        }
+        return out
+      }
+      index.families = compile(doc.families)
+      index.tiers = compile(doc.tiers)
+      return index
+    }
+
+    /** Fold case and separators so `glm-5.3-flash` and `glm-5-3-flash` agree. */
+    function normalizeModelId(id) {
+      return String(id === void 0 || id === null ? '' : id).toLowerCase().replace(/[^a-z0-9]/g, '')
+    }
+
+    /** The shell's active locale id, or the document fallback when it cannot be read. */
+    function activeLocale(ctx) {
+      var c = ctx || hostCtx
+      try {
+        if (c && typeof c.get === 'function') {
+          var locale = c.get('locale')
+          if (locale && typeof locale.getSnapshot === 'function') {
+            var active = locale.getSnapshot().active
+            if (typeof active === 'string' && active) return active
+          }
+        }
+      } catch (error) { /* no locale service: keep the fallback language */ }
+      return modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
+    }
+
+    /** One localized string out of a `{ locale: text }` pair, fallback locale last. */
+    function localized(pair, ctx) {
+      if (!pair || typeof pair !== 'object') return ''
+      var text = pair[activeLocale(ctx)]
+      if (typeof text === 'string' && text) return text
+      var fallback = modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
+      var backstop = pair[fallback]
+      return typeof backstop === 'string' ? backstop : ''
+    }
+
+    /**
+     * One picker label: the document's localized string, else the neutral
+     * English constant the bundle carries. `{name}` placeholders are filled
+     * from `params`, so a label with a slot stays translatable.
+     */
+    function copyLabel(key, fallback, params) {
+      var text = modelCopy === null || !modelCopy.ui ? '' : localized(modelCopy.ui[key])
+      if (!text) text = fallback
+      if (!params) return text
+      return text.replace(/\{(\w+)\}/g, function (match, name) {
+        return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+      })
+    }
+
+    /**
+     * One settings-page string. The settings copy rides the same document as
+     * the picker copy, so the page follows the shell language too — and the
+     * English constants stay as the fallback for a failed fetch.
+     */
+    function settingsCopy(key, fallback) {
+      var text = modelCopy === null || !modelCopy.settings ? '' : localized(modelCopy.settings[key])
+      return text || fallback
+    }
+

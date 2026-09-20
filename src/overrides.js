@@ -100,6 +100,7 @@
         group.className = SEGMENTS_CLASS
         group.setAttribute('role', 'radiogroup')
         group.setAttribute('aria-label', 'Permission')
+        group.setAttribute('data-composer-segments', '')
         for (var i = 0; i < PERMISSION_SEGMENTS.length; i++) {
           var spec = PERMISSION_SEGMENTS[i]
           var item = document.createElement('button')
@@ -391,6 +392,15 @@
           allCards[c].setAttribute('data-composer-variant', isHero ? 'hero' : 'inline')
         }
 
+        // The composer preference is page-level: the two surfaces are mutually
+        // exclusive per view (a page is either the new-conversation hero or a
+        // session), so one attribute on <body> carries the decision and the
+        // gated stylesheet does the rest.
+        var composerScope = readPrefs().composerScope
+        var composerOn = composerScope === 'all' ||
+          (isHero ? composerScope === 'hero' : composerScope === 'conversation')
+        if (composerOn) document.body.setAttribute(COMPOSER_ATTR, '')
+        else document.body.removeAttribute(COMPOSER_ATTR)
         var trigger = findAccessTrigger()
         if (trigger === null) return
         var host = trigger.parentElement
@@ -400,7 +410,7 @@
         var preset = session === null ? null : currentPreset(session)
 
         var existingPermContainers = document.querySelectorAll('.dsh-claude-perm-container')
-        var existingSegments = document.querySelectorAll('.' + SEGMENTS_CLASS)
+        var existingSegments = document.querySelectorAll('.' + SEGMENTS_CLASS + '[data-composer-segments]')
 
         if (isHero) {
           for (var i = 0; i < existingPermContainers.length; i++) {
@@ -524,113 +534,7 @@
       var modelCopyRequested = false
       /** Locale subscription, so switching the shell language repaints the picker. */
       var localeUnsubscribe = null
-
-      /**
-       * Fetch the model copy document the host half serves. It is data, not code
-       * (see src/model-descriptions.json), so the table can grow without a
-       * rebuild. Until it arrives — and if it never does — the picker paints the
-       * catalog's own text, which is why a failure here is silent: a missing
-       * description line is a smaller defect than a picker that cannot open.
-       */
-      function loadModelCopy() {
-        if (modelCopyRequested) return
-        modelCopyRequested = true
-        if (typeof fetch !== 'function') return
-        try {
-          fetch(MODEL_COPY_ROUTE, { credentials: 'same-origin' })
-            .then(function (response) {
-              if (!response.ok) throw new Error('HTTP ' + response.status)
-              return response.json()
-            })
-            .then(function (doc) {
-              modelCopy = indexModelCopy(doc)
-              if (modelCopy === null) return
-              // The rows are already built with the fallback copy; drop the
-              // signatures so the next pass repaints them from the document.
-              modelBodySig = ''
-              modelSubSig = ''
-              schedule()
-            })
-            .catch(function () { /* the catalog's own text stays in place */ })
-        } catch (error) { /* no fetch: same fallback */ }
-      }
-
-      /**
-       * Compile a copy document into the shape lookups want: a folded id index,
-       * the alias table, and the rule lists with their regexps built once.
-       * @param doc - parsed document; anything malformed is dropped, not fatal.
-       * @returns the index, or null when the document is unusable.
-       */
-      function indexModelCopy(doc) {
-        if (!doc || typeof doc !== 'object') return null
-        var exact = doc.exact && typeof doc.exact === 'object' ? doc.exact : {}
-        var index = {
-          ui: doc.ui && typeof doc.ui === 'object' ? doc.ui : {},
-          exact: exact,
-          aliases: doc.aliases && typeof doc.aliases === 'object' ? doc.aliases : {},
-          fallback: typeof doc.fallback === 'string' && doc.fallback ? doc.fallback : MODEL_COPY_FALLBACK_LOCALE,
-          folded: {},
-          families: [],
-          tiers: [],
-        }
-        for (var id in exact) index.folded[normalizeModelId(id)] = exact[id]
-        var compile = function (rules) {
-          var out = []
-          for (var i = 0; i < (rules || []).length; i++) {
-            var rule = rules[i]
-            if (!rule || typeof rule.match !== 'string') continue
-            try {
-              out.push({ re: new RegExp(rule.match, 'i'), key: rule.key, text: rule.text })
-            } catch (error) { /* a malformed rule is skipped, not fatal */ }
-          }
-          return out
-        }
-        index.families = compile(doc.families)
-        index.tiers = compile(doc.tiers)
-        return index
-      }
-
-      /** Fold case and separators so `glm-5.3-flash` and `glm-5-3-flash` agree. */
-      function normalizeModelId(id) {
-        return String(id === void 0 || id === null ? '' : id).toLowerCase().replace(/[^a-z0-9]/g, '')
-      }
-
-      /** The shell's active locale id, or the document fallback when it cannot be read. */
-      function activeLocale() {
-        try {
-          var locale = ctx.get('locale')
-          if (locale && typeof locale.getSnapshot === 'function') {
-            var active = locale.getSnapshot().active
-            if (typeof active === 'string' && active) return active
-          }
-        } catch (error) { /* no locale service: keep the fallback language */ }
-        return modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
-      }
-
-      /** One localized string out of a `{ locale: text }` pair, fallback locale last. */
-      function localized(pair) {
-        if (!pair || typeof pair !== 'object') return ''
-        var text = pair[activeLocale()]
-        if (typeof text === 'string' && text) return text
-        var fallback = modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
-        var backstop = pair[fallback]
-        return typeof backstop === 'string' ? backstop : ''
-      }
-
-      /**
-       * One picker label: the document's localized string, else the neutral
-       * English constant the bundle carries. `{name}` placeholders are filled
-       * from `params`, so a label with a slot stays translatable.
-       */
-      function copyLabel(key, fallback, params) {
-        var text = modelCopy === null ? '' : localized(modelCopy.ui[key])
-        if (!text) text = fallback
-        if (!params) return text
-        return text.replace(/\{(\w+)\}/g, function (match, name) {
-          return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
-        })
-      }
-
+      var modelCopyUnsubscribe = null
       /** Exact entry: `provider/model`, bare id, folded id, then the alias table. */
       function exactModelCopy(groupId, modelId) {
         if (modelCopy === null) return null
@@ -887,7 +791,9 @@
         chevron.innerHTML = MODEL_CHEVRON_SVG
         cell.appendChild(chevron)
         cell.addEventListener('mouseenter', (function (k) {
-          return function () { openModelSub(k) }
+          return function () {
+            if (readPrefs().autoPopover) openModelSub(k)
+          }
         })(kind))
         cell.addEventListener('click', (function (k) {
           return function (e) {
@@ -1100,8 +1006,14 @@
           modelBtn.innerHTML =
             '<span class="dsh-claude-model-btn-label"></span>' +
             '<span class="dsh-claude-model-btn-chevron">' + MODEL_CHEVRON_DOWN_SVG + '</span>'
-          modelBtn.addEventListener('mouseenter', function () { openModelPopover() })
-          modelBtn.addEventListener('mouseleave', scheduleCloseModel)
+          // Same contract as the account trigger: hover unless the preference
+          // says click-only.
+          modelBtn.addEventListener('mouseenter', function () {
+            if (readPrefs().autoPopover) openModelPopover()
+          })
+          modelBtn.addEventListener('mouseleave', function () {
+            if (readPrefs().autoPopover) scheduleCloseModel()
+          })
           modelBtn.addEventListener('click', function (e) {
             e.stopPropagation()
             if (modelPop && modelPop.getAttribute('data-open') === 'true') closeModelPopovers()
@@ -1707,10 +1619,41 @@
         return null
       }
 
+      /**
+       * Hand the sidebar footer back to the host.
+       *
+       * The "Collapse the sidebar settings area" preference turns the whole
+       * takeover off, so the skin's own nodes go and every marker it put on the
+       * host's entries is removed — with the stylesheet's takeover rules gated
+       * on the same attribute, the footer then renders exactly as shipped.
+       */
+      function dropAccountFooter(footArea) {
+        cancelClosePopover()
+        if (accountBtn !== null && accountBtn.parentElement !== null) accountBtn.parentElement.removeChild(accountBtn)
+        if (accountPopover !== null && accountPopover.parentElement !== null) {
+          accountPopover.parentElement.removeChild(accountPopover)
+        }
+        accountBtn = null
+        accountPopover = null
+        popoverBody = null
+        settingsItem = null
+        var marked = footArea.querySelectorAll(
+          '[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay]',
+        )
+        for (var i = 0; i < marked.length; i++) {
+          marked[i].removeAttribute('data-dsh-claude-footer-entry')
+          marked[i].removeAttribute('data-dsh-claude-footer-hidden')
+          marked[i].removeAttribute('data-dsh-claude-footer-overlay')
+        }
+      }
       function syncAccountFooter() {
         var footArea = document.querySelector('[class*="footArea"]')
         if (footArea === null) return
 
+        if (!readPrefs().collapseFooter) {
+          dropAccountFooter(footArea)
+          return
+        }
         var username = getUsername(ctx)
 
         if (accountBtn === null || !footArea.contains(accountBtn)) {
@@ -1728,11 +1671,15 @@
             '</span>' +
             '<span class="dsh-claude-account-chevron"></span>'
 
+          // Hover is the default way in; the "Open popovers on hover"
+          // preference turns it off, leaving the click handler below as the only
+          // way in (and the only way out, so a click-opened popover does not
+          // vanish when the pointer leaves).
           accountBtn.addEventListener('mouseenter', function () {
-            openPopover()
+            if (readPrefs().autoPopover) openPopover()
           })
           accountBtn.addEventListener('mouseleave', function () {
-            scheduleClosePopover()
+            if (readPrefs().autoPopover) scheduleClosePopover()
           })
           accountBtn.addEventListener('click', function (e) {
             e.stopPropagation()
@@ -1874,6 +1821,23 @@
         }
       } catch (error) { /* no locale service: the picker keeps the fallback language */ }
 
+      // Preferences gate the stylesheet and this scheduler both — the footer
+      // takeover adds or removes the account row, and the composer scope flips
+      // an attribute the stylesheet reads — so a change re-runs the pass. The
+      // first read also arrives through here, which is what replaces the
+      // defaults with the stored values.
+      var prefsUnsubscribe = subscribePrefs(function () {
+        modelBodySig = ''
+        modelSubSig = ''
+        schedule()
+      })
+      loadPrefs()
+
+      modelCopyUnsubscribe = onModelCopyLoaded(function () {
+        modelBodySig = ''
+        modelSubSig = ''
+        schedule()
+      })
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
       var composerCardObserver = null
@@ -1950,6 +1914,14 @@
           try { localeUnsubscribe() } catch (error) { /* already disposed */ }
           localeUnsubscribe = null
         }
+        if (prefsUnsubscribe !== null) {
+          try { prefsUnsubscribe() } catch (error) { /* already disposed */ }
+          prefsUnsubscribe = null
+        }
+        if (modelCopyUnsubscribe !== null) {
+          try { modelCopyUnsubscribe() } catch (error) { /* already disposed */ }
+          modelCopyUnsubscribe = null
+        }
         // Null the model chrome too: the sweep below detaches the nodes, and a
         // later re-install must rebuild them rather than reuse dead elements.
         modelBtn = null
@@ -2000,7 +1972,7 @@
           accountBtn.parentElement.removeChild(accountBtn)
         }
         accountBtn = null
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments, .dsh-claude-model-btn, .dsh-claude-model-popover')
+        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover')
         for (var li = 0; li < leftoverItems.length; li++) {
           if (leftoverItems[li].parentElement) {
             leftoverItems[li].parentElement.removeChild(leftoverItems[li])
