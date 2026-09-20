@@ -6,6 +6,7 @@
 - **模型选择器厂商标识**：模型行显示**模型所属厂商**的标识（而非转售该模型的 provider），「更多模型」的 provider 分组标题显示该 provider 的标识。标识取自 [Lobe Icons](https://lobehub.com/icons) 的静态 SVG（`@lobehub/icons-static-svg`，MIT），按仓库既有架构在构建期内联进 bundle——`@lobehub/icons` 是 React 组件包，装它就要破坏「零依赖、零打包器、单文件产物」这条约束。用单色字形（`fill="currentColor"`）随主题文字色绘制，亮暗两画布都清晰，也不与「陶烬橙唯一强调色」冲突；彩色变体不做——OpenAI、Anthropic、xAI、Moonshot、Z.ai、Vercel、Groq 等 12 家上游本就没有彩色版，且部分厂商色在 `#141413` 画布上不可见。绑定关系仍是数据：`model-descriptions.json` 的 `brands.providers` / `brands.models`，构建期校验引用的标识都已 vendored，写错即构建失败。
 
 ### Changed
+- **文本选区改为实色两态**：选中文字不再用半透明陶烬橙，改为平台式实色——窗口聚焦时蓝底白字（`#3366D0` / `#FFFFFF`），窗口失焦时灰底黑字（`#C7C7C6` / `#000000`），亮暗两画布一致。选区是瞬时操作而非界面表层，因此不跟随主题；两态都是实色且带 `!important`，覆盖底下的链接色、行内代码色与语法高亮色，避免"蓝底上保留原文字色"导致读不清。CSS 无法读取窗口焦点（Chromium 走内部 `-internal-inactive-selection-*`），故由新增的 `src/overrides/selection.js` 把焦点态镜像到文档属性上，样式表据此切换；失焦时选区本身保留，不消失。
 - **接入 cc-switch 全量供应商图标**：`src/assets/icons/providers` 引入其 107 个图标，build 解析 `index.ts` / `metadata.ts` 生成 `PROVIDER_ICONS` / `PROVIDER_ICON_METADATA`，宿主新增 `/dsh-claude-style/icons/providers/*` 路由；模型选择器优先用 cc-switch 图标，缺失时回退 Lobe。
 - **更多模型供应商标签改为推挤式 sticky**：每个供应商包成 section，滚动时上一个标签被下一个 section 往上推，而不是直接覆盖。
 - **附件输入框接缝优化**：移除附件轨 focus 时 1px 内圈阴影，消除图片区与文字区之间的分界线和阴影。

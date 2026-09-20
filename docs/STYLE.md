@@ -40,6 +40,25 @@ Rules:
   follows the same hairline so the two tiers stay one outline. Accent is never
   used for focus strokes.
 
+## Text selection
+
+Selection is the one surface that leaves the palette on purpose — it is a
+transient gesture, not part of the interface, so it uses the platform's two
+solid paints and looks the same on both canvases:
+
+| State | Background | Text |
+|---|---|---|
+| Window focused | `#3366D0` | `#FFFFFF` |
+| Window unfocused | `#C7C7C6` | `#000000` |
+
+Both are solid (never translucent) and `!important`, so they override whatever
+colour the text underneath carries — links, inline code, syntax tokens. CSS
+cannot read window focus: Chromium reaches the inactive paint through its own
+internal `-internal-inactive-selection-*` properties, which a stylesheet cannot
+address. `src/overrides/selection.js` therefore mirrors `document.hasFocus()`
+onto `data-dsh-window-blur` and the stylesheet switches on that attribute; the
+selection itself survives the blur.
+
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
@@ -80,6 +99,7 @@ assembles the bundle:
 | `src/overrides/model-picker.js` | model picker installer |
 | `src/overrides/account-footer.js` | account footer/popover installer |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
+| `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |
 | `src/entry.js` | `apply()` orchestrator + exports |
 | `src/model-descriptions.json` | model copy (picker labels + per-model descriptions); validated at build time and **copied** to `lib/`, not inlined |

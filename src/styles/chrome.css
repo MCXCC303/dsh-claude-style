@@ -97,8 +97,7 @@ body[data-dsh-claude-style] ::-webkit-scrollbar-thumb:hover {
 }
 
 /* Text selection: two solid paints, identical on both canvases.
-   Focused is white on blue, unfocused is black on gray — the platform's own
-   pairing, which is what the selection has to look like. It replaces the
+   Focused is white on blue, unfocused is black on gray. It replaces the
    translucent clay wash this skin used before, and it deliberately ignores the
    theme: a selection is a transient user gesture, not a surface, so it does not
    follow the ivory/warm-black palette. Every value is a solid colour and
@@ -109,12 +108,12 @@ body[data-dsh-claude-style] ::-webkit-scrollbar-thumb:hover {
    so the attribute decides; the focus state itself is mirrored onto the
    document by src/overrides/selection.js. */
 body[data-dsh-claude-style] ::selection {
-  background-color: #0060df !important;
+  background-color: #3366d0 !important;
   color: #ffffff !important;
 }
 
 body[data-dsh-claude-style][data-dsh-window-blur] ::selection {
-  background-color: #c8c8c8 !important;
+  background-color: #c7c7c6 !important;
   color: #000000 !important;
 }
 
