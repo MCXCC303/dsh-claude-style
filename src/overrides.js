@@ -518,6 +518,160 @@
       var modelSubKind = null
       var modelBodySig = ''
       var modelSubSig = ''
+      /** Indexed model copy document, or null before the fetch settles and after it fails. */
+      var modelCopy = null
+      /** One fetch attempt per install: a failure must not re-request on every frame. */
+      var modelCopyRequested = false
+      /** Locale subscription, so switching the shell language repaints the picker. */
+      var localeUnsubscribe = null
+
+      /**
+       * Fetch the model copy document the host half serves. It is data, not code
+       * (see src/model-descriptions.json), so the table can grow without a
+       * rebuild. Until it arrives — and if it never does — the picker paints the
+       * catalog's own text, which is why a failure here is silent: a missing
+       * description line is a smaller defect than a picker that cannot open.
+       */
+      function loadModelCopy() {
+        if (modelCopyRequested) return
+        modelCopyRequested = true
+        if (typeof fetch !== 'function') return
+        try {
+          fetch(MODEL_COPY_ROUTE, { credentials: 'same-origin' })
+            .then(function (response) {
+              if (!response.ok) throw new Error('HTTP ' + response.status)
+              return response.json()
+            })
+            .then(function (doc) {
+              modelCopy = indexModelCopy(doc)
+              if (modelCopy === null) return
+              // The rows are already built with the fallback copy; drop the
+              // signatures so the next pass repaints them from the document.
+              modelBodySig = ''
+              modelSubSig = ''
+              schedule()
+            })
+            .catch(function () { /* the catalog's own text stays in place */ })
+        } catch (error) { /* no fetch: same fallback */ }
+      }
+
+      /**
+       * Compile a copy document into the shape lookups want: a folded id index,
+       * the alias table, and the rule lists with their regexps built once.
+       * @param doc - parsed document; anything malformed is dropped, not fatal.
+       * @returns the index, or null when the document is unusable.
+       */
+      function indexModelCopy(doc) {
+        if (!doc || typeof doc !== 'object') return null
+        var exact = doc.exact && typeof doc.exact === 'object' ? doc.exact : {}
+        var index = {
+          ui: doc.ui && typeof doc.ui === 'object' ? doc.ui : {},
+          exact: exact,
+          aliases: doc.aliases && typeof doc.aliases === 'object' ? doc.aliases : {},
+          fallback: typeof doc.fallback === 'string' && doc.fallback ? doc.fallback : MODEL_COPY_FALLBACK_LOCALE,
+          folded: {},
+          families: [],
+          tiers: [],
+        }
+        for (var id in exact) index.folded[normalizeModelId(id)] = exact[id]
+        var compile = function (rules) {
+          var out = []
+          for (var i = 0; i < (rules || []).length; i++) {
+            var rule = rules[i]
+            if (!rule || typeof rule.match !== 'string') continue
+            try {
+              out.push({ re: new RegExp(rule.match, 'i'), key: rule.key, text: rule.text })
+            } catch (error) { /* a malformed rule is skipped, not fatal */ }
+          }
+          return out
+        }
+        index.families = compile(doc.families)
+        index.tiers = compile(doc.tiers)
+        return index
+      }
+
+      /** Fold case and separators so `glm-5.3-flash` and `glm-5-3-flash` agree. */
+      function normalizeModelId(id) {
+        return String(id === void 0 || id === null ? '' : id).toLowerCase().replace(/[^a-z0-9]/g, '')
+      }
+
+      /** The shell's active locale id, or the document fallback when it cannot be read. */
+      function activeLocale() {
+        try {
+          var locale = ctx.get('locale')
+          if (locale && typeof locale.getSnapshot === 'function') {
+            var active = locale.getSnapshot().active
+            if (typeof active === 'string' && active) return active
+          }
+        } catch (error) { /* no locale service: keep the fallback language */ }
+        return modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
+      }
+
+      /** One localized string out of a `{ locale: text }` pair, fallback locale last. */
+      function localized(pair) {
+        if (!pair || typeof pair !== 'object') return ''
+        var text = pair[activeLocale()]
+        if (typeof text === 'string' && text) return text
+        var fallback = modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
+        var backstop = pair[fallback]
+        return typeof backstop === 'string' ? backstop : ''
+      }
+
+      /**
+       * One picker label: the document's localized string, else the neutral
+       * English constant the bundle carries. `{name}` placeholders are filled
+       * from `params`, so a label with a slot stays translatable.
+       */
+      function copyLabel(key, fallback, params) {
+        var text = modelCopy === null ? '' : localized(modelCopy.ui[key])
+        if (!text) text = fallback
+        if (!params) return text
+        return text.replace(/\{(\w+)\}/g, function (match, name) {
+          return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+        })
+      }
+
+      /** Exact entry: `provider/model`, bare id, folded id, then the alias table. */
+      function exactModelCopy(groupId, modelId) {
+        if (modelCopy === null) return null
+        var byProvider = modelCopy.exact[groupId + '/' + modelId]
+        if (byProvider) return byProvider
+        if (modelCopy.exact[modelId]) return modelCopy.exact[modelId]
+        var folded = normalizeModelId(modelId)
+        if (modelCopy.folded[folded]) return modelCopy.folded[folded]
+        var alias = modelCopy.aliases[modelId] || modelCopy.aliases[folded]
+        return alias && modelCopy.exact[alias] ? modelCopy.exact[alias] : null
+      }
+
+      /**
+       * Family entry. The model id is tried alone first because it is the
+       * stronger signal, then `provider/id` for ids that carry no brand of their
+       * own (`abab6.5s-chat` under a provider called `minimax`).
+       */
+      function familyModelCopy(groupId, modelId) {
+        if (modelCopy === null) return null
+        var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
+        var haystacks = [id, String(groupId === void 0 || groupId === null ? '' : groupId).toLowerCase() + '/' + id]
+        for (var h = 0; h < haystacks.length; h++) {
+          for (var i = 0; i < modelCopy.families.length; i++) {
+            var rule = modelCopy.families[i]
+            if (!rule.re.test(haystacks[h])) continue
+            if (rule.key) return modelCopy.exact[rule.key] || null
+            return rule.text
+          }
+        }
+        return null
+      }
+
+      /** Last-resort tier rule, read out of the id itself. */
+      function tierModelCopy(modelId) {
+        if (modelCopy === null) return null
+        var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
+        for (var i = 0; i < modelCopy.tiers.length; i++) {
+          if (modelCopy.tiers[i].re.test(id)) return modelCopy.tiers[i].text
+        }
+        return null
+      }
 
       function cancelCloseModel() {
         if (modelCloseTimer) {
@@ -667,14 +821,23 @@
         return { reasoning: reasoning, effective: effective, label: label }
       }
 
+      /**
+       * The description line for one catalog model, in the shell's language.
+       *
+       * Resolution descends: exact entry (one model resold by several providers
+       * folds to a single key) → family rule → tier rule → the catalog's own
+       * text. Family rules are ordered and anchored (see
+       * src/model-descriptions.json) so another vendor's flash tier never
+       * borrows DeepSeek's copy. A model this table has never seen and the
+       * catalog does not describe resolves to an empty string on purpose: a
+       * name-only row beats an invented line.
+       */
       function modelDescription(groupId, model) {
-        var key = groupId + '/' + model.id
-        if (MODEL_DESCRIPTIONS[key]) return MODEL_DESCRIPTIONS[key]
-        // A model id ending in `flash` is the flagship flash line and carries
-        // its tech-report title. The vision variant ends in `-exp`, so it is
-        // never caught here — it takes its own keyed entry above.
-        if (typeof model.id === 'string' && /flash$/i.test(model.id)) return MODEL_FLASH_DESCRIPTION
-        return model.description || ''
+        var id = typeof model.id === 'string' ? model.id : ''
+        var pair = exactModelCopy(groupId, id) || familyModelCopy(groupId, id) || tierModelCopy(id)
+        var text = localized(pair)
+        if (text) return text
+        return typeof model.description === 'string' ? model.description : ''
       }
 
       function modelEl(tag, cls, text) {
@@ -688,7 +851,7 @@
       var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
       var MODEL_CHEVRON_DOWN_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>'
 
-      /** One selectable model row: name (+ description) and a check when current. */
+      /** One selectable model row: name, description line and a check when current. */
       function buildModelOption(group, model, selected) {
         var item = modelEl('button', 'dsh-claude-model-option')
         item.type = 'button'
@@ -696,6 +859,8 @@
         item.setAttribute('aria-checked', selected ? 'true' : 'false')
         var copy = modelEl('span', 'dsh-claude-model-copy')
         copy.appendChild(modelEl('span', 'dsh-claude-model-name', model.name))
+        // One line, in the shell's language: the copy document is localized, so
+        // the row never stacks two languages.
         var desc = modelDescription(group.id, model)
         if (desc) copy.appendChild(modelEl('span', 'dsh-claude-model-desc', desc))
         item.appendChild(copy)
@@ -767,14 +932,14 @@
         var groups = (snap && snap.groups) || []
         var current = modelCurrent(snap)
         var effort = modelEffort(snap)
-        var sig = [status, current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : ''].join('|')
+        var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : ''].join('|')
         for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
         if (sig === modelBodySig) return
         modelBodySig = sig
         while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
 
         if (status === 'idle' || status === 'loading' || status === 'selecting') {
-          modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_LOADING_LABEL))
+          modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('loading', MODEL_LOADING_LABEL)))
         } else {
           var official = null
           for (var g2 = 0; g2 < groups.length; g2++) {
@@ -789,7 +954,7 @@
             }
           }
           if (rows.length === 0) {
-            modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_EMPTY_LABEL))
+            modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('empty', MODEL_EMPTY_LABEL)))
           } else {
             for (var r = 0; r < rows.length; r++) {
               var selected = current !== null && current.group.id === rows[r].group.id && current.model.id === rows[r].model.id
@@ -797,8 +962,8 @@
             }
           }
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
-          if (effort) modelBody.appendChild(buildModelCell(MODEL_EFFORT_LABEL, effort.label, 'effort'))
-          modelBody.appendChild(buildModelCell(MODEL_MORE_LABEL, '', 'more'))
+          if (effort) modelBody.appendChild(buildModelCell(copyLabel('effortLabel', MODEL_EFFORT_LABEL), effort.label, 'effort'))
+          modelBody.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL), '', 'more'))
         }
       }
 
@@ -813,7 +978,7 @@
           modelSubSig = sig
           while (modelSubBody.firstChild) modelSubBody.removeChild(modelSubBody.firstChild)
           if (effort === null) {
-            modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', '当前模型未提供推理等级。'))
+            modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('noEffort', MODEL_NO_EFFORT_LABEL)))
             return
           }
           var levels = []
@@ -859,7 +1024,7 @@
           }
         }
         if (modelSubBody.firstChild === null) {
-          modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_EMPTY_LABEL))
+            modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('empty', MODEL_EMPTY_LABEL)))
         }
       }
 
@@ -915,6 +1080,9 @@
 
       /** Build/refresh the trigger, its label and the popover rows. */
       function syncModelControl() {
+        // The copy document is fetched on first paint of the picker rather than
+        // at install, so a session that never opens it never pays for it.
+        loadModelCopy()
         modelDirectory()
         var slot = document.querySelector('[data-slot="conversation.input.model"]')
         if (slot === null) return
@@ -946,7 +1114,7 @@
         var snap = modelSnapshot()
         var current = modelCurrent(snap)
         var effort = modelEffort(snap)
-        var label = current ? current.model.name : MODEL_FALLBACK_LABEL
+        var label = current ? current.model.name : copyLabel('fallbackLabel', MODEL_FALLBACK_LABEL)
         var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
         if (labelEl) {
           labelEl.textContent = label
@@ -962,7 +1130,7 @@
         } else if (effortEl !== null && effortEl.parentElement) {
           effortEl.parentElement.removeChild(effortEl)
         }
-        modelBtn.setAttribute('aria-label', '选择模型，当前 ' + label)
+        modelBtn.setAttribute('aria-label', copyLabel('triggerLabel', MODEL_TRIGGER_LABEL, { model: label }))
         modelBtn.disabled = false
 
         renderModelBody()
@@ -992,6 +1160,9 @@
           var footArea = document.querySelector('[class*="footArea"]')
           if (footArea) syncPopoverItems(footArea)
         } catch (error) { /* opening must never fail because of a mirror sync */ }
+        // Resolve the rail anchor before the reveal so the panel never paints at
+        // its stale coordinates for a frame.
+        positionAccountPopover()
         accountPopover.setAttribute('data-open', 'true')
         accountBtn.setAttribute('data-open', 'true')
         accountBtn.setAttribute('aria-expanded', 'true')
@@ -1030,6 +1201,43 @@
           clearTimeout(popoverTimer)
           popoverTimer = null
         }
+      }
+
+      /**
+       * Anchor the account popover to its trigger while the sidebar is a rail.
+       *
+       * In the rail the popover is `position: fixed` (components.css): the sidebar
+       * column clips its overflow, so an absolutely positioned panel would be cut
+       * off at the 56px rail edge and never seen. Its coordinates therefore have
+       * to be resolved here — the same contract the model picker's popovers use.
+       * The declarations are written `important` because the stylesheet anchors
+       * the wide-sidebar popover with `!important` as well, and an author
+       * `!important` beats a plain inline declaration.
+       *
+       * With the sidebar wide the CSS anchor is the right one, so the inline
+       * overrides are dropped again and the footer rule takes over.
+       */
+      function positionAccountPopover() {
+        if (!accountPopover || !accountBtn) return
+        if (accountBtn.closest('[class*="collapsed"]') === null) {
+          accountPopover.style.removeProperty('left')
+          accountPopover.style.removeProperty('top')
+          return
+        }
+        var rect = accountBtn.getBoundingClientRect()
+        var width = accountPopover.offsetWidth
+        var height = accountPopover.offsetHeight
+        var MARGIN = 8
+        // Opens to the right of the rail; flips to the trigger's left when the
+        // viewport cannot hold it (the model picker's sub-level does the same).
+        var x = rect.right + MARGIN
+        if (x + width > window.innerWidth - MARGIN) {
+          x = Math.max(MARGIN, rect.left - MARGIN - width)
+        }
+        // Bottom-aligned with the trigger, kept on screen.
+        var y = Math.min(Math.max(MARGIN, rect.bottom - height), Math.max(MARGIN, window.innerHeight - height - MARGIN))
+        accountPopover.style.setProperty('left', Math.round(x) + 'px', 'important')
+        accountPopover.style.setProperty('top', Math.round(y) + 'px', 'important')
       }
 
       var settingsItem = null
@@ -1640,13 +1848,31 @@
       document.addEventListener('pointerdown', onCardPointerDown)
       document.addEventListener('keydown', onGlobalKeyDown, true)
 
-      // The picker is position:fixed against the trigger; scroll of the page
-      // (not the conversation's own auto-stick) and resizes move the anchor.
-      function onModelViewportChange() {
+      // Both fixed popovers are anchored to their trigger; scroll of the page
+      // (not the conversation's own auto-stick) and resizes move the anchor, so
+      // whichever is open must re-resolve it.
+      function onFixedPopoverViewportChange() {
         if (modelPop && modelPop.getAttribute('data-open') === 'true') positionModelPopovers()
+        if (accountPopover && accountPopover.getAttribute('data-open') === 'true') positionAccountPopover()
       }
-      window.addEventListener('resize', onModelViewportChange)
-      window.addEventListener('scroll', onModelViewportChange, true)
+      window.addEventListener('resize', onFixedPopoverViewportChange)
+      window.addEventListener('scroll', onFixedPopoverViewportChange, true)
+
+      // The picker's copy follows the shell language, so a locale switch has to
+      // rebuild the rows it already painted. Subscribing here (rather than
+      // reading the locale at render time only) is what makes the change land
+      // while a popover is open.
+      function onLocaleChange() {
+        modelBodySig = ''
+        modelSubSig = ''
+        schedule()
+      }
+      try {
+        var localeService = ctx.get('locale')
+        if (localeService && typeof localeService.subscribe === 'function') {
+          localeUnsubscribe = localeService.subscribe(onLocaleChange)
+        }
+      } catch (error) { /* no locale service: the picker keeps the fallback language */ }
 
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
@@ -1678,6 +1904,9 @@
           syncChatTabComposer()
           syncModelControl()
           syncAccountFooter()
+          // Covers the rail toggle (and any reflow) while the popover is open:
+          // its anchor moved without a window resize or a page scroll.
+          if (accountPopover && accountPopover.getAttribute('data-open') === 'true') positionAccountPopover()
           if (composerCardObserver) {
             var currentCard = document.querySelector('[data-composer-card]')
             if (currentCard !== observedCard) {
@@ -1715,8 +1944,12 @@
         dropModelSubscription()
         modelDir = null
         modelSessionId = null
-        window.removeEventListener('resize', onModelViewportChange)
-        window.removeEventListener('scroll', onModelViewportChange, true)
+        window.removeEventListener('resize', onFixedPopoverViewportChange)
+        window.removeEventListener('scroll', onFixedPopoverViewportChange, true)
+        if (localeUnsubscribe !== null) {
+          try { localeUnsubscribe() } catch (error) { /* already disposed */ }
+          localeUnsubscribe = null
+        }
         // Null the model chrome too: the sweep below detaches the nodes, and a
         // later re-install must rebuild them rather than reuse dead elements.
         modelBtn = null

@@ -346,6 +346,9 @@ body[data-dsh-claude-style] .dsh-claude-model-name {
   font-weight: 500 !important;
   line-height: 16px !important;
 }
+/* The row carries one description line, in the shell's language: the copy
+   document is localized rather than stacked, so there is no second-language
+   rule to style. */
 body[data-dsh-claude-style] .dsh-claude-model-desc {
   font-size: 11px !important;
   line-height: 14px !important;
@@ -501,7 +504,26 @@ body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] > [cla
 body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
   display: none !important;
 }
-body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"],
+/* Both containers stay mounted at zero size so the overlays they host keep
+   painting, but the collapse must stay geometric. font-size and line-height
+   inherit, and the settings dialog mounts IN PLACE inside settingsArea (the
+   host renders its overlay as a sibling of the trigger row — no portal): the
+   dialog inherited font-size: 0 with line-height: 0px, so every text line
+   that sets an explicit font-size without its own line-height (the SubAgent
+   page's rows, the onboarding overlay) collapsed to a 0px line box and
+   vanished. settingsArea hosts nothing besides its display:none'd trigger row
+   and those in-place overlays, so it keeps only the geometric collapse and
+   hands real inherited metrics down; footerActions still hosts plain plugin
+   entries whose stray in-flow text only the zeroing keeps invisible, so the
+   full collapse stays there. */
+body[data-dsh-claude-style] [class*="footArea"] > [class*="settingsArea"] {
+  position: static !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
 body[data-dsh-claude-style] [class*="footArea"] > [class*="footerActions"] {
   position: static !important;
   width: 0 !important;
@@ -550,12 +572,46 @@ body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-acco
 body[data-dsh-claude-style] [class*="root"][class*="collapsed"] :is(.dsh-claude-account-label, .dsh-claude-account-chevron) {
   display: none !important;
 }
+/* The rail's popover cannot stay an absolutely positioned child of the footer.
+   The sidebar column is 56px wide with `overflow: hidden`, so a panel anchored
+   past the rail edge is cut off the moment it crosses it — and the base rule's
+   percentage max-width, measured against the 59px footer, squashed it to 43px.
+   Fixed positioning lifts it out of that clip (no ancestor is a containing block
+   for it), and overrides.js anchors it to the trigger from there. left/right/
+   bottom are reset so the base rule's own `!important` anchors cannot fight the
+   resolved coordinates. */
 body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-popover {
-  left: calc(100% + 8px) !important;
-  bottom: 0 !important;
+  position: fixed !important;
+  left: auto !important;
   right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
   width: 220px !important;
+  max-width: min(220px, calc(100vw - 16px)) !important;
   transform-origin: bottom left !important;
+}
+/* The rail opens the panel beside the trigger, not above it, so the hover bridge
+   has to span the horizontal gap: the base rule's downward strip would sit under
+   the panel and leave the pointer's 8px crossing uncovered. */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-account-popover::after {
+  top: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+  right: 100% !important;
+  width: 12px !important;
+  height: auto !important;
+}
+/* In the rail the account button is the only control; the settings entry lives
+   in the popover. The settings container is zero-sized rather than hidden (its
+   dialog must stay reachable), which is enough while the sidebar is wide — the
+   entry is squeezed to a 4px sliver. A plugin that ships its own rail variant
+   escapes that box instead: the settings plugin's `…_rail` trigger keeps its
+   full 36px square and lands straight on top of the Claude mark. Hide the entry
+   in the rail. Reachability is unaffected — the popover's settings item opens
+   the real trigger programmatically (`realTrigger.click()`), which
+   display:none does not block. */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]) {
+  display: none !important;
 }
 
 /* Embedded footer widgets: display-only plugin entries (progress bars,

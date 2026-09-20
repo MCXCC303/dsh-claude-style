@@ -14,6 +14,10 @@
  *   src/settings.js    Zone 4.4 — settings section (brand)
  *   src/entry.js       Zone 6 — apply() + exports
  *
+ * `src/model-descriptions.json` is not a fragment: it is validated here and
+ * copied to `lib/`, where the host half serves it to the browser half at
+ * runtime. Model copy is data, so it must not enter the bundle.
+ *
  * Fragments are concatenated verbatim (they share one factory scope at
  * runtime), so each fragment must keep its 4-space base indentation and must
  * NOT use import/export.
@@ -25,7 +29,16 @@ import vm from 'node:vm'
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = path.join(ROOT, 'src')
 const ASSETS = path.join(SRC, 'assets')
-const OUT = path.join(ROOT, 'lib', 'client.js')
+const LIB = path.join(ROOT, 'lib')
+const OUT = path.join(LIB, 'client.js')
+
+/**
+ * Model copy ships as DATA beside the bundle, not inside it: the browser half
+ * fetches it at runtime (the host half serves it), so the table grows without
+ * touching this build. It is validated here so a malformed table fails the
+ * build instead of the picker.
+ */
+const MODEL_COPY = 'model-descriptions.json'
 
 const STYLE_FILES = [
   'tokens.css',
@@ -112,6 +125,54 @@ function substitute(file, text, tokens) {
   return out
 }
 
+/**
+ * Check the model copy document before it ships. Every failure here is one the
+ * picker could otherwise only express as a silently missing or wrong line, so
+ * they all throw: a `families[].key` or `aliases` target that names no entry,
+ * a rule whose `match` is not a compilable regexp, a `{zh, en}` pair missing a
+ * language, or a document with no `exact` table at all.
+ * @param doc - parsed `src/model-descriptions.json`.
+ * @returns the number of exact entries, for the build log.
+ */
+function validateModelCopy(doc) {
+  const fail = (message) => {
+    throw new Error(`build: ${MODEL_COPY} ${message}`)
+  }
+  if (typeof doc !== 'object' || doc === null) fail('is not an object')
+  if (typeof doc.fallback !== 'string' || doc.fallback === '') fail('needs a non-empty "fallback" locale id')
+  if (typeof doc.exact !== 'object' || doc.exact === null) fail('needs an "exact" table')
+
+  const locales = new Set([doc.fallback])
+  const requirePair = (where, pair) => {
+    if (typeof pair !== 'object' || pair === null) fail(`${where} is not a {locale: string} object`)
+    for (const [locale, text] of Object.entries(pair)) {
+      locales.add(locale)
+      if (typeof text !== 'string' || text.trim() === '') fail(`${where}.${locale} is not a non-empty string`)
+    }
+  }
+
+  for (const [id, pair] of Object.entries(doc.exact)) requirePair(`exact["${id}"]`, pair)
+  for (const [key, pair] of Object.entries(doc.ui ?? {})) requirePair(`ui["${key}"]`, pair)
+  for (const [from, to] of Object.entries(doc.aliases ?? {})) {
+    if (typeof to !== 'string' || !(to in doc.exact)) fail(`alias "${from}" points at unknown entry "${to}"`)
+  }
+  for (const list of ['families', 'tiers']) {
+    for (const [index, rule] of (doc[list] ?? []).entries()) {
+      const where = `${list}[${index}]`
+      if (typeof rule?.match !== 'string') fail(`${where} needs a string "match"`)
+      try {
+        new RegExp(rule.match)
+      } catch (error) {
+        fail(`${where} has an uncompilable "match": ${error.message}`)
+      }
+      if (rule.key !== undefined && !(rule.key in doc.exact)) fail(`${where} points at unknown entry "${rule.key}"`)
+      if (rule.key === undefined) requirePair(`${where}.text`, rule.text)
+    }
+  }
+  if (locales.size < 2) fail('carries fewer than two locales; i18n needs at least the fallback and one translation')
+  return Object.keys(doc.exact).length
+}
+
 function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
 
@@ -157,6 +218,11 @@ function main() {
   fs.writeFileSync(OUT, bundle)
   const lines = bundle.split('\n').length
   console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + 5 fragments)`)
+
+  const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
+  const exact = validateModelCopy(copy)
+  fs.writeFileSync(path.join(LIB, MODEL_COPY), JSON.stringify(copy, null, 2) + '\n')
+  console.log(`built lib/${MODEL_COPY} (${exact} exact entries, ${copy.families.length} family rules, ${copy.tiers.length} tier rules)`)
 }
 
 main()

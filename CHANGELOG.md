@@ -2,8 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- **模型文案改为运行时读取的数据文件**：文案表迁出 bundle，落到 `src/model-descriptions.json`（构建时校验后随包发布为 `lib/model-descriptions.json`）；宿主半边新增 `/dsh-claude-style/model-descriptions.json` 路由按请求读取该文件，浏览器半边在首次绘制模型选择器时 fetch 并按需缓存。此后扩充文案表无需重新构建、也不进 bundle（产物内已无任何模型文案）。解析按「精确条目 → 家族规则 → 档位规则 → 目录自带文本」逐级降级；精确条目按**归一化模型 id** 建键，同一模型被多个 provider 转售（`deepseek-v4-flash` 同时在 deepseek-official 与 opencode-go）折叠为一条；家族规则有序且锚定（`flash` 规则限定 `deepseek`，否则 `glm-5.3-flash`、`step-3.7-flash` 会冒用 DeepSeek 文案）。取不到文档时静默回退目录自带文本，不影响选择器可用。
+
 ### Changed
-- **模型描述语更新**：id 以 `flash` 结尾的旗舰模型（如 `deepseek-flash`）显示其技术报告标题「DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression」；为 DeepSeek-V4-Pro（旗舰推理、质量优先、成本较高）与 DeepSeek-V4-Flash-Vision-Exp（实验性视觉版本、支持图像理解）补写简介。视觉实验版 id 以 `-exp` 结尾，不会被 flash 规则误捕；宿主默认目录里的 legacy `deepseek-v4-flash` 另有专门条目，不冒用 V4.1 标题。
+- **模型文案跟随全局语言、单行显示**：描述按 shell 自身的 `locale` 服务取当前语言（`zh` / `en`），每行只渲染一条，不再中英两行叠加；并订阅 locale 变更，切换语言时已渲染的弹层即时重绘。选择器自身的 UI 文案（触发按钮 aria、加载中、空目录、推理等级、More models）走同一路径，bundle 内只保留取不到文档时的中性英文兜底。
+
+### Fixed
+- **塌缩态底栏插件控件压住 Claude 标**：皮肤把 `settingsArea` 压成零尺寸（保留 `overflow: visible` 让浮层可画），展开态下这足以把条目挤成 4px 细条；但设置插件带了自己的 rail 变体（`…_rail`），塌缩时拿到固定 36×36 并逃出零尺寸盒子，正好压在账户控件的 Claude 标上。现于塌缩态隐藏 `settingsArea` 内的按钮与 `triggerRow`；可达性不受影响——弹层镜像项用 `realTrigger.click()` 驱动真实触发器，`display:none` 不阻断。
+- **塌缩态账户弹层被侧栏容器裁掉**：侧栏列宽 56px 且 `overflow: hidden`，弹层原本 `position: absolute` 锚在轨道右侧，越过轨道边缘即被整块裁掉（同时基础规则的百分比 `max-width` 以 59px 页脚为基准把它压成 43px 宽）。现塌缩态改为 `position: fixed`（祖先链无 `transform`/`contain`，故不受该 `overflow` 裁剪），坐标由 `positionAccountPopover()` 解析（内联 `!important`，因为样式表侧同样用 `!important` 锚定）；过渡桥同步由「朝下」转为「朝侧」。
+- **修复设置页（含 SubAgent 分页）文字整页消失**：皮肤为隐藏侧栏底栏原按钮，把 `footArea` 下的 `settingsArea`/`footerActions` 容器压成零尺寸并写了 `font-size: 0 !important; line-height: 0 !important`（保留 `overflow: visible` 让浮层可画）。但宿主设置弹窗是**就地渲染**在 `settingsArea` 子树里的（弹窗 overlay 是触发行的兄弟节点，没有 portal），零字号/零行高沿子树继承——官方组件只给文本行设了 `font-size`、没设 `line-height`，继承到 0px 行高的行盒直接塌成 0 高，整页文字"消失"。现把两个容器的折叠拆开：`settingsArea` 只保留几何折叠（零宽高 + `overflow: visible`），字体度量恢复自然继承——它除了被 `display: none` 的触发行就只剩就地弹窗，无需零字号兜底；`footerActions` 仍托管着会被镜像改道的插件原始条目，散落的行内文字仍需零字号压住，维持完整折叠。
 
 ## [0.2.4] - 2026-09-19
 

@@ -1,0 +1,446 @@
+{
+  "version": 1,
+  "fallback": "en",
+  "ui": {
+    "fallbackLabel": {
+      "zh": "选择模型",
+      "en": "Select model"
+    },
+    "triggerLabel": {
+      "zh": "选择模型，当前 {model}",
+      "en": "Select model, currently {model}"
+    },
+    "loading": {
+      "zh": "正在加载模型…",
+      "en": "Loading models…"
+    },
+    "empty": {
+      "zh": "没有可用的模型。",
+      "en": "No models available."
+    },
+    "effortLabel": {
+      "zh": "推理等级",
+      "en": "Reasoning effort"
+    },
+    "moreLabel": {
+      "zh": "More models",
+      "en": "More models"
+    },
+    "noEffort": {
+      "zh": "当前模型未提供推理等级。",
+      "en": "This model offers no reasoning levels."
+    }
+  },
+  "exact": {
+    "deepseek-flash": {
+      "zh": "最新旗舰 Flash：百万上下文，长程 Agent 的 KV 缓存成本降到约 1/4。",
+      "en": "Latest flagship Flash: 1M context with the KV-cache cost of long-horizon agents cut to about a quarter."
+    },
+    "deepseek-v4-flash": {
+      "zh": "快速、高效、经济；适合目标明确、常规或并行任务。",
+      "en": "Fast, efficient, and economical; suited to focused, routine, or parallel tasks."
+    },
+    "deepseek-v4-pro": {
+      "zh": "自主编码、知识与复杂推理更强；适合质量优先的复杂任务，成本更高。",
+      "en": "Stronger agentic coding, knowledge, and difficult reasoning; suited to complex or quality-critical tasks at higher cost."
+    },
+    "deepseek-v4-flash-vision-exp": {
+      "zh": "实验性多模态：视觉理解大幅补强，多模态 Agent 能力接近 Opus-4.8。",
+      "en": "Experimental multimodal Flash: much stronger visual understanding, multimodal agent ability approaching Opus-4.8."
+    },
+    "deepseek-v3.2": {
+      "zh": "上一代通用模型，长上下文与成本仍然能打。",
+      "en": "Previous-generation generalist; still competitive on long context and cost."
+    },
+    "claude-opus-4.8": {
+      "zh": "旗舰：编程、Agent 与专业工作最强，长程任务一致性最好。",
+      "en": "Flagship: strongest coding, agentic and professional work, with the consistency for long-running tasks."
+    },
+    "claude-sonnet-5": {
+      "zh": "主力档：成本与能力平衡，部分场景追平 Opus。",
+      "en": "The workhorse: balanced cost and capability, matching Opus in some cases."
+    },
+    "gpt-5.4": {
+      "zh": "前沿通用模型，首个原生电脑操作能力，整合 Codex 编码能力。",
+      "en": "Frontier generalist with native computer use and Codex-grade coding."
+    },
+    "gemini-3.8-flash": {
+      "zh": "最强 Flash：跑分直逼旗舰，强化编程、Agent 与多步推理，价格仍低。",
+      "en": "The strongest Flash: benchmark scores near flagship, with reinforced coding, agent workflows and multi-step reasoning."
+    },
+    "glm-5.3": {
+      "zh": "前沿编码能力，擅长长程自主任务。",
+      "en": "Frontier coding with strong long-horizon autonomy."
+    },
+    "glm-5.3-flash": {
+      "zh": "GLM-5 系列首个原生多模态；18B 激活，性能追平 Opus-4.8，成本极低。",
+      "en": "The GLM-5 series' first natively multimodal model; 18B active, matching Opus-4.8 at very low cost."
+    },
+    "glm-5.3-flashx": {
+      "zh": "GLM-5.3-Flash 的高吞吐版本。",
+      "en": "High-throughput variant of GLM-5.3-Flash."
+    },
+    "kimi-k3": {
+      "zh": "开放 3T 级模型：原生视觉、百万上下文，编程与知识工作强。",
+      "en": "Open 3T-class model: native vision, 1M context, strong at coding and knowledge work."
+    },
+    "kimi-for-coding": {
+      "zh": "编程专用：稳定、便宜，适合日常改代码。",
+      "en": "Coding-tuned: steady and cheap for everyday code work."
+    },
+    "kimi-for-coding-highspeed": {
+      "zh": "与 K2.7 Code 同一模型，输出约 5–6 倍速，单价约 2 倍。",
+      "en": "Same model as K2.7 Code at roughly 5–6x output speed and 2x the price."
+    },
+    "qwen3.8-max": {
+      "zh": "通义旗舰：多模态与综合能力最强。",
+      "en": "Qwen's flagship: strongest multimodality and overall capability."
+    },
+    "step-5-preview": {
+      "zh": "阶跃下一代旗舰预览，百万上下文。",
+      "en": "StepFun's next-generation flagship preview with a million-token context."
+    },
+    "step-3.7-flash": {
+      "zh": "原生多模态，超高速：约 400 token/s，目前最快的一档。",
+      "en": "Natively multimodal and extremely fast: around 400 tokens/s."
+    },
+    "minimax-m3": {
+      "zh": "编程与 Agent 前沿，百万上下文，原生多模态。",
+      "en": "Coding and agentic frontier with 1M context and native multimodality."
+    },
+    "grok-4.5": {
+      "zh": "xAI 最强模型，主打编程。",
+      "en": "xAI's strongest model, aimed at programming."
+    },
+    "doubao-seed-2.1": {
+      "zh": "字节旗舰系列，分层定位，中文与多模态均衡。",
+      "en": "ByteDance's flagship line, tiered, balanced across Chinese and multimodality."
+    },
+    "ernie-5.0": {
+      "zh": "超稀疏 MoE，预训练成本极低，中文知识强。",
+      "en": "Ultra-sparse MoE with very low training cost and strong Chinese knowledge."
+    },
+    "mistral-large-3": {
+      "zh": "宽松许可的开源权重模型，综合能力强。",
+      "en": "Permissively licensed open-weight model with strong overall capability."
+    }
+  },
+  "aliases": {
+    "deepseek-v4.1-flash": "deepseek-flash",
+    "deepseek-v41-flash": "deepseek-flash",
+    "k3": "kimi-k3",
+    "k3-256k": "kimi-k3",
+    "kimi-k2.7-code": "kimi-for-coding",
+    "kimi-for-coding-highspeed-256k": "kimi-for-coding-highspeed",
+    "ernie-5": "ernie-5.0",
+    "minimax-m3-1m": "minimax-m3"
+  },
+  "families": [
+    {
+      "match": "^deepseek.*(v4[-.]?1|4[-.]?1).*flash$|^deepseek-flash$",
+      "key": "deepseek-flash",
+      "note": "Anchored on `deepseek` on purpose: an unanchored /flash$/ would hand this copy to glm-5.3-flash, step-3.7-flash and every other vendor's flash tier."
+    },
+    {
+      "match": "deepseek.*vision",
+      "key": "deepseek-v4-flash-vision-exp"
+    },
+    {
+      "match": "deepseek.*pro",
+      "key": "deepseek-v4-pro"
+    },
+    {
+      "match": "deepseek.*flash",
+      "key": "deepseek-v4-flash"
+    },
+    {
+      "match": "deepseek.*(r1|reasoner|think)",
+      "text": {
+        "zh": "DeepSeek 推理专用：先思考再作答，适合数学、算法与难题。",
+        "en": "DeepSeek reasoning-first: thinks before answering; best for math, algorithms and hard problems."
+      }
+    },
+    {
+      "match": "deepseek",
+      "text": {
+        "zh": "DeepSeek 通用模型：中文与代码均衡，长上下文性价比高。",
+        "en": "DeepSeek generalist: balanced Chinese and code, strong long-context value."
+      }
+    },
+    {
+      "match": "claude.*opus",
+      "text": {
+        "zh": "Claude 旗舰：编程、Agent 与专业工作最强，长程一致性最好。",
+        "en": "Claude flagship: strongest coding, agentic and professional work, best long-run consistency."
+      }
+    },
+    {
+      "match": "claude.*sonnet",
+      "text": {
+        "zh": "Claude 主力档：成本与能力平衡，日常首选。",
+        "en": "Claude workhorse: balanced cost and capability, the everyday default."
+      }
+    },
+    {
+      "match": "claude.*haiku",
+      "text": {
+        "zh": "Claude 轻量档：低延迟、低成本，适合简单与高频任务。",
+        "en": "Claude lightweight: low latency and cost for simple, high-frequency tasks."
+      }
+    },
+    {
+      "match": "claude",
+      "text": {
+        "zh": "Anthropic Claude 模型。",
+        "en": "Anthropic Claude model."
+      }
+    },
+    {
+      "match": "codex",
+      "text": {
+        "zh": "OpenAI 编码专用：长程代码任务与重构。",
+        "en": "OpenAI coding specialist for long-horizon code work and refactors."
+      }
+    },
+    {
+      "match": "gpt-?5",
+      "text": {
+        "zh": "OpenAI 通用前沿模型，推理与编码均衡。",
+        "en": "OpenAI frontier generalist with balanced reasoning and coding."
+      }
+    },
+    {
+      "match": "(^|[/-])o[1-9](-|$)",
+      "text": {
+        "zh": "OpenAI 推理专用：先思考再作答，适合数学、算法与难题。",
+        "en": "OpenAI reasoning-first: thinks before answering; best for math, algorithms and hard problems."
+      }
+    },
+    {
+      "match": "gpt",
+      "text": {
+        "zh": "OpenAI 通用模型。",
+        "en": "OpenAI general model."
+      }
+    },
+    {
+      "match": "gemini.*(pro|ultra)",
+      "text": {
+        "zh": "Gemini 旗舰：世界知识与多模态最强，适合复杂长程任务。",
+        "en": "Gemini flagship: strongest world knowledge and multimodality for complex, long-horizon work."
+      }
+    },
+    {
+      "match": "gemini.*flash",
+      "text": {
+        "zh": "Gemini Flash：快而便宜，能力逼近旗舰。",
+        "en": "Gemini Flash: fast and cheap, with capability close to the flagship."
+      }
+    },
+    {
+      "match": "gemini",
+      "text": {
+        "zh": "Google Gemini 模型。",
+        "en": "Google Gemini model."
+      }
+    },
+    {
+      "match": "glm.*flashx",
+      "key": "glm-5.3-flashx"
+    },
+    {
+      "match": "glm.*flash",
+      "text": {
+        "zh": "GLM Flash：原生多模态，小激活、极低成本，性能逼近旗舰。",
+        "en": "GLM Flash: natively multimodal, few active parameters, very low cost, capability near the flagship."
+      }
+    },
+    {
+      "match": "glm",
+      "text": {
+        "zh": "智谱 GLM：结构化输出与编码能力突出，适合 Agent 工作流。",
+        "en": "Zhipu GLM: strong structured output and coding, well suited to agent workflows."
+      }
+    },
+    {
+      "match": "kimi.*(k3|k-?3)|^k3",
+      "key": "kimi-k3"
+    },
+    {
+      "match": "kimi.*(code|k2[-.]?7)",
+      "key": "kimi-for-coding"
+    },
+    {
+      "match": "kimi",
+      "text": {
+        "zh": "Moonshot Kimi：长文本见长，中文写作与知识工作强。",
+        "en": "Moonshot Kimi: strong on long documents, Chinese writing and knowledge work."
+      }
+    },
+    {
+      "match": "qwen.*max",
+      "key": "qwen3.8-max"
+    },
+    {
+      "match": "qwen.*(coder|code)",
+      "text": {
+        "zh": "Qwen 代码专用：补全、生成与仓库级修改。",
+        "en": "Qwen coding specialist for completion, generation and repo-level edits."
+      }
+    },
+    {
+      "match": "qwen.*(flash|turbo)",
+      "text": {
+        "zh": "Qwen 轻量档：响应快、成本低。",
+        "en": "Qwen lightweight tier: fast responses at low cost."
+      }
+    },
+    {
+      "match": "qwen.*plus",
+      "text": {
+        "zh": "Qwen 中端档：能力与成本折中。",
+        "en": "Qwen mid tier: a middle ground between capability and cost."
+      }
+    },
+    {
+      "match": "qwen.*\\d+\\s*b",
+      "text": {
+        "zh": "小尺寸稠密模型：可本地或低成本部署。",
+        "en": "Small dense model: cheap to serve, or run locally."
+      }
+    },
+    {
+      "match": "qwen",
+      "text": {
+        "zh": "阿里通义千问：中文与多模态均衡。",
+        "en": "Alibaba Qwen: balanced Chinese and multimodality."
+      }
+    },
+    {
+      "match": "step.*5",
+      "key": "step-5-preview"
+    },
+    {
+      "match": "step.*flash",
+      "key": "step-3.7-flash"
+    },
+    {
+      "match": "step",
+      "text": {
+        "zh": "阶跃星辰 Step 模型。",
+        "en": "StepFun Step model."
+      }
+    },
+    {
+      "match": "minimax.*m3|(^|-)m3($|-)",
+      "key": "minimax-m3"
+    },
+    {
+      "match": "minimax|(^|-)m2[-.]?\\d",
+      "text": {
+        "zh": "MiniMax：性价比高，编程与长上下文兼顾。",
+        "en": "MiniMax: good value, covering coding and long context."
+      }
+    },
+    {
+      "match": "grok",
+      "text": {
+        "zh": "xAI Grok：风格直接，编程与实时知识强。",
+        "en": "xAI Grok: direct style, strong at coding and current knowledge."
+      }
+    },
+    {
+      "match": "doubao|seed-?\\d|volc",
+      "text": {
+        "zh": "字节豆包：中文与多模态均衡，分层定位。",
+        "en": "ByteDance Doubao: balanced Chinese and multimodality, tiered by use."
+      }
+    },
+    {
+      "match": "ernie",
+      "text": {
+        "zh": "百度文心：中文知识与检索增强强。",
+        "en": "Baidu ERNIE: strong Chinese knowledge and retrieval augmentation."
+      }
+    },
+    {
+      "match": "hunyuan|(^|-)hy\\d",
+      "text": {
+        "zh": "腾讯混元：中文与 Agent 场景均衡。",
+        "en": "Tencent Hunyuan: balanced for Chinese and agent scenarios."
+      }
+    },
+    {
+      "match": "codestral",
+      "text": {
+        "zh": "Mistral 代码专用：补全与生成。",
+        "en": "Mistral coding specialist for completion and generation."
+      }
+    },
+    {
+      "match": "mistral|magistral",
+      "text": {
+        "zh": "Mistral：宽松许可，欧洲开源权重代表。",
+        "en": "Mistral: permissively licensed European open-weight line."
+      }
+    },
+    {
+      "match": "llama",
+      "text": {
+        "zh": "Meta Llama 开源权重模型。",
+        "en": "Meta Llama open-weight model."
+      }
+    },
+    {
+      "match": "command-?[ar]|cohere",
+      "text": {
+        "zh": "Cohere Command：企业检索与工具调用见长。",
+        "en": "Cohere Command: strong at enterprise retrieval and tool use."
+      }
+    },
+    {
+      "match": "phi-?\\d",
+      "text": {
+        "zh": "微软 Phi 小模型：体积小、可本地部署。",
+        "en": "Microsoft Phi small model: compact and locally deployable."
+      }
+    },
+    {
+      "match": "nova",
+      "text": {
+        "zh": "Amazon Nova 模型。",
+        "en": "Amazon Nova model."
+      }
+    },
+    {
+      "match": "sonar|perplexity",
+      "text": {
+        "zh": "Perplexity Sonar：联网检索增强。",
+        "en": "Perplexity Sonar: search-augmented."
+      }
+    }
+  ],
+  "tiers": [
+    {
+      "match": "flash|mini|lite|nano|turbo|air|small|swift|highspeed|fast|instant",
+      "text": {
+        "zh": "轻量档：响应快、成本低，适合简单或高频任务。",
+        "en": "Lightweight tier: fast and cheap, for simple or high-frequency tasks."
+      }
+    },
+    {
+      "match": "pro|max|ultra|opus|thinking|reasoner|plus|large|advanced|heavy|frontier",
+      "text": {
+        "zh": "高能力档：适合复杂或质量优先的任务，成本更高。",
+        "en": "High-capability tier: for complex, quality-first work at higher cost."
+      }
+    },
+    {
+      "match": "\\d+\\s*b($|[^a-z])",
+      "text": {
+        "zh": "小尺寸稠密模型：可本地或低成本部署。",
+        "en": "Small dense model: cheap to serve, or run locally."
+      }
+    }
+  ]
+}

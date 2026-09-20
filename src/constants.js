@@ -6,28 +6,30 @@
     var COMPOSER_HINT = 'How can I help you today?'
 
     /**
-     * Model-picker copy. `deepseek-official` is the provider group id of
-     * DeepSeek's own service. Descriptions shown under each model name:
-     * any model id ENDING in `flash` (e.g. `deepseek-flash`) carries its
-     * tech-report title, and the rest are keyed by `provider/model` — the
-     * vision variant deliberately ends in `-exp`, so it takes its own entry.
-     * Models with no entry fall back to the host's own description.
+     * Model picker copy.
+     *
+     * The copy itself is NOT here. It ships as `model-descriptions.json` beside
+     * the bundle, and the browser half fetches it at runtime (the host half
+     * serves it under MODEL_COPY_ROUTE), so the model table grows without a
+     * rebuild and no copy enters the bundle. The language comes from the shell's
+     * own `locale` service — one line per row, in the language the rest of the
+     * UI is in — never two languages stacked.
+     *
+     * The constants below are the neutral fallbacks painted before that document
+     * arrives, and kept if it never does. They are English because a failed
+     * fetch has no locale to honour.
      */
     var MODEL_OFFICIAL_GROUP = 'deepseek-official'
-    var MODEL_FALLBACK_LABEL = '选择模型'
-    var MODEL_LOADING_LABEL = '正在加载模型…'
-    var MODEL_EMPTY_LABEL = '没有可用的模型。'
-    var MODEL_EFFORT_LABEL = '推理等级'
+    var MODEL_COPY_ROUTE = '/dsh-claude-style/model-descriptions.json'
+    var MODEL_COPY_FALLBACK_LOCALE = 'en'
+    var MODEL_FALLBACK_LABEL = 'Select model'
+    var MODEL_LOADING_LABEL = 'Loading models…'
+    var MODEL_EMPTY_LABEL = 'No models available.'
+    var MODEL_EFFORT_LABEL = 'Reasoning effort'
     var MODEL_EFFORT_DEFAULT = 'Default'
     var MODEL_MORE_LABEL = 'More models'
-    var MODEL_FLASH_DESCRIPTION = 'DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression'
-    var MODEL_DESCRIPTIONS = {
-      // Legacy text-only V4-Flash (the host default catalog still lists it):
-      // keyed so it does not borrow the V4.1 title from the flash rule.
-      'deepseek-official/deepseek-v4-flash': '快速、高效且经济；适合目标明确、常规或并行任务。',
-      'deepseek-official/deepseek-v4-pro': '旗舰模型：自主编码、知识与复杂推理最强，适合质量优先的复杂任务，成本较高。',
-      'deepseek-official/deepseek-v4-flash-vision-exp': '实验性视觉版本：在 Flash 基础上支持图像理解，适合截图、图表与文档类任务。',
-    }
+    var MODEL_TRIGGER_LABEL = 'Select model, currently {model}'
+    var MODEL_NO_EFFORT_LABEL = 'This model offers no reasoning levels.'
 
     /** English weekday names, indexed by Date#getDay() (0 = Sunday). */
     var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
