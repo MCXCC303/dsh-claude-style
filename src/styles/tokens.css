@@ -46,6 +46,10 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
   --dsh-claude-inline-code-fg: #e8a08a;
   --dsh-claude-link: #8ab4f8;
   --dsh-claude-link-underline: rgba(138, 180, 248, 0.6);
+  /* The quote reads as a link: same blue, a wash of it for the fill, and the
+     same tone for the bar — the text colour itself is --dsh-claude-link. */
+  --dsh-claude-quote-bg: rgba(138, 180, 248, 0.12);
+  --dsh-claude-quote-border: rgba(138, 180, 248, 0.55);
   /* The host pins the code-block surface on `pre.shiki` with !important, so it
      is only reachable through its own token; #1c1b1a is the value the skin's
      (inert) `pre { background }` rule always meant. */
@@ -119,6 +123,9 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsh-claude-inline-code-fg: #943333;
   --dsh-claude-link: #184f95;
   --dsh-claude-link-underline: rgba(24, 79, 149, 0.6);
+  /* Quote = link material (see the dark block). */
+  --dsh-claude-quote-bg: rgba(24, 79, 149, 0.08);
+  --dsh-claude-quote-border: rgba(24, 79, 149, 0.45);
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
@@ -160,12 +167,6 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) button[class*="_brand"]:ho
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) button[class*="_primary"]:hover,
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-slot="sidebar.settings"] > :is(button, [role="button"]):hover {
   background: #c6613f;
-}
-
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) blockquote {
-  color: #6e6a60;
-  border-left-color: var(--dsw-alias-label-caption);
-  background: rgba(20, 20, 19, 0.04);
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) pre {

@@ -59,6 +59,17 @@ address. `src/overrides/selection.js` therefore mirrors `document.hasFocus()`
 onto `data-dsh-window-blur` and the stylesheet switches on that attribute; the
 selection itself survives the blur.
 
+## Markdown material
+
+A markdown quote and a markdown link are the same signal — a passage that came
+from somewhere else — so the quote wears the link's material: the link blue
+(`--dsh-claude-link`), the link's resting underline (1.5px, offset 2px), a wash
+of that blue for the fill and a matching bar (`--dsh-claude-quote-bg` /
+`--dsh-claude-quote-border`, tuned per theme). The prose serif face is
+unchanged. The quote's `padding` is pinned with `!important`: the host's own
+`.markdown blockquote` sets `padding-left` on a class, which would otherwise
+leave the wash lopsided.
+
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.

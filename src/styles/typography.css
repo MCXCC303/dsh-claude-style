@@ -142,16 +142,25 @@ body[data-dsh-claude-style] :is([class*="caption"], [class*="sectionLabel"]) {
 }
 
 /* ---------- editorial markdown ---------- */
-/* Claude's quote keeps the prose face but stands upright on a neutral bar and
-   wash; the warm accent stays reserved for controls. */
+/* The quote wears the link's material: same blue, underlined at rest, on a wash
+   of that blue with a matching bar. A quote and a link are the same signal — a
+   passage that came from somewhere else — so they read as one material instead
+   of the neutral gray bar the quote used to carry. The prose face stays. */
 body[data-dsh-claude-style] blockquote {
   font-family: var(--dsw-font-prose);
   font-style: normal;
-  color: #b0aea5;
-  border-left: 2px solid var(--dsw-alias-label-caption);
-  background: rgba(250, 249, 245, 0.06);
+  color: var(--dsh-claude-link);
+  text-decoration: underline;
+  text-decoration-color: var(--dsh-claude-link-underline);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  border-left: 2px solid var(--dsh-claude-quote-border);
+  background: var(--dsh-claude-quote-bg);
   border-radius: 0 8px 8px 0;
-  padding: 0.6em 1em;
+  /* The host's `.markdown blockquote` sets padding-left on its own class, so
+     the box padding has to be pinned to keep the wash even on both sides. */
+  margin: 16px 0;
+  padding: 0.6em 1em !important;
 }
 
 /* The fill rides the host's --dsw-alias-markdown-code-block token — the host
