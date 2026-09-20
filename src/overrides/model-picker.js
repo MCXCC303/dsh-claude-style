@@ -1,8 +1,7 @@
     // ============================================================================
-    // 4.4: 模型选择器 (Model Picker)
+    // 模型选择器 (Model Picker)
     // ============================================================================
     function installModelPicker(ctx, ui) {
-      // --- 4.4 Model picker: replaces the host's model seat ---
       /**
        * The host's model seat is a click-triggered two-pane menu (Model /
        * Effort rows drilling into their own lists). The skin replaces it with

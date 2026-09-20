@@ -1,8 +1,7 @@
     // ============================================================================
-    // 4.2: 权限段控件与会话内弹层 (Permission Segments & Popover)
+    // 权限段控件与会话内弹层 (Permission Segments & Popover)
     // ============================================================================
     function installPermissions(ctx, ui) {
-      // --- 4.2 Permission Segments & In-Conversation Popover ---
       var segments = null
       var permContainer = null
       var permBtn = null

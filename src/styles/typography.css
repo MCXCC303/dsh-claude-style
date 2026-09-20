@@ -115,10 +115,12 @@ body[data-dsh-claude-style] [class*="tableScroll"] {
   padding-left: 0 !important;
   padding-right: 0 !important;
   background-clip: padding-box;
-  /* Narrow tables hug their content instead of being stretched by the
-     host's .tableFill variant; wide tables cap at the container and scroll. */
-  width: fit-content !important;
-  max-width: 100% !important;
+  /* Narrow tables stretch to the prose content block; wide tables keep
+     their natural max-content width and scroll inside this wrapper. */
+  width: 100% !important;
+  max-width: var(--dsh-chat-content-width, 100%) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 body[data-dsh-claude-style] [class*="tableScroll"] table {
@@ -129,6 +131,7 @@ body[data-dsh-claude-style] [class*="tableScroll"] table {
   border-spacing: 0 !important;
   border-collapse: collapse !important;
   width: max-content !important;
+  min-width: 100% !important;
   max-width: max-content !important;
 }
 

@@ -1,5 +1,5 @@
     // ============================================================================
-    // 4.5: 账户封禁彩蛋 (Account-ban Easter Egg)
+    // 账户封禁彩蛋 (Account-ban Easter Egg)
     // ============================================================================
     /**
      * The "Your account is on hold" screen, reproduced from Claude's own

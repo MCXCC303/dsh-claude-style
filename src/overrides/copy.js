@@ -1,8 +1,7 @@
     // ============================================================================
-    // 4.1: 文案改写 (Copy Rewrites)
+    // 文案改写 (Copy Rewrites)
     // ============================================================================
     function installCopy(ctx, ui) {
-      // --- 4.1 Copy Overrides ---
       /** Shipped idle composer hints (zh / en, hero / default) this skin replaces. */
       var HINT_SOURCES = [
         '描述你想要构建的内容',

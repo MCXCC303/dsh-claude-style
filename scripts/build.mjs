@@ -487,6 +487,7 @@ function main() {
   try {
     new vm.Script(bundle, { filename: 'lib/client.js' })
   } catch (error) {
+    fs.mkdirSync(path.join(ROOT, '.debug'), { recursive: true })
     fs.writeFileSync(path.join(ROOT, '.debug', 'failed-bundle.js'), bundle)
     console.error('build: generated bundle failed to parse:', error.message)
     console.error('build: failing bundle written to .debug/failed-bundle.js')

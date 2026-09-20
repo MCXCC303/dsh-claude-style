@@ -285,7 +285,7 @@
       "match": "deepseek.*(r1|reasoner|think)",
       "text": {
         "zh": "DeepSeek 推理专用：先思考再作答，适合数学、算法与难题。",
-        "en": "DeepSeek reasoning-first: thinks before answering; best for math, algorithms and hard problems."
+        "en": "DeepSeek reasoning-first: thinks before answering; suited for math, algorithms and hard problems."
       }
     },
     {
@@ -341,7 +341,7 @@
       "match": "(^|[/-])o[1-9](-|$)",
       "text": {
         "zh": "OpenAI 推理专用：先思考再作答，适合数学、算法与难题。",
-        "en": "OpenAI reasoning-first: thinks before answering; best for math, algorithms and hard problems."
+        "en": "OpenAI reasoning-first: thinks before answering; suited for math, algorithms and hard problems."
       }
     },
     {
