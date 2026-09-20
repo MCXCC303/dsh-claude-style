@@ -343,16 +343,43 @@
         }
       }
 
-      function restoreStatsPosition() {
+      /**
+       * Merge the session-stats pills into the composer toolbar row so the
+       * controls and the stats share ONE line. The host renders the pills
+       * (the `conversation.composer.dock` slot) as the card's sibling — a
+       * full-width line of their own below the input box; the skin moves
+       * them into the row, right before the trailing model/status group.
+       * A host re-render can put them back, so the move is re-applied on
+       * every pass and is a no-op once they are in place.
+       */
+      function mergeStatsIntoRow() {
         var stats = document.querySelector('[data-composer-stats]')
+        if (!stats) return
         // `[class*="_row"]`, not `[class*="row"]`: the bare substring also
         // matches the input growth wrapper (`grow` contains `row`).
-        if (stats && stats.parentElement && (stats.parentElement.matches && stats.parentElement.matches('[class*="_row"]') || stats.parentElement.querySelector('[class*="tools"]'))) {
-          var card = stats.closest('[data-composer-card]')
-          if (card && card.parentNode) {
-            card.parentNode.insertBefore(stats, card.nextSibling)
+        var row = null
+        if (stats.parentElement && stats.parentElement.matches && stats.parentElement.matches('[class*="_row"]')) {
+          row = stats.parentElement
+        } else {
+          // Host default: the pills sit in a slot anchor beside the card.
+          // Walk up to the nearest ancestor that also holds a composer card.
+          var node = stats.parentElement
+          while (node && node !== document.body && row === null) {
+            var card = node.querySelector('[data-composer-card]')
+            if (card) {
+              var r = card.querySelector('[class*="_row"]')
+              if (r) row = r
+            }
+            node = node.parentElement
           }
         }
+        if (row === null) return
+        var trailing = row.querySelector('[class*="trailing"]')
+        var inPlace = stats.parentElement === row &&
+          (trailing !== null ? stats.nextElementSibling === trailing : row.lastElementChild === stats)
+        if (inPlace) return
+        if (trailing !== null) row.insertBefore(stats, trailing)
+        else row.appendChild(stats)
       }
 
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
@@ -1120,7 +1147,7 @@
           rewriteHint()
           rewriteTurnStatus()
           syncAttachmentState()
-          restoreStatsPosition()
+          mergeStatsIntoRow()
           syncSegments()
           syncAccountFooter()
           if (composerCardObserver) {
