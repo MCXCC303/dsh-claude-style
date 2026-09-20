@@ -1,7 +1,8 @@
-<div align="center">
 # DSH Claude Style
 
 **为 DeepSeek Harness (DSH) Web 客户端复刻 Claude Code Desktop 视觉与交互体验的主题插件 —— 暖调象牙画布、陶烬橙强调色，以及在 DSH 上重筑的 Claude Code 交互模型。**
+
+<div align="center">
 
 > **咖啡与 Claude 的下午茶时光。**
 
@@ -101,4 +102,10 @@ dsh plugin --profile web remove dsh-claude-style   # 卸载
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://www.star-history.com/?type=date&repos=Nwflower%2Fdsh-claude-style)
+<a href="https://www.star-history.com/?type=date&repos=Nwflower%2Fdsh-claude-style">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Nwflower/dsh-claude-style&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Nwflower/dsh-claude-style&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Nwflower/dsh-claude-style&type=date&legend=top-left" />
+ </picture>
+</a>
