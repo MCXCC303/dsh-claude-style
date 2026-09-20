@@ -114,6 +114,11 @@
         schedule()
       })
 
+      var usernameUnsubscribe = null
+      usernameUnsubscribe = onUsernameLoaded(function () {
+        schedule()
+      })
+
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
       var composerCardObserver = null
@@ -189,6 +194,10 @@
         if (modelCopyUnsubscribe !== null) {
           try { modelCopyUnsubscribe() } catch (error) { /* already disposed */ }
           modelCopyUnsubscribe = null
+        }
+        if (usernameUnsubscribe !== null) {
+          try { usernameUnsubscribe() } catch (error) { /* already disposed */ }
+          usernameUnsubscribe = null
         }
         observer.disconnect()
         if (composerCardObserver) {

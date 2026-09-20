@@ -1,4 +1,50 @@
 /* --- 2.2 Typography & Markdown Editorial --- */
+/* ---------- webfonts ---------- */
+/* The code font ships inside the plugin package and the host half serves it
+   under /dsh-claude-style/fonts/, so 'JetBrains Mono' resolves even on systems
+   that never installed it. @font-face cannot hang off the skin root — it is a
+   global registration — but the family is only referenced by the skin's own
+   font stacks, so nothing else on the page picks it up. When the route is
+   missing (host half unavailable) the fetch 404s and the stack's system
+   fallbacks take over exactly as before. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/dsh-claude-style/fonts/JetBrainsMonoVariable.ttf') format('truetype-variations');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/dsh-claude-style/fonts/JetBrainsMonoItalicVariable.ttf') format('truetype-variations');
+  font-weight: 100 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* The Anthropic text faces are NOT in the npm package (they remain Anthropic's
+   property), so these registrations resolve only when the user has dropped the
+   files into the plugin's fonts/ directory; otherwise the request 404s and the
+   stacks fall back to a system-installed copy. Both files are static Regular
+   cuts — a single 400 declaration covers them and the browser synthesizes the
+   heavier weights, exactly as it does for a system-installed copy. */
+@font-face {
+  font-family: 'Anthropic Sans Web Text';
+  src: url('/dsh-claude-style/fonts/AnthropicSansWebText.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Serif Web Text';
+  src: url('/dsh-claude-style/fonts/AnthropicSerifWebText.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ---------- typography: serif display + sans UI + mono code ---------- */
 body[data-dsh-claude-style] {
   font-family: var(--dsw-font-family);
@@ -46,6 +92,24 @@ body[data-dsh-claude-style] [class*="markdown"] h4 { font: var(--dsw-font-markdo
 
 body[data-dsh-claude-style] [class*="markdown"] :is(th, td) {
   font-family: var(--dsw-font-prose);
+  /* One type step up from the host's secondary table size (13px → 14px),
+     not a literal +1px. */
+  font-size: var(--dsh-content-font-size, 14px);
+}
+
+body[data-dsh-claude-style] [class*="markdown"] th {
+  background: #f0f0ef;
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="markdown"] th {
+  background: #242320;
+}
+
+/* Table frame: same 0.5px line the host uses for row separators, rounded
+   like the code block. The scroll container already clips its content. */
+body[data-dsh-claude-style] [class*="markdown"] [class*="tableScroll"] {
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
 }
 
 /* Heading rhythm. The host gives every heading a 32px top margin, which stacks
@@ -92,10 +156,11 @@ body[data-dsh-claude-style] blockquote {
 
 /* The fill rides the host's --dsw-alias-markdown-code-block token — the host
    pins `pre.shiki` with !important, so a `background` here would never apply.
-   Only the frame is styled. */
-body[data-dsh-claude-style] pre {
-  border: 1px solid #242320;
-  border-radius: 8px;
+   The frame lives on the wrapper so the language banner and the code share
+   one rounded outline, like Claude's code block. */
+body[data-dsh-claude-style] .md-code-block {
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
 }
 
 /* Code blocks keep the same outer rhythm as body paragraphs: 12px between
@@ -111,11 +176,15 @@ body[data-dsh-claude-style] .md-code-block pre code {
   font-weight: 500 !important;
 }
 
-/* Claude sets code blocks at the same size as body copy; the host sizes
-   pre/code itself, so force both to the surrounding body size. */
-body[data-dsh-claude-style] pre,
+/* Code block type: one pixel below the surrounding body copy; the inner
+   <code> inherits from <pre> rather than compounding the calc(). */
+body[data-dsh-claude-style] pre {
+  font-size: calc(1em - 1px) !important;
+  font-weight: 500 !important;
+}
+
 body[data-dsh-claude-style] pre code {
-  font-size: 1em !important;
+  font-size: inherit !important;
   font-weight: 500 !important;
 }
 
@@ -128,7 +197,7 @@ body[data-dsh-claude-style] code:not(pre code) {
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 4px;
   padding: 1px;
-  font-size: 1em !important;
+  font-size: calc(1em - 1px) !important;
 }
 
 /* Claude's links: blue, underlined at rest, and without the host's

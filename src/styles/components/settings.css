@@ -91,3 +91,29 @@ body[data-dsh-claude-style] .dsh-claude-settings-switch-knob {
 body[data-dsh-claude-style] .dsh-claude-settings-switch[data-on] .dsh-claude-settings-switch-knob {
   transform: translateX(16px);
 }
+
+/* Custom username input: same row rhythm as the switch/segments, but wide
+   enough to read a name and narrow enough not to push the description. */
+body[data-dsh-claude-style] .dsh-claude-settings-input {
+  flex: none;
+  width: 180px;
+  max-width: 45%;
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  outline: none;
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-input:focus {
+  border-color: var(--dsw-alias-brand-primary, #d97757);
+}
+
+body[data-dsh-claude-style] .dsh-claude-settings-input::placeholder {
+  color: var(--dsw-alias-label-caption);
+}

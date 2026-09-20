@@ -23,13 +23,20 @@
       var errorState = React.useState(null)
       var error = errorState[0]
       var setError = errorState[1]
+      var usernameState = React.useState(prefs.username)
+      var username = usernameState[0]
+      var setUsername = usernameState[1]
+      var usernameTimer = React.useRef(null)
 
       // The skin's own apply-side writes land here too (a reload, a conflict
       // re-read), so the page never drifts from what the document says.
       React.useEffect(function () {
         var alive = true
         var unsubscribe = subscribePrefs(function (next) {
-          if (alive) setPrefs(next)
+          if (alive) {
+            setPrefs(next)
+            setUsername(next.username)
+          }
         })
         var unsubscribeCopy = onModelCopyLoaded(function () {
           if (alive) setPrefs(function (p) { return Object.assign({}, p) })
@@ -38,6 +45,7 @@
           alive = false
           unsubscribe()
           if (unsubscribeCopy) unsubscribeCopy()
+          if (usernameTimer.current) clearTimeout(usernameTimer.current)
         }
       }, [])
 
@@ -51,6 +59,32 @@
         savePrefs(patch).then(function (result) {
           if (result === null) setError(settingsCopy('unavailable', 'The settings store is unavailable, so changes will not be saved.'))
         })
+      }
+
+      var saveUsernameNow = function (value) {
+        var next = value.trim().slice(0, USERNAME_MAX)
+        if (next === readPrefs().username) return
+        setError(null)
+        setPrefs(Object.assign({}, readPrefs(), { username: next }))
+        savePrefs({ username: next }).then(function (result) {
+          if (result === null) setError(settingsCopy('unavailable', 'The settings store is unavailable, so changes will not be saved.'))
+        })
+      }
+
+      var queueUsernameSave = function (value) {
+        if (usernameTimer.current) clearTimeout(usernameTimer.current)
+        usernameTimer.current = setTimeout(function () {
+          usernameTimer.current = null
+          saveUsernameNow(value)
+        }, 600)
+      }
+
+      var commitUsername = function () {
+        if (usernameTimer.current) {
+          clearTimeout(usernameTimer.current)
+          usernameTimer.current = null
+        }
+        saveUsernameNow(username)
       }
 
       var segment = function (options, active, onPick) {
@@ -118,6 +152,35 @@
       ]
 
       var rows = [
+        row(
+          'username',
+          settingsCopy('usernameTitle', 'Username'),
+          settingsCopy('usernameDesc', 'Shown in the new-conversation greeting. Leave empty to use the name resolved from the host user.'),
+          React.createElement('input', {
+            type: 'text',
+            className: 'dsh-claude-settings-input',
+            value: username,
+            maxLength: USERNAME_MAX,
+            placeholder: settingsCopy('usernamePlaceholder', 'Auto-detect from host user'),
+            spellCheck: false,
+            autoComplete: 'off',
+            onChange: function (e) {
+              setUsername(e.target.value)
+              queueUsernameSave(e.target.value)
+            },
+            onBlur: commitUsername,
+            onKeyDown: function (e) {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commitUsername()
+                if (e.currentTarget && e.currentTarget.blur) e.currentTarget.blur()
+              } else if (e.key === 'Escape') {
+                setUsername(prefs.username)
+                if (e.currentTarget && e.currentTarget.blur) e.currentTarget.blur()
+              }
+            },
+          }),
+        ),
         row(
           'brand',
           settingsCopy('brandTitle', 'Brand mark'),

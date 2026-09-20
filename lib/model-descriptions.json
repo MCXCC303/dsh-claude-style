@@ -68,6 +68,18 @@
       "zh": "重绘输入区，可选新会话页、对话内或两者。",
       "en": "Which input area the skin restyles: the new-conversation page, the conversation, or both. The hero brand mark and headline are unaffected."
     },
+    "usernameTitle": {
+      "zh": "用户名",
+      "en": "Username"
+    },
+    "usernameDesc": {
+      "zh": "显示在新会话欢迎语中；留空则使用宿主解析到的系统用户名。",
+      "en": "Shown in the new-conversation greeting. Leave empty to use the system username resolved by the host."
+    },
+    "usernamePlaceholder": {
+      "zh": "自动解析系统用户",
+      "en": "Auto-detect host user"
+    },
     "brandOff": {
       "zh": "关闭",
       "en": "Off"

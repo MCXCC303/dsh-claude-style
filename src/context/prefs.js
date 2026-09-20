@@ -17,10 +17,38 @@
       collapseFooter: true,
       autoPopover: true,
       composerScope: 'all',
+      username: '',
     }
     var prefsRevision
     var prefsAvailable = false
     var prefsListeners = []
+
+    /**
+     * Browser-local fallback for the custom username.
+     *
+     * The host settings namespace is the authoritative store, but a running
+     * host half may predate the `username` field. Persisting the value here
+     * keeps the setting usable until the host is reloaded, and the host value
+     * always wins once it carries a non-empty username.
+     */
+    var USERNAME_STORAGE_KEY = 'dsh-claude-style.username'
+    var fallbackUsername = ''
+    try {
+      fallbackUsername = typeof localStorage === 'undefined' ? '' : (localStorage.getItem(USERNAME_STORAGE_KEY) || '')
+    } catch (error) { fallbackUsername = '' }
+
+    function readFallbackUsername() {
+      return fallbackUsername
+    }
+
+    function setFallbackUsername(value) {
+      fallbackUsername = value
+      try {
+        if (typeof localStorage === 'undefined') return
+        if (value) localStorage.setItem(USERNAME_STORAGE_KEY, value)
+        else localStorage.removeItem(USERNAME_STORAGE_KEY)
+      } catch (error) { /* storage may be unavailable */ }
+    }
 
     /** The current preferences (live object; treat as read-only). */
     function readPrefs() {
@@ -75,6 +103,8 @@
             if (!data || data.ok !== true) return
             prefsRevision = data.revision
             prefsAvailable = data.available === true
+            var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
+            if (hostName) setFallbackUsername('')
             adoptPrefs(normalizePrefs(data.value))
           })
           .catch(function () { /* defaults stay */ })
@@ -89,6 +119,7 @@
         collapseFooter: section.collapseFooter !== false,
         autoPopover: section.autoPopover !== false,
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
+        username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
       }
     }
 
@@ -122,6 +153,10 @@
           if (data && data.ok === true) {
             prefsRevision = data.revision
             prefsAvailable = data.available === true
+            if (typeof patch.username === 'string') {
+              var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
+              setFallbackUsername(hostName ? '' : patch.username)
+            }
             adoptPrefs(normalizePrefs(data.value))
             return prefs
           }

@@ -6,6 +6,7 @@
       body.setAttribute('data-dsh-claude-style', '')
       setHostContext(ctx)
       loadModelCopy()
+      loadUsername()
       // Preferences are read asynchronously from the host settings namespace;
       // applying the defaults first keeps every gated rule in a defined state
       // for the frames before that read settles, and is exactly the shipped

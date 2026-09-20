@@ -161,6 +161,10 @@
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /** Route the browser half reads and writes preferences through (lib/index.js). */
     var PREFS_ROUTE = '/dsh-claude-style/prefs'
+    /** Route that resolves the host OS user once; never polled. */
+    var USERNAME_ROUTE = '/dsh-claude-style/username'
+    /** Longest accepted custom username; mirrored by lib/index.js. */
+    var USERNAME_MAX = 64
 
     /** Wordmark aspect ratio; scripts/build.mjs sizes the sidebar word height from it (geometry lives in src/assets/claude-word.svg). */
     var CLAUDE_WORD_ASPECT = 512.22 / 121.54

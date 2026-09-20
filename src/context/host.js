@@ -55,31 +55,50 @@
     }
 
     /**
-     * The client context exposes no user or account service, so the account
-     * name is inferred from the home-directory segment of a workspace path or
-     * a session cwd. Falls back to 'User'.
+     * Host-resolved username.
+     *
+     * The host half owns the OS user (`os.userInfo().username`); this side
+     * fetches it once and caches it. A custom username from the settings page
+     * always wins. No workspace parsing, no polling.
      */
-    function getUsername(ctx) {
+    var usernameFromHost = ''
+    var usernameRequested = false
+    var usernameListeners = []
+
+    function onUsernameLoaded(listener) {
+      usernameListeners.push(listener)
+      return function () {
+        var index = usernameListeners.indexOf(listener)
+        if (index !== -1) usernameListeners.splice(index, 1)
+      }
+    }
+
+    function loadUsername() {
+      if (usernameRequested) return
+      usernameRequested = true
+      if (typeof fetch !== 'function') return
       try {
-        if (ctx && typeof ctx.get === 'function') {
-          var workspaces = ctx.get('workspaces')
-          if (workspaces && workspaces.list && typeof workspaces.list.getSnapshot === 'function') {
-            var items = workspaces.list.getSnapshot().items || []
-            for (var i = 0; i < items.length; i++) {
-              var m = (items[i].path || '').match(/[/\\](?:Users|home)[/\\]([^/\\]+)/i)
-              if (m && m[1]) return m[1]
+        fetch(USERNAME_ROUTE, { credentials: 'same-origin' })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status)
+            return response.json()
+          })
+          .then(function (data) {
+            if (!data || data.ok !== true || typeof data.username !== 'string') return
+            usernameFromHost = data.username.trim().slice(0, USERNAME_MAX)
+            var listeners = usernameListeners.slice()
+            for (var i = 0; i < listeners.length; i++) {
+              try { listeners[i](usernameFromHost) } catch (error) { /* listener error */ }
             }
-          }
-          var sessions = ctx.get('sessions')
-          if (sessions && sessions.list && typeof sessions.list.getSnapshot === 'function') {
-            var byId = sessions.list.getSnapshot().byId || {}
-            for (var id in byId) {
-              var m2 = (byId[id].cwd || '').match(/[/\\](?:Users|home)[/\\]([^/\\]+)/i)
-              if (m2 && m2[1]) return m2[1]
-            }
-          }
-        }
-      } catch (e) {}
+          })
+          .catch(function () { /* custom username or 'User' stays */ })
+      } catch (error) { /* no fetch: fallback stays */ }
+    }
+
+    function getUsername() {
+      var custom = readPrefs().username || readFallbackUsername()
+      if (custom) return custom
+      if (usernameFromHost) return usernameFromHost
       return 'User'
     }
 
@@ -90,4 +109,8 @@
     var hostCtx = null
     function setHostContext(ctx) {
       hostCtx = ctx
+      // A new host context means a new OS user; the next apply resolves once
+      // again rather than reusing the previous host's cached name.
+      usernameRequested = false
+      usernameFromHost = ''
     }

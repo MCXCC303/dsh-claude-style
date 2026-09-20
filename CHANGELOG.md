@@ -1,8 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.6] - 2026-09-20
+
+### Added
+- **JetBrains Mono 免安装生效**：代码字体此前虽随包分发，但只在用户把字体装进系统后才解析；现由宿主半边新增 `/dsh-claude-style/fonts/*` 路由直接随包提供字体文件，浏览器半边以 `@font-face`（`font-display: swap`）注册为 webfont——未安装 JetBrains Mono 的系统上代码字体也立即生效，路由缺失时静默回退原系统字体栈。
+- **Anthropic 字体可选免安装**：`fonts/*` 路由同时放行 `AnthropicSansWebText.ttf` / `AnthropicSerifWebText.ttf`（均不进 npm 包，版权仍属 Anthropic）。用户把这两个文件放进插件包的 `fonts/` 目录后，宿主即以 webfont 提供，与系统安装效果一致；文件缺失时路由 404，字体栈回退到系统安装的副本，不影响未放置字体的用户。
 
 ### Changed
+- **代码块与表格样式对齐 Claude**：行内代码与代码块字号 -1px；代码块边框移到外层容器，语言标签与代码共用同一圆角边框；Markdown 表格字号提升一档（13px → 14px）、表头 #F0F0EF 背景、12px 圆角，并使用与内部横线一致的 0.5px 线条加外边框。
+- **设置页支持自定义用户名**：新增用户名输入框，输入停顿后自动保存；默认用户名由宿主 OS 用户解析一次并缓存，不再解析工作区路径或轮询；宿主半边未重载时浏览器本地回退保留自定义值。
 - **链接与行内代码样式对齐 Claude**：Markdown 链接下划线静止态 60% 不透明度、hover/focus-visible 恢复 100%，下划线加粗到 1.5px 并保留下划线避让；行内代码与代码块均改用 JetBrains Mono、字号强制与正文一致，并 +1 字重；代码字体栈补上正文 CJK 回退。行内代码背景矩形 padding 缩到 1px、背景色进一步减淡，边框与 composer 输入卡片非焦点态一致（1px solid --dsw-alias-border-l1）；Markdown 正文行高 -1px、段落间距 -4px，代码块外边距与行高同步对齐正文。新对话页 composer 卡片保留纯白填充与真实投影，仅移除背景色光晕阴影。排队消息、后台任务、目标栏提升到消息层之上，避免被消息卡片遮挡。
 - **代码字体从 Anthropic Mono Variable 替换为 JetBrains Mono Variable**：选用 JetBrains Mono 可变字体（含 Italic）作为代码字体，随插件库一并分发，并保留 SIL OFL 许可证。
 - **权限弹层改为 hover 态打开**：权限分段按钮悬停时打开权限弹层，移入弹层取消关闭，移出后延迟关闭；`autoPopover` 关闭时仍保持点击打开/关闭。
