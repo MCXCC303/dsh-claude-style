@@ -71,7 +71,7 @@ function loadTokens() {
   const factory = new Function(`
     ${constants}
     return {
-      SANS, SERIF, MONO, BRAND_ATTR, BRAND_ANTHROPIC,
+      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC,
       CLAUDE_WORD_WIDTH: (18 * CLAUDE_WORD_ASPECT).toFixed(1),
     }
   `)

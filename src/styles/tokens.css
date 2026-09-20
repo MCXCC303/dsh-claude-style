@@ -3,19 +3,16 @@
 body[data-dsh-claude-style] {
   --dsw-font-family: %%SANS%%;
   --dsw-font-serif: %%SERIF%%;
+  --dsw-font-prose: %%PROSE%%;
   --dsw-font-code: %%MONO%%;
-  /* Markdown document headings keep the UI sans at 700 — the face the host
-     ships and the one Claude uses. The host's markdown heading rule is a
-     `font:` shorthand (`--dsw-font-markdown-hN`) that names --dsw-font-family
-     directly, so overriding the four `-font-family` sub-tokens never reached
-     the page; these re-declare the shorthand itself. The ladder is steepened
-     from the host's 21/19/18 toward Claude's measured ≈21/17/15; h1 and h4
-     keep the host's values. */
-  --dsw-font-markdown-h2: 700 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
-  --dsw-font-markdown-h3: 700 calc(16px + var(--dsh-content-font-delta)) / calc(24px + var(--dsh-content-font-delta)) var(--dsw-font-family);
-  --dsw-font-markdown-base-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-small-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-table-font-family: var(--dsw-font-family);
+  /* Markdown document headings keep the host's own ladder, steepened from
+     21/19/18 toward Claude's measured ≈21/17/15; h1 and h4 keep the host's
+     values. The host reads these through a `font:` shorthand that names
+     --dsw-font-family directly, so overriding the `-font-family` sub-tokens
+     never reached the page — the shorthand itself is what has to be
+     re-declared. */
+  --dsw-font-markdown-h2: 700 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-prose);
+  --dsw-font-markdown-h3: 700 calc(16px + var(--dsh-content-font-delta)) / calc(24px + var(--dsh-content-font-delta)) var(--dsw-font-prose);
 }
 
 /* ---------- design tokens: warm-black (dark) palette ---------- */
@@ -45,6 +42,13 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
   --dsw-alias-button-info-hover: #e08a6d;
   --dsw-alias-interactive-bg-active: rgba(217, 119, 87, 0.30);
   --dsh-claude-hover-bg: rgba(255, 255, 255, 0.08);
+  --dsh-claude-inline-code-fg: #e8a08a;
+  --dsh-claude-link: #8ab4f8;
+  /* The host pins the code-block surface on `pre.shiki` with !important, so it
+     is only reachable through its own token; #1c1b1a is the value the skin's
+     (inert) `pre { background }` rule always meant. */
+  --dsw-alias-markdown-code-block: #1c1b1a;
+  --dsw-alias-markdown-code-block-banner: #242320;
   --dsw-alias-interactive-bg-hover: var(--dsh-claude-hover-bg);
   --dsw-alias-interactive-bg-hover-solid: #2e2c29;
   --dsw-alias-label-primary: #faf9f5;
@@ -104,6 +108,13 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   /* User message bubbles: the host's light bubble token is deepseek-50 (blue);
      use the skin's button-hover gray instead. */
   --dsw-specific-bubble: var(--dsh-claude-hover-bg);
+  /* Markdown surfaces, measured off Claude: a white code block, a neutral-gray
+     inline-code chip, and blue links. The chip colour is the same gray the
+     components hover with, so the two read as one material. */
+  --dsw-alias-markdown-code-block: #ffffff;
+  --dsw-alias-markdown-code-block-banner: #ffffff;
+  --dsh-claude-inline-code-fg: #943333;
+  --dsh-claude-link: #184f95;
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
@@ -154,12 +165,7 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) blockquote {
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) pre {
-  background: #f5f3ee;
   border-color: #e8e6dc;
-}
-
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) code:not(pre code) {
-  background: #e8e6dc;
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) table th {

@@ -20,15 +20,26 @@ body[data-dsh-claude-style] :is(h1, [class*="headline"]) {
   letter-spacing: -0.015em;
 }
 
-/* ---------- markdown document headings ---------- */
-/* The serif display face above is for UI headlines. Document headings are body
-   text: re-assert the host's own markdown heading shorthand (sans, 700) at a
-   weight that beats that rule, so the host's size ladder and line-heights
-   apply untouched. */
-body[data-dsh-claude-style] [class*="markdown"] h1 { font: var(--dsw-font-markdown-h1); }
-body[data-dsh-claude-style] [class*="markdown"] h2 { font: var(--dsw-font-markdown-h2); }
-body[data-dsh-claude-style] [class*="markdown"] h3 { font: var(--dsw-font-markdown-h3); }
-body[data-dsh-claude-style] [class*="markdown"] h4 { font: var(--dsw-font-markdown-h4); }
+/* ---------- markdown document prose ---------- */
+/* Claude sets conversation prose — body and headings alike — in the serif
+   face and lets Chinese fall through to a sans CJK; the serif display rule
+   above stays for UI headlines. */
+body[data-dsh-claude-style] [class*="markdown"] {
+  font-family: var(--dsw-font-prose);
+}
+
+/* The host gives its markdown elements their own `font:` shorthand, so the
+   family has to be re-stated wherever those shorthands land. The heading
+   shorthand is re-asserted too, so the host's weight, size and line-height
+   survive the serif display rule above. */
+body[data-dsh-claude-style] [class*="markdown"] h1 { font: var(--dsw-font-markdown-h1); font-family: var(--dsw-font-prose); }
+body[data-dsh-claude-style] [class*="markdown"] h2 { font: var(--dsw-font-markdown-h2); font-family: var(--dsw-font-prose); }
+body[data-dsh-claude-style] [class*="markdown"] h3 { font: var(--dsw-font-markdown-h3); font-family: var(--dsw-font-prose); }
+body[data-dsh-claude-style] [class*="markdown"] h4 { font: var(--dsw-font-markdown-h4); font-family: var(--dsw-font-prose); }
+
+body[data-dsh-claude-style] [class*="markdown"] :is(th, td) {
+  font-family: var(--dsw-font-prose);
+}
 
 /* Heading rhythm. The host gives every heading a 32px top margin, which stacks
    on the previous heading's 16px bottom margin: two consecutive headings open
@@ -60,10 +71,10 @@ body[data-dsh-claude-style] :is([class*="caption"], [class*="sectionLabel"]) {
 }
 
 /* ---------- editorial markdown ---------- */
-/* Claude's quote keeps the serif face but stands upright on a neutral bar and
-   wash; the warm accent stays reserved for links and controls. */
+/* Claude's quote keeps the prose face but stands upright on a neutral bar and
+   wash; the warm accent stays reserved for controls. */
 body[data-dsh-claude-style] blockquote {
-  font-family: var(--dsw-font-serif);
+  font-family: var(--dsw-font-prose);
   font-style: normal;
   color: #b0aea5;
   border-left: 2px solid var(--dsw-alias-label-caption);
@@ -72,17 +83,35 @@ body[data-dsh-claude-style] blockquote {
   padding: 0.6em 1em;
 }
 
+/* The fill rides the host's --dsw-alias-markdown-code-block token — the host
+   pins `pre.shiki` with !important, so a `background` here would never apply.
+   Only the frame is styled. */
 body[data-dsh-claude-style] pre {
-  background: #1c1b1a;
   border: 1px solid #242320;
   border-radius: 8px;
 }
 
+/* Claude's inline-code chip: warm red on the same neutral gray the components
+   hover with — both resolve per theme from the palette blocks. */
 body[data-dsh-claude-style] code:not(pre code) {
-  background: #2e2c29;
+  background: var(--dsh-claude-hover-bg);
+  color: var(--dsh-claude-inline-code-fg);
   border-radius: 4px;
   padding: 0.15em 0.4em;
   font-size: 0.88em;
+}
+
+/* Claude's links: blue, underlined at rest, and without the host's
+   link-category glyph. */
+body[data-dsh-claude-style] [class*="linkIcon"] {
+  display: none;
+}
+
+body[data-dsh-claude-style] [class*="markdown"] :is(a, a:hover, a:focus) {
+  color: var(--dsh-claude-link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 body[data-dsh-claude-style] hr {
