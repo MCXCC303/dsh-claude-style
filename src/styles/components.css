@@ -2,8 +2,8 @@
 /* ---------- Claude Code layout: permission segments ---------- */
 /* The shipped access control is one popup-select button; it is replaced by
    a Read | Edit | Auto segmented control over the same three presets. */
-body[data-dsh-claude-style] button[aria-label^="访问模式"],
-body[data-dsh-claude-style] button[aria-label^="Access mode"] {
+body[data-dsh-claude-style][data-dsh-claude-composer-active] button[aria-label^="访问模式"],
+body[data-dsh-claude-style][data-dsh-claude-composer-active] button[aria-label^="Access mode"] {
   display: none !important;
 }
 

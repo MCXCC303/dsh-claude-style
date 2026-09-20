@@ -39,7 +39,19 @@
         }
       }
 
+      function isHeroView() {
+        var hasTurns = document.querySelector('[class*="turn"], [class*="message"], [data-turn], [data-message-id]') !== null
+        return !hasTurns && (document.querySelector('[class*="composerHero"], [data-phase="hero"]') !== null)
+      }
+
+      function isComposerActive() {
+        var isHero = isHeroView()
+        var scope = readPrefs().composerScope
+        return scope === 'all' || (isHero ? scope === 'hero' : scope === 'conversation')
+      }
+
       function rewriteHint() {
+        if (!isComposerActive()) return
         var isHero = document.querySelector('[class*="heroWorkspaceRow"], [class*="titleGroup"]') !== null
         var targetHint = isHero ? COMPOSER_HINT : 'Type / for commands'
         var hints = document.querySelectorAll('[data-composer-placeholder]')
@@ -328,9 +340,16 @@
       }
 
       function syncAttachmentState() {
+        var active = isComposerActive()
         var cards = document.querySelectorAll('[data-composer-card]')
         for (var ci = 0; ci < cards.length; ci++) {
           var card = cards[ci]
+          if (!active) {
+            if (card.hasAttribute('data-has-attachments')) {
+              card.removeAttribute('data-has-attachments')
+            }
+            continue
+          }
           var hasAtt = card.querySelector('._54WpYG_imageItem, [class*="imageItem"], [class*="thumbnail"], [class*="FileCard"], [class*="rail"]:not([class*="trailing"]) [class*="item"], [class*="rail"]:not([class*="trailing"]) img, [class*="rail"]:not([class*="trailing"]) [class*="card"]') !== null
           if (hasAtt) {
             if (card.getAttribute('data-has-attachments') !== 'true') {
@@ -356,6 +375,16 @@
       function mergeStatsIntoRow() {
         var stats = document.querySelector('[data-composer-stats]')
         if (!stats) return
+        var active = isComposerActive()
+        if (!active) {
+          if (stats.parentElement && stats.parentElement.matches && stats.parentElement.matches('[class*="_row"]')) {
+            var card = stats.closest('[data-composer-card]')
+            if (card && card.parentElement) {
+              card.parentElement.insertBefore(stats, card.nextSibling)
+            }
+          }
+          return
+        }
         // `[class*="_row"]`, not `[class*="row"]`: the bare substring also
         // matches the input growth wrapper (`grow` contains `row`).
         var row = null
@@ -385,22 +414,38 @@
 
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
       function syncSegments() {
-        var hasTurns = document.querySelector('[class*="turn"], [class*="message"], [data-turn], [data-message-id]') !== null
-        var isHero = !hasTurns && (document.querySelector('[class*="composerHero"], [data-phase="hero"]') !== null)
+        var isHero = isHeroView()
         var allCards = document.querySelectorAll('[data-composer-card]')
         for (var c = 0; c < allCards.length; c++) {
           allCards[c].setAttribute('data-composer-variant', isHero ? 'hero' : 'inline')
         }
 
-        // The composer preference is page-level: the two surfaces are mutually
-        // exclusive per view (a page is either the new-conversation hero or a
-        // session), so one attribute on <body> carries the decision and the
-        // gated stylesheet does the rest.
-        var composerScope = readPrefs().composerScope
-        var composerOn = composerScope === 'all' ||
-          (isHero ? composerScope === 'hero' : composerScope === 'conversation')
+        var composerOn = isComposerActive()
         if (composerOn) document.body.setAttribute(COMPOSER_ATTR, '')
         else document.body.removeAttribute(COMPOSER_ATTR)
+
+        var existingPermContainers = document.querySelectorAll('.dsh-claude-perm-container')
+        var existingSegments = document.querySelectorAll('.' + SEGMENTS_CLASS + '[data-composer-segments]')
+
+        if (!composerOn) {
+          for (var ep = 0; ep < existingPermContainers.length; ep++) {
+            existingPermContainers[ep].remove()
+          }
+          if (permPopover && permPopover.parentElement) {
+            permPopover.parentElement.removeChild(permPopover)
+          }
+          permContainer = null
+          permBtn = null
+          permLabel = null
+          permPopover = null
+
+          for (var es0 = 0; es0 < existingSegments.length; es0++) {
+            existingSegments[es0].remove()
+          }
+          segments = null
+          return
+        }
+
         var trigger = findAccessTrigger()
         if (trigger === null) return
         var host = trigger.parentElement
@@ -408,9 +453,6 @@
 
         var session = currentSession(ctx)
         var preset = session === null ? null : currentPreset(session)
-
-        var existingPermContainers = document.querySelectorAll('.dsh-claude-perm-container')
-        var existingSegments = document.querySelectorAll('.' + SEGMENTS_CLASS + '[data-composer-segments]')
 
         if (isHero) {
           for (var i = 0; i < existingPermContainers.length; i++) {
@@ -487,6 +529,10 @@
        * single view) means the chat surface is all there is.
        */
       function syncChatTabComposer() {
+        if (!isComposerActive()) {
+          document.body.removeAttribute('data-dsh-claude-composer-hidden')
+          return
+        }
         var chatActive = true
         var seat = document.querySelector('[data-composer-seat]')
         var root = seat && seat.closest ? seat.closest('[data-phase]') : null
@@ -986,6 +1032,34 @@
 
       /** Build/refresh the trigger, its label and the popover rows. */
       function syncModelControl() {
+        if (!isComposerActive()) {
+          var allHosts = document.querySelectorAll('[data-dsh-claude-model-host]')
+          for (var h = 0; h < allHosts.length; h++) {
+            allHosts[h].removeAttribute('data-dsh-claude-model-host')
+          }
+          var allModelBtns = document.querySelectorAll('.dsh-claude-model-btn')
+          for (var mb = 0; mb < allModelBtns.length; mb++) {
+            allModelBtns[mb].remove()
+          }
+          modelBtn = null
+          var allModelPops = document.querySelectorAll('.dsh-claude-model-popover')
+          for (var mp = 0; mp < allModelPops.length; mp++) {
+            allModelPops[mp].remove()
+          }
+          modelPop = null
+          modelSubPop = null
+          modelBody = null
+          modelSubBody = null
+          modelSubKind = null
+          modelBodySig = ''
+          modelSubSig = ''
+          cancelCloseModel()
+          dropModelSubscription()
+          modelDir = null
+          modelSessionId = null
+          return
+        }
+
         // The copy document is fetched on first paint of the picker rather than
         // at install, so a session that never opens it never pays for it.
         loadModelCopy()
