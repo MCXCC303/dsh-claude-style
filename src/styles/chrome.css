@@ -106,12 +106,13 @@ body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"]
 }
 
 /* Keyboard focus ring: neutral, in the input box's own shadow colour
-   (espresso #141413 in light, black in dark) instead of the clay accent. */
+   (espresso #141413 in light); dark inverts to bright ivory — a near-black
+   canvas gets a light ring, never a darker one. */
 body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]):focus-visible {
   outline: 2px solid rgba(20, 20, 19, 0.45);
   outline-offset: 1px;
 }
 
 body[data-dsh-claude-style][data-ds-dark-theme] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]):focus-visible {
-  outline-color: rgba(0, 0, 0, 0.45);
+  outline-color: rgba(250, 249, 245, 0.60);
 }

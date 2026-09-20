@@ -91,18 +91,20 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card] {
 
 /* Focus: the shipped field has no focus face at all — only the caret moves —
    so this adds one, in the input box's own shadow colour rather than the
-   accent: the hairline takes the drop-shadow tint (espresso in light, black
-   in dark), a 1px halo in the same tone hugs the edge, and the drop shadow
-   deepens. The tray below continues the same hairline, so its three edges
-   follow whenever the card above it holds focus. */
+   accent: the hairline takes the drop-shadow tint (espresso in light), a 1px
+   halo in the same tone hugs the edge, and the drop shadow deepens. Dark sits
+   on a near-black canvas, where black-on-black carries no cue at all — there
+   the focus face inverts to a BRIGHT ivory rim and halo, so the field visibly
+   lights up instead of deepening. The tray below continues the same hairline,
+   so its three edges follow whenever the card above it holds focus. */
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card]:focus-within {
   border-color: rgba(20, 20, 19, 0.36);
   box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.13), 0 6px 18px rgba(20, 20, 19, 0.06), 0 2px 6px rgba(20, 20, 19, 0.03);
 }
 
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card]:focus-within {
-  border-color: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.27);
+  border-color: rgba(250, 249, 245, 0.45);
+  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.18), 0 6px 24px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:has([data-composer-card]:focus-within) > [class*="heroWorkspaceRow"] {
@@ -110,7 +112,7 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:h
 }
 
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:has([data-composer-card]:focus-within) > [class*="heroWorkspaceRow"] {
-  border-color: rgba(0, 0, 0, 0.38);
+  border-color: rgba(250, 249, 245, 0.45);
 }
 
 /* The workspace-trigger variant paints its dashed ring through a masked svg
@@ -298,8 +300,8 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:n
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
-  border-color: rgba(0, 0, 0, 0.38) !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 4px 14px rgba(0, 0, 0, 0.27) !important;
+  border-color: rgba(250, 249, 245, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.18), 0 4px 16px rgba(0, 0, 0, 0.40) !important;
 }
 /* The attachment rail nests two levels: ComposerAttachments' outer rail wraps
    AttachmentRail's scrolling inner rail, and BOTH substring-match
@@ -355,8 +357,8 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:n
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [data-input-scroll],
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card]:focus-within [data-input-scroll] {
-  border-color: rgba(0, 0, 0, 0.38) !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 4px 14px rgba(0, 0, 0, 0.27) !important;
+  border-color: rgba(250, 249, 245, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.18), 0 4px 16px rgba(0, 0, 0, 0.40) !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-input-scroll] [class*="grow"],
 body[data-dsh-claude-style] [class*="composerStack"]:not(:has([class*="heroWorkspaceRow"])) [data-composer-card] [data-input-scroll] [class*="grow"] {

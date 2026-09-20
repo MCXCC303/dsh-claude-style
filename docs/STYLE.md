@@ -33,10 +33,12 @@ Rules:
 - Borders: 1px warm hairline.
 - Spacing: 4 px rhythm.
 - Focus: the composer field lights up — its hairline takes the input box's own
-  shadow colour (espresso `#141413` in light, black in dark), with a 1px halo
-  in the same tone and a deeper drop shadow. The footer tray below follows the
-  same hairline so the two tiers stay one outline. Accent is never used for
-  focus strokes.
+  shadow colour (espresso `#141413` in light) with a 1px halo in the same tone
+  and a deeper drop shadow. Dark inverts the face: on the near-black canvas a
+  black edge carries no cue, so the hairline and halo become bright ivory —
+  the field visibly lights up instead of deepening. The footer tray below
+  follows the same hairline so the two tiers stay one outline. Accent is never
+  used for focus strokes.
 
 ## Implementation notes
 
