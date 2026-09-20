@@ -140,9 +140,10 @@
 
     {
       "match": "claude.*opus",
+      "note": "Family copy stays version-agnostic, so it carries no superlatives: 'strongest' is only true of the current generation and would mislabel an older Opus. Superlatives belong in version-pinned exact entries.",
       "text": {
-        "zh": "Claude 旗舰：编程、Agent 与专业工作最强，长程一致性最好。",
-        "en": "Claude flagship: strongest coding, agentic and professional work, best long-run consistency."
+        "zh": "Claude 旗舰档：编程、Agent 与专业工作，长程一致性见长。",
+        "en": "Claude flagship tier: coding, agentic and professional work, strong on long-run consistency."
       }
     },
     {
@@ -174,8 +175,8 @@
     {
       "match": "gpt-?5",
       "text": {
-        "zh": "OpenAI 通用前沿模型，推理与编码均衡。",
-        "en": "OpenAI frontier generalist with balanced reasoning and coding."
+        "zh": "OpenAI 通用模型，推理与编码均衡。",
+        "en": "OpenAI generalist with balanced reasoning and coding."
       }
     },
     {
@@ -185,20 +186,27 @@
         "en": "OpenAI reasoning-first: thinks before answering; best for math, algorithms and hard problems."
       }
     },
+    {
+      "match": "gpt-oss|oss-\\d",
+      "text": {
+        "zh": "OpenAI 开源权重系列：可自托管，成本低。",
+        "en": "OpenAI's open-weight line: self-hostable at low cost."
+      }
+    },
     { "match": "gpt", "text": { "zh": "OpenAI 通用模型。", "en": "OpenAI general model." } },
 
     {
       "match": "gemini.*(pro|ultra)",
       "text": {
-        "zh": "Gemini 旗舰：世界知识与多模态最强，适合复杂长程任务。",
-        "en": "Gemini flagship: strongest world knowledge and multimodality for complex, long-horizon work."
+        "zh": "Gemini 旗舰档：世界知识与多模态见长，适合复杂长程任务。",
+        "en": "Gemini flagship tier: world knowledge and multimodality for complex, long-horizon work."
       }
     },
     {
       "match": "gemini.*flash",
       "text": {
-        "zh": "Gemini Flash：快而便宜，能力逼近旗舰。",
-        "en": "Gemini Flash: fast and cheap, with capability close to the flagship."
+        "zh": "Gemini Flash：速度与成本优先。",
+        "en": "Gemini Flash: speed and cost first."
       }
     },
     { "match": "gemini", "text": { "zh": "Google Gemini 模型。", "en": "Google Gemini model." } },
@@ -207,8 +215,8 @@
     {
       "match": "glm.*flash",
       "text": {
-        "zh": "GLM Flash：原生多模态，小激活、极低成本，性能逼近旗舰。",
-        "en": "GLM Flash: natively multimodal, few active parameters, very low cost, capability near the flagship."
+        "zh": "GLM Flash：原生多模态，激活参数少、成本低。",
+        "en": "GLM Flash: natively multimodal with few active parameters at low cost."
       }
     },
     {
@@ -252,7 +260,16 @@
       }
     },
     {
-      "match": "qwen.*\\d+\\s*b",
+      "match": "qwen.*a\\d+b",
+      "note": "MoE ids spell out total and active parameters (`2.4t-a95b`, `235b-a22b`); the active count must win over the size rule below, which would otherwise read the trailing `95b` as a small dense model.",
+      "text": {
+        "zh": "大尺寸 MoE：总参大、激活参数少，单位成本低于同规模稠密模型。",
+        "en": "Large MoE: many total parameters but few active, so it costs less than a dense model of the same size."
+      }
+    },
+    {
+      "match": "qwen.*[-_]\\d+b($|[^a-z])",
+      "note": "Anchored to a separator so the digits start a segment: an unanchored \\d+b matches the `95b` inside `a95b` and calls a 2.4T MoE a small dense model.",
       "text": {
         "zh": "小尺寸稠密模型：可本地或低成本部署。",
         "en": "Small dense model: cheap to serve, or run locally."
@@ -317,6 +334,13 @@
     },
     { "match": "llama", "text": { "zh": "Meta Llama 开源权重模型。", "en": "Meta Llama open-weight model." } },
     {
+      "match": "north",
+      "text": {
+        "zh": "Cohere North：编码与 Agent 场景。",
+        "en": "Cohere North: coding and agent scenarios."
+      }
+    },
+    {
       "match": "command-?[ar]|cohere",
       "text": {
         "zh": "Cohere Command：企业检索与工具调用见长。",
@@ -349,7 +373,16 @@
       }
     },
     {
-      "match": "\\d+\\s*b($|[^a-z])",
+      "match": "a\\d+b",
+      "note": "MoE active-parameter suffix (`a95b`, `a23b`); tried before the dense rule so the active count is not mistaken for a total.",
+      "text": {
+        "zh": "MoE 架构：总参大、激活参数少，单位成本低于同规模稠密模型。",
+        "en": "MoE: many total parameters but few active, so it costs less than a dense model of the same size."
+      }
+    },
+    {
+      "match": "(^|[-_])\\d+b($|[^a-z])",
+      "note": "Anchored so the digits start a segment: unanchored, `a95b` and `a23b` read as small dense models.",
       "text": {
         "zh": "小尺寸稠密模型：可本地或低成本部署。",
         "en": "Small dense model: cheap to serve, or run locally."
