@@ -74,10 +74,10 @@ leave the wash lopsided.
 inside an inline code span to a button (`.fileMention`, hashed — match it with
 `[class*="_fileMention"]`) and paints it with its link alias. The generic
 inline-code chip rule is more specific than that class, so a mention inherits
-the chip's warm red unless a rule names it: mentions take the link blue, weight
-500, and the link wash for the chip's fill and hairline, with the host's dotted
-underline on hover only (an underline at rest collides with monospace
-descenders and the pill's bottom edge). Plain inline code keeps the warm chip.
+the chip's warm red unless a rule names it. A mention takes the link blue, weight
+500, and the link's underline (solid at rest in the link tone, dotted on hover);
+the chip itself is left alone — the same fill, hairline, radius and padding as
+any other inline code. Plain inline code keeps its warm text.
 
 ## Implementation notes
 
