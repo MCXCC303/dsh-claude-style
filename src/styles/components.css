@@ -259,6 +259,146 @@ body[data-dsh-claude-style] .dsh-claude-account-popover::after {
   background: transparent;
 }
 
+/* ---------- Claude Code layout: model picker ---------- */
+/* Replaces the host's two-pane model menu: level 1 carries the current
+   provider's models, a divider, the effort row and a More models row; both
+   rows open their level 2 beside this popover. Container metrics mirror the
+   permission popover so the two read as one design. */
+body[data-dsh-claude-style] .dsh-claude-model-popover {
+  position: fixed !important;
+  min-width: 248px !important;
+  max-width: min(360px, calc(100vw - 16px)) !important;
+  max-height: min(440px, calc(100vh - 96px)) !important;
+  overflow-y: auto !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(4px) scale(0.98) !important;
+  transform-origin: bottom right !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-popover[data-open="true"] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-model-popover {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-popover-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-status {
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+  padding: 4px 8px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-group {
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  padding: 2px 8px 0 8px !important;
+}
+/* Model / effort option: same row metrics and hover as the drawer items. */
+body[data-dsh-claude-style] .dsh-claude-model-option {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  font-size: 13px !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-option:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-copy {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-name {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 16px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-desc {
+  font-size: 11px !important;
+  line-height: 14px !important;
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-check {
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  color: var(--dsw-alias-brand-primary, #d97757) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-divider {
+  height: 1px !important;
+  background: var(--dsw-alias-border-l1, #e8e6dc) !important;
+  margin: 2px 4px !important;
+  flex: none !important;
+}
+/* Level-2 row: label + current value + chevron; hover opens its own level. */
+body[data-dsh-claude-style] .dsh-claude-model-cell {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  font-size: 13px !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-cell:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-cell-label {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-cell-value {
+  flex: none !important;
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  font-size: 12px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-cell-chevron {
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+}
+
 /* Popover Header */
 body[data-dsh-claude-style] .dsh-claude-account-popover-header {
   padding: 6px 8px 6px 8px !important;

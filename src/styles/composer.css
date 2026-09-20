@@ -622,6 +622,55 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
   color: var(--dsw-alias-label-primary) !important;
 }
+/* The skin's own model trigger replaces the host's model seat (the host's
+   root is marked and hidden by syncModelControl). One button, one hover
+   background — the shipped seat stacks an icon + label + effort + chevron,
+   each with its own surface. */
+body[data-dsh-claude-style] [data-dsh-claude-model-host] {
+  display: none !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  height: 28px !important;
+  max-width: 280px !important;
+  padding: 0 6px 0 8px !important;
+  border: none !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-label.dsh-claude-model-btn-loading {
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-label {
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-effort {
+  flex: none !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+  font-weight: 400 !important;
+}
+body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-chevron {
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+}
 /* Token stats pills — merged into the toolbar row (one line with the
    controls). The base rule below is the fallback for the host's own
    position (a full-width line under the card); once mergeStatsIntoRow()

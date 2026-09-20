@@ -491,6 +491,452 @@
         else document.body.setAttribute('data-dsh-claude-composer-hidden', '')
       }
 
+      // --- 4.4 Model picker: replaces the host's model seat ---
+      /**
+       * The host's model seat is a click-triggered two-pane menu (Model /
+       * Effort rows drilling into their own lists). The skin replaces it with
+       * a Claude-style picker: hovering the trigger opens the first level —
+       * the DeepSeek official provider's models, a divider, then the
+       * reasoning-effort row (when the current model offers one) and a More
+       * models row; both open their second level BESIDE the first level.
+       *
+       * Data and submission ride the host's own per-session ModelDirectory
+       * (`ctx.modelDirectories`), the same store the host's menu and the
+       * /model command read — so the current selection, catalog and errors
+       * stay in sync without scraping the DOM. The host's seat is hidden and
+       * marked; a React swap re-marks it on the next pass.
+       */
+      var modelBtn = null
+      var modelPop = null
+      var modelSubPop = null
+      var modelBody = null
+      var modelSubBody = null
+      var modelCloseTimer = null
+      var modelDir = null
+      var modelSub = null
+      var modelSessionId = null
+      var modelSubKind = null
+      var modelBodySig = ''
+      var modelSubSig = ''
+
+      function cancelCloseModel() {
+        if (modelCloseTimer) {
+          clearTimeout(modelCloseTimer)
+          modelCloseTimer = null
+        }
+      }
+
+      function scheduleCloseModel() {
+        cancelCloseModel()
+        modelCloseTimer = setTimeout(function () {
+          closeModelPopovers()
+        }, 180)
+      }
+
+      function closeModelPopovers() {
+        cancelCloseModel()
+        if (modelPop) modelPop.setAttribute('data-open', 'false')
+        if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
+        modelSubKind = null
+      }
+
+      function openModelPopover() {
+        cancelCloseModel()
+        modelDirectory()
+        if (modelDir) {
+          try { modelDir.load() } catch (error) { /* the store's error surface covers a failure */ }
+        }
+        modelSubKind = null
+        if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
+        positionModelPopovers()
+        if (modelPop) modelPop.setAttribute('data-open', 'true')
+      }
+
+      function openModelSub(kind) {
+        cancelCloseModel()
+        modelSubKind = kind
+        positionModelPopovers()
+        if (modelSubPop) modelSubPop.setAttribute('data-open', 'true')
+      }
+
+      function currentModelSessionId() {
+        try {
+          var sessions = ctx.get('sessions')
+          if (!sessions || !sessions.list || typeof sessions.list.getSnapshot !== 'function') return null
+          var id = sessions.list.getSnapshot().current
+          return id === void 0 || id === null ? null : id
+        } catch (error) {
+          return null
+        }
+      }
+
+      function dropModelSubscription() {
+        if (modelSub) {
+          try { modelSub() } catch (error) { /* already disposed */ }
+        }
+        modelSub = null
+      }
+
+      /** Resolve the session's directory (and observe it) once per session. */
+      function modelDirectory() {
+        var id = currentModelSessionId()
+        if (id === null) {
+          dropModelSubscription()
+          modelDir = null
+          modelSessionId = null
+          return null
+        }
+        if (modelSessionId === id && modelDir !== null) return modelDir
+        dropModelSubscription()
+        modelDir = null
+        modelSessionId = id
+        try {
+          var dirs = ctx.get('modelDirectories')
+          if (dirs && typeof dirs.directoryFor === 'function') {
+            modelDir = dirs.directoryFor(id)
+            modelSub = modelDir.subscribe(function () { schedule() })
+          }
+        } catch (error) {
+          modelDir = null
+        }
+        return modelDir
+      }
+
+      function modelSnapshot() {
+        if (modelDir === null) return null
+        try { return modelDir.getSnapshot() } catch (error) { return null }
+      }
+
+      /** The current selection resolved to its group + model entries. */
+      function modelCurrent(snap) {
+        if (!snap || snap.current === null) return null
+        for (var g = 0; g < snap.groups.length; g++) {
+          var group = snap.groups[g]
+          if (group.id !== snap.current.provider) continue
+          for (var m = 0; m < group.models.length; m++) {
+            if (group.models[m].id === snap.current.model) return { group: group, model: group.models[m] }
+          }
+        }
+        return null
+      }
+
+      /** Reasoning metadata + the effective effort for the current model. */
+      function modelEffort(snap) {
+        var current = modelCurrent(snap)
+        if (current === null || !current.model.reasoning) return null
+        var reasoning = current.model.reasoning
+        var effective = snap.current.reasoningEffort !== void 0 ? snap.current.reasoningEffort : reasoning.defaultEffort
+        var label = MODEL_EFFORT_DEFAULT
+        if (effective !== void 0) {
+          label = effective
+          for (var i = 0; i < reasoning.efforts.length; i++) {
+            if (reasoning.efforts[i].id === effective) {
+              label = reasoning.efforts[i].name
+              break
+            }
+          }
+        }
+        return { reasoning: reasoning, effective: effective, label: label }
+      }
+
+      function modelDescription(groupId, model) {
+        var key = groupId + '/' + model.id
+        if (MODEL_DESCRIPTIONS[key]) return MODEL_DESCRIPTIONS[key]
+        return model.description || ''
+      }
+
+      function modelEl(tag, cls, text) {
+        var el = document.createElement(tag)
+        if (cls) el.className = cls
+        if (text !== void 0 && text !== null) el.textContent = text
+        return el
+      }
+
+      var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
+      var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
+      var MODEL_CHEVRON_DOWN_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>'
+
+      /** One selectable model row: name (+ description) and a check when current. */
+      function buildModelOption(group, model, selected) {
+        var item = modelEl('button', 'dsh-claude-model-option')
+        item.type = 'button'
+        item.setAttribute('role', 'menuitemradio')
+        item.setAttribute('aria-checked', selected ? 'true' : 'false')
+        var copy = modelEl('span', 'dsh-claude-model-copy')
+        copy.appendChild(modelEl('span', 'dsh-claude-model-name', model.name))
+        var desc = modelDescription(group.id, model)
+        if (desc) copy.appendChild(modelEl('span', 'dsh-claude-model-desc', desc))
+        item.appendChild(copy)
+        var check = modelEl('span', 'dsh-claude-model-check')
+        check.innerHTML = selected ? MODEL_CHECK_SVG : ''
+        item.appendChild(check)
+        item.addEventListener('click', (function (g, m) {
+          return function (e) {
+            e.stopPropagation()
+            pickModel(g, m)
+          }
+        })(group.id, model.id))
+        return item
+      }
+
+      /** One level-2 row: label + current value + chevron, hover opens its level. */
+      function buildModelCell(label, value, kind) {
+        var cell = modelEl('button', 'dsh-claude-model-cell')
+        cell.type = 'button'
+        cell.setAttribute('role', 'menuitem')
+        cell.appendChild(modelEl('span', 'dsh-claude-model-cell-label', label))
+        if (value) cell.appendChild(modelEl('span', 'dsh-claude-model-cell-value', value))
+        var chevron = modelEl('span', 'dsh-claude-model-cell-chevron')
+        chevron.innerHTML = MODEL_CHEVRON_SVG
+        cell.appendChild(chevron)
+        cell.addEventListener('mouseenter', (function (k) {
+          return function () { openModelSub(k) }
+        })(kind))
+        cell.addEventListener('click', (function (k) {
+          return function (e) {
+            e.stopPropagation()
+            if (modelSubKind === k) closeModelPopovers()
+            else openModelSub(k)
+          }
+        })(kind))
+        return cell
+      }
+
+      function pickModel(provider, modelId) {
+        var dir = modelDirectory()
+        if (dir === null) return
+        try {
+          dir.select({ provider: provider, model: modelId })
+        } catch (error) { /* rejected selections surface on the host's toast */ }
+        closeModelPopovers()
+      }
+
+      function pickEffort(effort) {
+        var dir = modelDirectory()
+        var snap = modelSnapshot()
+        if (dir === null || !snap || snap.current === null) return
+        var selection = { provider: snap.current.provider, model: snap.current.model }
+        if (effort !== void 0) selection.reasoningEffort = effort
+        try {
+          dir.select(selection)
+        } catch (error) { /* rejected selections surface on the host's toast */ }
+        closeModelPopovers()
+      }
+
+      /** Level 1: the official provider's models, divider, effort + more rows. */
+      function renderModelBody() {
+        if (!modelBody) return
+        var snap = modelSnapshot()
+        var status = snap ? snap.status : 'idle'
+        var groups = (snap && snap.groups) || []
+        var current = modelCurrent(snap)
+        var effort = modelEffort(snap)
+        var sig = [status, current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : ''].join('|')
+        for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
+        if (sig === modelBodySig) return
+        modelBodySig = sig
+        while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
+
+        if (status === 'idle' || status === 'loading' || status === 'selecting') {
+          modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_LOADING_LABEL))
+        } else {
+          var official = null
+          for (var g2 = 0; g2 < groups.length; g2++) {
+            if (groups[g2].id === MODEL_OFFICIAL_GROUP) { official = groups[g2]; break }
+          }
+          var rows = []
+          if (official) {
+            for (var m = 0; m < official.models.length; m++) rows.push({ group: official, model: official.models[m] })
+          } else {
+            for (var g3 = 0; g3 < groups.length; g3++) {
+              for (var m2 = 0; m2 < groups[g3].models.length; m2++) rows.push({ group: groups[g3], model: groups[g3].models[m2] })
+            }
+          }
+          if (rows.length === 0) {
+            modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_EMPTY_LABEL))
+          } else {
+            for (var r = 0; r < rows.length; r++) {
+              var selected = current !== null && current.group.id === rows[r].group.id && current.model.id === rows[r].model.id
+              modelBody.appendChild(buildModelOption(rows[r].group, rows[r].model, selected))
+            }
+          }
+          modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
+          if (effort) modelBody.appendChild(buildModelCell(MODEL_EFFORT_LABEL, effort.label, 'effort'))
+          modelBody.appendChild(buildModelCell(MODEL_MORE_LABEL, '', 'more'))
+        }
+      }
+
+      /** Level 2: the effort ladder, or every provider group's models. */
+      function renderModelSub() {
+        if (!modelSubBody) return
+        var snap = modelSnapshot()
+        if (modelSubKind === 'effort') {
+          var effort = modelEffort(snap)
+          var sig = 'effort:' + (effort ? String(effort.effective) : 'none')
+          if (sig === modelSubSig) return
+          modelSubSig = sig
+          while (modelSubBody.firstChild) modelSubBody.removeChild(modelSubBody.firstChild)
+          if (effort === null) {
+            modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', '当前模型未提供推理等级。'))
+            return
+          }
+          var levels = []
+          if (effort.reasoning.defaultEffort === void 0) levels.push({ effort: void 0, label: MODEL_EFFORT_DEFAULT })
+          for (var i = 0; i < effort.reasoning.efforts.length; i++) {
+            levels.push({ effort: effort.reasoning.efforts[i].id, label: effort.reasoning.efforts[i].name })
+          }
+          for (var l = 0; l < levels.length; l++) {
+            (function (level, active) {
+              var item = modelEl('button', 'dsh-claude-model-option')
+              item.type = 'button'
+              item.setAttribute('role', 'menuitemradio')
+              item.setAttribute('aria-checked', active ? 'true' : 'false')
+              item.appendChild(modelEl('span', 'dsh-claude-model-copy', level.label))
+              var check = modelEl('span', 'dsh-claude-model-check')
+              check.innerHTML = active ? MODEL_CHECK_SVG : ''
+              item.appendChild(check)
+              item.addEventListener('click', function (e) {
+                e.stopPropagation()
+                pickEffort(level.effort)
+              })
+              modelSubBody.appendChild(item)
+            })(levels[l], effort.effective === levels[l].effort)
+          }
+          return
+        }
+        // 'more': every provider group, headed by its name.
+        var groups = (snap && snap.groups) || []
+        var current = modelCurrent(snap)
+        var sig2 = 'more'
+        for (var g = 0; g < groups.length; g++) sig2 += ';' + groups[g].id + ':' + groups[g].models.length
+        if (current) sig2 += '#' + current.group.id + '/' + current.model.id
+        if (sig2 === modelSubSig) return
+        modelSubSig = sig2
+        while (modelSubBody.firstChild) modelSubBody.removeChild(modelSubBody.firstChild)
+        for (var g2 = 0; g2 < groups.length; g2++) {
+          var group = groups[g2]
+          if (group.models.length === 0) continue
+          modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-group', group.name))
+          for (var m = 0; m < group.models.length; m++) {
+            var selected = current !== null && current.group.id === group.id && current.model.id === group.models[m].id
+            modelSubBody.appendChild(buildModelOption(group, group.models[m], selected))
+          }
+        }
+        if (modelSubBody.firstChild === null) {
+          modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', MODEL_EMPTY_LABEL))
+        }
+      }
+
+      function positionModelPopovers() {
+        if (!modelBtn || !modelPop) return
+        var rect = modelBtn.getBoundingClientRect()
+        var MARGIN = 8
+        var w = modelPop.offsetWidth
+        var h = modelPop.offsetHeight
+        var x = Math.max(MARGIN, Math.min(rect.right - w, window.innerWidth - w - MARGIN))
+        var y = rect.top - 6 - h
+        if (y < MARGIN) y = Math.min(rect.bottom + 6, Math.max(MARGIN, window.innerHeight - h - MARGIN))
+        modelPop.style.left = x + 'px'
+        modelPop.style.top = y + 'px'
+        if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') {
+          var w2 = modelSubPop.offsetWidth
+          var h2 = modelSubPop.offsetHeight
+          // Beside the first level; flip to its left when the viewport is tight.
+          var x2 = x + w + 4
+          if (x2 + w2 > window.innerWidth - MARGIN) x2 = Math.max(MARGIN, x - 4 - w2)
+          var y2 = Math.max(MARGIN, Math.min(y, window.innerHeight - h2 - MARGIN))
+          modelSubPop.style.left = x2 + 'px'
+          modelSubPop.style.top = y2 + 'px'
+        }
+      }
+
+      function ensureModelChrome() {
+        if (modelPop === null) {
+          modelPop = document.createElement('div')
+          modelPop.className = 'dsh-claude-model-popover'
+          modelPop.setAttribute('role', 'menu')
+          modelPop.setAttribute('data-open', 'false')
+          modelBody = document.createElement('div')
+          modelBody.className = 'dsh-claude-model-popover-body'
+          modelPop.appendChild(modelBody)
+          modelPop.addEventListener('mouseenter', cancelCloseModel)
+          modelPop.addEventListener('mouseleave', scheduleCloseModel)
+          document.body.appendChild(modelPop)
+        }
+        if (modelSubPop === null) {
+          modelSubPop = document.createElement('div')
+          modelSubPop.className = 'dsh-claude-model-popover dsh-claude-model-popover-sub'
+          modelSubPop.setAttribute('role', 'menu')
+          modelSubPop.setAttribute('data-open', 'false')
+          modelSubBody = document.createElement('div')
+          modelSubBody.className = 'dsh-claude-model-popover-body'
+          modelSubPop.appendChild(modelSubBody)
+          modelSubPop.addEventListener('mouseenter', cancelCloseModel)
+          modelSubPop.addEventListener('mouseleave', scheduleCloseModel)
+          document.body.appendChild(modelSubPop)
+        }
+      }
+
+      /** Build/refresh the trigger, its label and the popover rows. */
+      function syncModelControl() {
+        modelDirectory()
+        var slot = document.querySelector('[data-slot="conversation.input.model"]')
+        if (slot === null) return
+        // Hide the host's own seat (React owns the node; re-mark on swap).
+        var hostRoot = slot.firstElementChild
+        if (hostRoot !== null && !hostRoot.hasAttribute('data-dsh-claude-model-host')) {
+          hostRoot.setAttribute('data-dsh-claude-model-host', '')
+        }
+        if (modelBtn === null || modelBtn.parentElement !== slot) {
+          if (modelBtn !== null && modelBtn.parentElement !== null) modelBtn.parentElement.removeChild(modelBtn)
+          modelBtn = document.createElement('button')
+          modelBtn.type = 'button'
+          modelBtn.className = 'dsh-claude-model-btn'
+          modelBtn.setAttribute('aria-haspopup', 'menu')
+          modelBtn.innerHTML =
+            '<span class="dsh-claude-model-btn-label"></span>' +
+            '<span class="dsh-claude-model-btn-chevron">' + MODEL_CHEVRON_DOWN_SVG + '</span>'
+          modelBtn.addEventListener('mouseenter', function () { openModelPopover() })
+          modelBtn.addEventListener('mouseleave', scheduleCloseModel)
+          modelBtn.addEventListener('click', function (e) {
+            e.stopPropagation()
+            if (modelPop && modelPop.getAttribute('data-open') === 'true') closeModelPopovers()
+            else openModelPopover()
+          })
+          slot.appendChild(modelBtn)
+        }
+        ensureModelChrome()
+
+        var snap = modelSnapshot()
+        var current = modelCurrent(snap)
+        var effort = modelEffort(snap)
+        var label = current ? current.model.name : MODEL_FALLBACK_LABEL
+        var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
+        if (labelEl) {
+          labelEl.textContent = label
+          labelEl.classList.toggle('dsh-claude-model-btn-loading', !!(snap && (snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting')))
+        }
+        var effortEl = modelBtn.querySelector('.dsh-claude-model-btn-effort')
+        if (effort) {
+          if (effortEl === null) {
+            effortEl = modelEl('span', 'dsh-claude-model-btn-effort')
+            modelBtn.insertBefore(effortEl, modelBtn.firstChild ? labelEl.nextSibling : null)
+          }
+          effortEl.textContent = '· ' + effort.label
+        } else if (effortEl !== null && effortEl.parentElement) {
+          effortEl.parentElement.removeChild(effortEl)
+        }
+        modelBtn.setAttribute('aria-label', '选择模型，当前 ' + label)
+        modelBtn.disabled = false
+
+        renderModelBody()
+        if (modelSubKind !== null) {
+          renderModelSub()
+          if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') positionModelPopovers()
+        }
+        if (modelPop && modelPop.getAttribute('data-open') === 'true') positionModelPopovers()
+      }
+
       // --- 4.3 Account Footer & Popover ---
       var accountBtn = null
       var accountPopover = null
@@ -1099,8 +1545,15 @@
       // Zone 5: 响应式调度与生命周期清理 (Scheduler & Teardown)
       // ============================================================================
       function onGlobalPointerDown(e) {
-        if (!accountPopover || !accountBtn) return
         var target = e.target
+        // The model picker is hover-driven; a press anywhere outside its
+        // trigger and both levels closes it (same discipline as the perm menu).
+        if (target && (modelBtn === null || !modelBtn.contains(target)) &&
+            (modelPop === null || !modelPop.contains(target)) &&
+            (modelSubPop === null || !modelSubPop.contains(target))) {
+          closeModelPopovers()
+        }
+        if (!accountPopover || !accountBtn) return
         if (target && (accountBtn.contains(target) || accountPopover.contains(target))) return
         closePopover()
       }
@@ -1109,6 +1562,7 @@
         if (e.key === 'Escape') {
           closePopover()
           closePermMenu()
+          closeModelPopovers()
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
           e.preventDefault()
@@ -1150,6 +1604,14 @@
       document.addEventListener('pointerdown', onCardPointerDown)
       document.addEventListener('keydown', onGlobalKeyDown, true)
 
+      // The picker is position:fixed against the trigger; scroll of the page
+      // (not the conversation's own auto-stick) and resizes move the anchor.
+      function onModelViewportChange() {
+        if (modelPop && modelPop.getAttribute('data-open') === 'true') positionModelPopovers()
+      }
+      window.addEventListener('resize', onModelViewportChange)
+      window.addEventListener('scroll', onModelViewportChange, true)
+
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
       var composerCardObserver = null
@@ -1178,6 +1640,7 @@
           mergeStatsIntoRow()
           syncSegments()
           syncChatTabComposer()
+          syncModelControl()
           syncAccountFooter()
           if (composerCardObserver) {
             var currentCard = document.querySelector('[data-composer-card]')
@@ -1212,6 +1675,22 @@
       return function () {
         clearInterval(greetingTimer)
         greetingTimer = null
+        cancelCloseModel()
+        dropModelSubscription()
+        modelDir = null
+        modelSessionId = null
+        window.removeEventListener('resize', onModelViewportChange)
+        window.removeEventListener('scroll', onModelViewportChange, true)
+        // Null the model chrome too: the sweep below detaches the nodes, and a
+        // later re-install must rebuild them rather than reuse dead elements.
+        modelBtn = null
+        modelPop = null
+        modelSubPop = null
+        modelBody = null
+        modelSubBody = null
+        modelSubKind = null
+        modelBodySig = ''
+        modelSubSig = ''
         observer.disconnect()
         if (composerCardObserver) {
           composerCardObserver.disconnect()
@@ -1252,7 +1731,7 @@
           accountBtn.parentElement.removeChild(accountBtn)
         }
         accountBtn = null
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments')
+        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments, .dsh-claude-model-btn, .dsh-claude-model-popover')
         for (var li = 0; li < leftoverItems.length; li++) {
           if (leftoverItems[li].parentElement) {
             leftoverItems[li].parentElement.removeChild(leftoverItems[li])

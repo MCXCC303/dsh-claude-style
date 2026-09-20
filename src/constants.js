@@ -5,6 +5,24 @@
 
     var COMPOSER_HINT = 'How can I help you today?'
 
+    /**
+     * Model-picker copy. The host's model catalog only carries English
+     * descriptions for its two builtin DeepSeek models, so the skin mirrors
+     * the host dictionary's zh strings for them (raw descriptions otherwise).
+     * `deepseek-official` is the provider group id of DeepSeek's own service.
+     */
+    var MODEL_OFFICIAL_GROUP = 'deepseek-official'
+    var MODEL_FALLBACK_LABEL = '选择模型'
+    var MODEL_LOADING_LABEL = '正在加载模型…'
+    var MODEL_EMPTY_LABEL = '没有可用的模型。'
+    var MODEL_EFFORT_LABEL = '推理等级'
+    var MODEL_EFFORT_DEFAULT = 'Default'
+    var MODEL_MORE_LABEL = 'More models'
+    var MODEL_DESCRIPTIONS = {
+      'deepseek-official/deepseek-v4-flash': '快速、高效且经济；适合目标明确、常规或并行任务。',
+      'deepseek-official/deepseek-v4-pro': '更强的自主编码、知识与复杂推理能力；适合复杂或质量优先的任务，但成本更高。',
+    }
+
     /** English weekday names, indexed by Date#getDay() (0 = Sunday). */
     var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
