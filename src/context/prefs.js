@@ -12,13 +12,60 @@
      * Until the first read settles (and if it fails) the defaults below hold,
      * which is exactly the shipped behaviour.
      */
+    /**
+     * Browser-local fallback for the account-hold page's language.
+     *
+     * Same contract as the username fallback below, and needed for the same
+     * reason: this bundle reloads with the page, but the host half is imported
+     * once when the app boots, so a running host half can predate the field.
+     * Without the fallback the choice SILENTLY REVERTS — the old host half has
+     * no `banLocale` in its accepted-key list, drops the unknown key, and
+     * answers the write with its unchanged value, so the segment flips back
+     * with nothing to explain it.
+     */
+    var BAN_LOCALE_STORAGE_KEY = 'dsh-claude-style.banLocale'
+    var fallbackBanLocale = readStoredBanLocale()
+
+    function readStoredBanLocale() {
+      try {
+        if (typeof localStorage === 'undefined') return ''
+        var stored = localStorage.getItem(BAN_LOCALE_STORAGE_KEY) || ''
+        return BAN_LOCALES.indexOf(stored) === -1 ? '' : stored
+      } catch (error) {
+        return ''
+      }
+    }
+
+    /** Persist (or clear) the local language choice; anything else is refused. */
+    function setFallbackBanLocale(value) {
+      fallbackBanLocale = BAN_LOCALES.indexOf(value) === -1 ? '' : value
+      try {
+        if (typeof localStorage === 'undefined') return
+        if (fallbackBanLocale) localStorage.setItem(BAN_LOCALE_STORAGE_KEY, fallbackBanLocale)
+        else localStorage.removeItem(BAN_LOCALE_STORAGE_KEY)
+      } catch (error) { /* storage may be unavailable */ }
+    }
+
+    /**
+     * The language the account-hold page is written in.
+     *
+     * The local fallback outranks the host value while it exists: it is only
+     * ever set when the host refused the write, and `savePrefs` clears it the
+     * moment the host confirms the same value — so a stale host half cannot
+     * revert the choice, and a reloaded one takes over on its own.
+     */
+    function resolveBanLocale(hostValue) {
+      if (fallbackBanLocale) return fallbackBanLocale
+      return BAN_LOCALES.indexOf(hostValue) === -1 ? DEFAULT_BAN_LOCALE : hostValue
+    }
+
     var prefs = {
       brand: DEFAULT_BRAND,
       collapseFooter: true,
       autoPopover: true,
       composerScope: 'all',
       username: '',
-      banLocale: DEFAULT_BAN_LOCALE,
+      banLocale: fallbackBanLocale || DEFAULT_BAN_LOCALE,
     }
     var prefsRevision
     var prefsAvailable = false
@@ -107,6 +154,7 @@
             var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
             if (hostName) setFallbackUsername('')
             adoptPrefs(normalizePrefs(data.value))
+            replayPendingBanLocale(data.value)
           })
           .catch(function () { /* defaults stay */ })
       } catch (error) { /* no fetch: defaults stay */ }
@@ -121,10 +169,27 @@
         autoPopover: section.autoPopover !== false,
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
-        // `banLocale` is read by the browser half only; a host half that predates
-        // the field simply reports nothing, so an unknown value falls back here.
-        banLocale: BAN_LOCALES.indexOf(section.banLocale) === -1 ? DEFAULT_BAN_LOCALE : section.banLocale,
+        banLocale: resolveBanLocale(section.banLocale),
       }
+    }
+
+    /**
+     * Replay a language that was chosen while the running host half did not know
+     * the field yet.
+     *
+     * Once per load, and only while a local fallback exists: on a host half that
+     * still predates `banLocale` the write is dropped again (the fallback keeps
+     * the choice), and on a reloaded one it lands, `savePrefs` sees the host echo
+     * the value back and drops the fallback — so the setting migrates itself
+     * instead of having to be picked again after the app restarts.
+     */
+    var banLocaleReplayed = false
+    function replayPendingBanLocale(hostValue) {
+      if (banLocaleReplayed || !fallbackBanLocale) return
+      var hostLocale = hostValue && typeof hostValue.banLocale === 'string' ? hostValue.banLocale : ''
+      if (hostLocale === fallbackBanLocale) return
+      banLocaleReplayed = true
+      savePrefs({ banLocale: fallbackBanLocale })
     }
 
     /**
@@ -160,6 +225,13 @@
             if (typeof patch.username === 'string') {
               var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
               setFallbackUsername(hostName ? '' : patch.username)
+            }
+            // The host echoing the value back is the only proof it knows the
+            // field; anything else (no value at all, or a different one) means
+            // the write did not land and the local fallback has to keep it.
+            if (typeof patch.banLocale === 'string') {
+              var hostLocale = data.value && typeof data.value.banLocale === 'string' ? data.value.banLocale : ''
+              setFallbackBanLocale(hostLocale === patch.banLocale ? '' : patch.banLocale)
             }
             adoptPrefs(normalizePrefs(data.value))
             return prefs

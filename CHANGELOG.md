@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **封号彩蛋语言选不动**：设置里选「中文」立刻弹回英文，且没有任何提示。根因是宿主半边（`lib/index.js`）只在 app 启动时被 import 一次，而它是后来才认识 `banLocale` 这个字段的——旧宿主半边的写入口不认这个键，把它丢掉之后按「没有可写字段」当成一次读取返回，客户端拿到原值就把刚做的选择覆盖回去了（浏览器半边每次刷新都是新的，宿主半边不是，两边版本就此错位）。现在 `banLocale` 与用户名走同一套浏览器本地兜底：宿主不认这个键时把选择存在本地（`localStorage`）并立刻按它渲染，页面刷新后仍在；等宿主半边重启、第一次读取时自动把待写入的值补写一次，宿主回显确认后本地兜底才清除——所以选择既不会丢，也不会和宿主长期打架。`.debug/prefs/prefs-test.cjs` 用打桩的宿主路由覆盖了旧宿主 / 刷新 / 宿主补齐 / 拒绝写入四种情况。
+
 ## [0.3.0] - 2026-09-20
 
 ### Added
@@ -17,7 +22,7 @@
 ### Fixed
 - **回退引用块的链接材质**：0.2.7 把 Markdown 引用块（`blockquote`）改成了链接材质（蓝字 + 蓝色下划线 + 蓝色底纹/竖条），但引用是**容器**而不是链接，这套样式会连同块内的行内代码、文件引用一起染蓝，等于让链接材质泄露进引用块。现回退为原来的中性灰：文字 `#B0AEA5`（亮色 `#6E6A60`）、灰底 + 灰竖条，块内的链接、行内代码片、文件引用各自保持自己的材质，互不串色。`padding` 也不再需要 `!important` 钉死。
 - **文件引用（行内文件名）颜色与超链接不一致**：聊天里的 `` `CHANGELOG.md` `` 这类**文件引用**是宿主把行内代码里的文件路径解析成按钮（`.fileMention`）后的产物，但皮肤的通配行内代码规则（`code:not(pre code)`，特异性 (0,2,1)）压过宿主自己的链接色类（(0,1,0)），于是同一段话里文件引用是代码片的暖红、真正的超链接是链接蓝。现在文件引用的文字改用链接色（亮 `#184F95` / 暗 `#8AB4F8`）、字重 500，下划线沿用超链接那一套（静止态实线、链接色调 60%、1.5px、offset 2px；hover/focus 同样实线、换成不透明的链接色，**线宽与线位不变**），**代码片本身完全不动**——底纹、描边、圆角、内边距与普通行内代码逐项相同，只有文字颜色不同。hover 规则只改颜色：先前用 `text-decoration` 简写会把 `text-decoration-thickness` 重置为 `auto`，导致 hover 时下划线反而变细。普通行内代码仍是暖红代码片；宿主类名带哈希，故按仓库纪律取最长稳定片段 `[class*="_fileMention"]`。
-- **修复 Markdown 表格左侧空隙**：删除旧的全局 `table { width:100% }`、`table th` 背景与 `td/th { padding: 0.6em 0.85em !important }` 规则，避免覆盖宿主 `th:first-child { padding-left: 0 }` 和 `width: max-content`，表格过宽时不再出现左侧空白与外部边框错位。 同时对全部 `.tableScroll` 包装器强制 table margin/padding/border-spacing 归零，首/末单元格恢复 16px 内边距，并把表头背景与行线覆盖到 `thead th/td` 和每行首末单元格（th 或 td），使首列的留白看起来是表格内部区域而不是空隙。
+- **修复 Markdown 表格左侧空隙**：删除旧的全局 `table { width:100% }`、`table th` 背景与 `td/th { padding: 0.6em 0.85em !important }` 规则，避免覆盖宿主 `th:first-child { padding-left: 0 }` 和 `width: max-content`，表格过宽时不再出现左侧空白与外部边框错位。 同时对全部 `.tableScroll` 包装器强制 table margin/padding/border-spacing 归零，首/末单元格恢复 16px 内边距，并把表头背景与行线覆盖到 `thead th/td` 和每行首末单元格（th 或 td），使首列的留白看起来是表格内部区域而不是空隙。 另外，窄表不再被宿主 `.tableFill` 拉满：`.tableScroll` 使用 `fit-content`，表格使用 `max-content`，宽表仍保留横向滚动。
 
 ## [0.2.7] - 2026-09-20
 
