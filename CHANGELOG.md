@@ -2,9 +2,6 @@
 
 ## [Unreleased]
 
-### Fixed
-- **修复权限切换在 dsh 0.2+ 上完全失效**：当前会话选中态已移出 Session Controller（`sessions.list` 快照不再有 `current` 字段，改由 `uiSession` 服务以主视图绑定投影），`currentSession` 恒返回 null，点击权限菜单任意选项都静默无效、按钮标签永远停留在 `Accept edits`，而原生触发器被皮肤隐藏，GUI 内没有任何可用的切换入口。改为优先从 `uiSession` 主视图绑定读取当前会话 id，旧版宿主回退到 `list.current`；同时兼容 `permissions` 投影在 0.2+ 直接返回裸值（旧版包一层 `{ currentValue }`）的差异。
-
 ### Changed
 - **深色模式输入框焦点由"加深"改为"提亮"**：近黑画布上黑边毫无辨识度，深色焦点描边与 1px 晕边从纯黑改为亮象牙（`#faf9f5`，描边 45% / 晕边 18%），输入框聚焦时明显亮起，底栏托盘与键盘 `:focus-visible` 外框同步改为亮象牙；暗色投影保留作真实阴影深度。
 - **权限弹层列表间距加宽**：Read / Edit / Auto 预设行为两行行（标签 + 说明），原先 2px 的行间距糊成整块；行间距加宽 4px 至 6px，弹层不再拥挤。
@@ -15,6 +12,7 @@
 - **模型选择控件按 Claude 效果重构**：触发器去掉数据库图标、只保留模型名（+ 推理等级）与箭头，整体单一 hover 背景（不再是多块背景矩形叠加）；弹层不再两段 drilling，一级直接列出 DeepSeek 官方服务模型（名 + 描述 + 勾选），其下分界线、推理等级行（如有）与 More models 行；后两者唤出二级弹层并排在一级旁侧（视口不够自动翻到左侧）。整弹层改为悬停即开（与账户控件一致，带 180ms 跨窗宽容），列表字体/行高/间距/圆角/悬停与权限弹层完全一致。数据与提交直连宿主 `ctx.modelDirectories` 的每会话 ModelDirectory（与宿主菜单、`/model` 命令同源），选中态、目录与错误实时同步；宿主原座椅节点标记隐藏，React 换节点后自动重标记。
 
 ### Fixed
+- **修复权限切换在 dsh 0.2+ 上完全失效**：当前会话选中态已移出 Session Controller（`sessions.list` 快照不再有 `current` 字段，改由 `uiSession` 服务以主视图绑定投影），`currentSession` 恒返回 null，点击权限菜单任意选项都静默无效、按钮标签永远停留在 `Accept edits`，而原生触发器被皮肤隐藏，GUI 内没有任何可用的切换入口。改为优先从 `uiSession` 主视图绑定读取当前会话 id，旧版宿主回退到 `list.current`；同时兼容 `permissions` 投影在 0.2+ 直接返回裸值（旧版包一层 `{ currentValue }`）的差异。
 - **亮色用户消息气泡由蓝改灰**：宿主亮色气泡底色 token（`--dsw-specific-bubble`）是 DeepSeek 蓝（`deepseek-50`），皮肤此前未覆盖，故亮色下用户消息呈蓝色；现改取皮肤的按钮悬停灰（`--dsh-claude-hover-bg`，亮色 `rgba(0,0,0,0.08)`）。深色气泡宿主本就是中性灰，保持不变。
 - **深色强调色回到陶烬橙**：皮肤的深色 token 块声明在 `body[data-dsh-claude-style]` 上，与宿主的 `body[data-ds-dark-theme]` 同为 (0,1,1) 权重；宿主主题样式表若排在皮肤之后，其蓝色强调（`--dsw-alias-state-business-primary`、`--dsw-alias-button-info-fill`、`--dsw-alias-link` 与品牌 "new color"）就会盖掉暖色盘。现把深色盘限定到 `[data-ds-dark-theme]`（(0,2,1)，与样式表顺序无关），并补上此前缺失的 `--dsw-alias-link` 与品牌 "new color" 两个强调 token；亮色盘补齐原先从深色基块继承的四个 token，外观不变。
 
