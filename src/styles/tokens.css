@@ -172,9 +172,6 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) pre {
   border-color: #e8e6dc;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) table th {
-  background: #f0eee6;
-}
 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) * {
   scrollbar-color: rgba(208, 205, 193, 0.9) transparent;
