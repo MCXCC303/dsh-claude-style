@@ -187,7 +187,3 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) ::-webkit-scrollbar-thumb 
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) ::-webkit-scrollbar-thumb:hover {
   background: rgba(143, 138, 126, 0.8);
 }
-
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) ::selection {
-  background: rgba(217, 119, 87, 0.22);
-}

@@ -8,6 +8,7 @@
  *
  *   src/constants.js             constants & tokens (evaluated to substitute
  *                                %%TOKEN%% placeholders); brand SVGs live in src/assets/
+ *   src/assets/icons/lobe/*.svg        model-vendor marks, inlined as a JS markup table
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
@@ -29,6 +30,14 @@ import vm from 'node:vm'
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = path.join(ROOT, 'src')
 const ASSETS = path.join(SRC, 'assets')
+/** Brand marks inlined as CSS data URIs. */
+const BRAND_ASSETS = path.join(ASSETS, 'brand')
+/** Vendored Lobe Icons marks (src/assets/icons/lobe/README.md); one SVG per brand id. */
+const LOBE_ASSETS = path.join(ASSETS, 'icons', 'lobe')
+/** Vendored cc-switch provider icons (src/assets/icons/providers); source is its index.ts. */
+const PROVIDER_ASSETS = path.join(ASSETS, 'icons', 'providers')
+/** Host route the browser half uses for raster provider icons. */
+const PROVIDER_ROUTE = '/dsh-claude-style/icons/providers/'
 const LIB = path.join(ROOT, 'lib')
 const OUT = path.join(LIB, 'client.js')
 
@@ -47,6 +56,7 @@ const FRAGMENTS = [
   'context/model-copy.js',
   'context/i18n.js',
   'overrides/popover-utils.js',
+  'overrides/selection.js',
   'overrides/copy.js',
   'overrides/permissions.js',
   'overrides/model-picker.js',
@@ -85,7 +95,7 @@ const HEADER = (() => {
  * \`node scripts/build.mjs\` assembles this bundle.
  *
  * JS fragments (in assembly order):
- *   - src/assets/*.svg   Brand marks (inlined as CSS url() data URIs at build time)
+ *   - src/assets/brand/*.svg   Brand marks (inlined as CSS url() data URIs at build time)
  * ${jsFragments}
  *
  * Stylesheets (in assembly order):
@@ -193,7 +203,7 @@ function gateComposerScope(file, text) {
 
 /**
  * Brand marks ship as runtime-inlined data URIs (the DSH loader exposes no
- * relative requires / asset URLs), so each src/assets/*.svg is encoded into a
+ * relative requires / asset URLs), so each src/assets/brand/*.svg is encoded into a
  * CSS url() %%TOKEN%% value here, at build time.
  */
 const SVG_TOKENS = {
@@ -209,10 +219,104 @@ const SVG_TOKENS = {
 function loadSvgAssets() {
   const out = {}
   for (const [token, file] of Object.entries(SVG_TOKENS)) {
-    const svg = fs.readFileSync(path.join(ASSETS, file), 'utf8').replace(/\r\n/g, '\n').trim()
+    const svg = fs.readFileSync(path.join(BRAND_ASSETS, file), 'utf8').replace(/\r\n/g, '\n').trim()
     out[token] = 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'
   }
   return out
+}
+
+/**
+ * The vendored Lobe Icons marks, keyed by brand id.
+ *
+ * These are injected as SVG *markup* rather than as CSS data URIs: the picker
+ * stamps them into the row with `innerHTML`, so the mark inherits the row's
+ * `color` and the theme paints it — a data URI in a stylesheet cannot follow
+ * `currentColor`. Discovered from the directory, so adding a vendor is a file
+ * drop plus a reference from the copy document (see src/assets/icons/lobe/README.md).
+ *
+ * @returns brand id → normalised single-line SVG markup.
+ */
+function loadLobeIcons() {
+  const out = {}
+  for (const name of fs.readdirSync(LOBE_ASSETS).sort()) {
+    if (!name.endsWith('.svg')) continue
+    const id = name.slice(0, -4)
+    const svg = fs.readFileSync(path.join(LOBE_ASSETS, name), 'utf8').replace(/\r\n/g, '\n').trim()
+    if (!svg.startsWith('<svg') || !svg.includes('viewBox=')) {
+      throw new Error(`build: src/assets/icons/lobe/${name} is not a scalable SVG (needs <svg viewBox=…>)`)
+    }
+    // The marks are pasted into the document; a stray quote or a `</script>`
+    // style sequence would break out of the JS string that carries them.
+    if (svg.includes('</') && /<\/script/i.test(svg)) throw new Error(`build: src/assets/icons/lobe/${name} carries a script end tag`)
+    if (svg.includes('\n')) throw new Error(`build: src/assets/icons/lobe/${name} is multi-line; run scripts/fetch-lobe-icons.mjs`)
+    out[id] = svg
+  }
+  if (Object.keys(out).length === 0) throw new Error('build: src/assets/icons/lobe/ holds no icons; run scripts/fetch-lobe-icons.mjs')
+  return out
+}
+
+/**
+ * Vendored cc-switch provider icons, mirroring its `index.ts` declaration.
+ *
+ * cc-switch keeps inline SVG strings in `icons` and imported asset URLs in
+ * `iconUrls`; metadata carries display names, categories, keywords and a
+ * default colour. We keep the same split: inline SVGs ride the bundle,
+ * raster/imported files are served by the host half from lib/icons/providers/.
+ *
+ * @returns { icons, urlKeys, metadata }.
+ */
+function loadProviderIcons() {
+  const indexText = fs.readFileSync(path.join(PROVIDER_ASSETS, 'index.ts'), 'utf8')
+  const metadataText = fs.readFileSync(path.join(PROVIDER_ASSETS, 'metadata.ts'), 'utf8')
+
+  const imports = new Map()
+  const importRe = /import\s+(_\w+)\s+from\s+["']\.\/([^"']+)["'];/g
+  let match
+  while ((match = importRe.exec(indexText))) {
+    const varName = match[1]
+    const file = match[2].replace(/\?url$/, '')
+    imports.set(varName, PROVIDER_ROUTE + file)
+  }
+
+  const importDecls = [...imports.entries()].map(([name, url]) => `var ${name} = ${JSON.stringify(url)};`).join('\n')
+
+  function extractObject(text, marker) {
+    const start = text.indexOf(marker)
+    if (start === -1) throw new Error(`build: provider icon source is missing ${marker}`)
+    const brace = text.indexOf('{', start)
+    let depth = 0
+    let i = brace
+    for (; i < text.length; i += 1) {
+      const ch = text[i]
+      if (ch === '{') depth += 1
+      else if (ch === '}') {
+        depth -= 1
+        if (depth === 0) break
+      } else if (ch === '`') {
+        i += 1
+        while (i < text.length) {
+          if (text[i] === '\\') { i += 2; continue }
+          if (text[i] === '`') break
+          i += 1
+        }
+      } else if (ch === '"' || ch === "'") {
+        const quote = ch
+        i += 1
+        while (i < text.length) {
+          if (text[i] === '\\') { i += 2; continue }
+          if (text[i] === quote) break
+          i += 1
+        }
+      }
+    }
+    return text.slice(brace, i + 1)
+  }
+
+  const icons = new Function(`${importDecls}\nreturn ${extractObject(indexText, 'export const icons')};`)()
+  const iconUrls = new Function(`${importDecls}\nreturn ${extractObject(indexText, 'export const iconUrls')};`)()
+  const metadata = new Function(`return ${extractObject(metadataText, 'export const iconMetadata')};`)()
+
+  return { icons: { ...icons, ...iconUrls }, urlKeys: Object.keys(iconUrls), metadata }
 }
 
 /** Substitute %%TOKEN%% placeholders in one stylesheet; throws on leftovers. */
@@ -231,16 +335,28 @@ function substitute(file, text, tokens) {
  * they all throw: a `families[].key` or `aliases` target that names no entry,
  * a rule whose `match` is not a compilable regexp, a `{zh, en}` pair missing a
  * language, or a document with no `exact` table at all.
+ *
+ * Brand bindings are checked too: every id named by `brands.providers` and
+ * `brands.models[].brand` must be vendored under src/assets/icons/lobe/, and every
+ * model rule must compile — a typo there would otherwise render as a silently
+ * missing mark on one row.
+ *
  * @param doc - parsed `src/model-descriptions.json`.
+ * @param brands - vendored brand ids (loadLobeIcons keys).
  * @returns the number of exact entries, for the build log.
  */
-function validateModelCopy(doc) {
+function validateModelCopy(doc, lobeBrands, providerBrands) {
   const fail = (message) => {
     throw new Error(`build: ${MODEL_COPY} ${message}`)
   }
   if (typeof doc !== 'object' || doc === null) fail('is not an object')
   if (typeof doc.fallback !== 'string' || doc.fallback === '') fail('needs a non-empty "fallback" locale id')
   if (typeof doc.exact !== 'object' || doc.exact === null) fail('needs an "exact" table')
+
+  const requireBrand = (where, brand) => {
+    if (typeof brand !== 'string' || brand === '') fail(`${where} is not a brand id string`)
+    if (!(brand in lobeBrands) && !(brand in providerBrands)) fail(`${where} names brand "${brand}", which is not vendored in src/assets/icons/lobe/ or src/assets/icons/providers/`)
+  }
 
   const locales = new Set([doc.fallback])
   const requirePair = (where, pair) => {
@@ -271,12 +387,32 @@ function validateModelCopy(doc) {
       if (rule.key === undefined) requirePair(`${where}.text`, rule.text)
     }
   }
+
+  const brandMap = doc.brands
+  if (typeof brandMap !== 'object' || brandMap === null) fail('needs a "brands" section')
+  for (const [provider, brand] of Object.entries(brandMap.providers ?? {})) {
+    requireBrand(`brands.providers["${provider}"]`, brand)
+  }
+  if (!Array.isArray(brandMap.models)) fail('needs a "brands.models" rule list')
+  for (const [index, rule] of brandMap.models.entries()) {
+    const where = `brands.models[${index}]`
+    if (typeof rule?.match !== 'string') fail(`${where} needs a string "match"`)
+    try {
+      new RegExp(rule.match)
+    } catch (error) {
+      fail(`${where} has an uncompilable "match": ${error.message}`)
+    }
+    requireBrand(`${where}.brand`, rule.brand)
+  }
+
   if (locales.size < 2) fail('carries fewer than two locales; i18n needs at least the fallback and one translation')
   return Object.keys(doc.exact).length
 }
 
 function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
+  const lobeIcons = loadLobeIcons()
+  const providerIcons = loadProviderIcons()
 
   const cssText = STYLE_FILES
     .map((fileDef) => {
@@ -295,6 +431,29 @@ function main() {
     '    var CSS = [',
     ...cssText.split('\n').map((line) => '      ' + JSON.stringify(line) + ','),
     "    ].join('\\n')",
+  ].join('\n')
+
+  // Brand marks ride the bundle as markup (see loadLobeIcons). They sit beside
+  // the stylesheet block so every fragment below can read the table; the picker
+  // stamps one into a row and the row's `color` paints it.
+  const brandDecl = [
+    '    // ============================================================================',
+    '    // 模型厂商标识（由 src/assets/icons/lobe/*.svg 内联生成，勿手改） (Brand marks)',
+    '    // ============================================================================',
+    '    var LOBE_BRAND_SVGS = {',
+    ...Object.entries(lobeIcons).map(([id, svg]) => `      ${JSON.stringify(id)}: ${JSON.stringify(svg)},`),
+    '    }',
+  ].join('\n')
+
+  // cc-switch provider icons: inline SVGs in PROVIDER_ICONS, imported/raster
+  // entries as host-route URLs; metadata mirrors its metadata.ts.
+  const providerDecl = [
+    '    // ============================================================================',
+    '    // 供应商/厂商图标（来自 cc-switch src/icons/extracted，勿手改） (Provider icons)',
+    '    // ============================================================================',
+    '    var PROVIDER_ICONS = ' + JSON.stringify(providerIcons.icons, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
+    '    var PROVIDER_ICON_URL_KEYS = ' + JSON.stringify(Object.fromEntries(providerIcons.urlKeys.map((key) => [key, true])), null, 2).split('\n').map((line) => '    ' + line).join('\n'),
+    '    var PROVIDER_ICON_METADATA = ' + JSON.stringify(providerIcons.metadata, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
   ].join('\n')
 
   const fragment = (name) => {
@@ -316,6 +475,8 @@ function main() {
     HEADER,
     fragment(FRAGMENTS[0]),
     cssDecl,
+    brandDecl,
+    providerDecl,
     ...FRAGMENTS.slice(1).map(fragment),
     FOOTER,
   ].join('\n\n')
@@ -331,11 +492,23 @@ function main() {
   }
 
   fs.writeFileSync(OUT, bundle)
+
+  // Provider icons are served by the host half from lib/icons/providers/.
+  const providerOut = path.join(LIB, 'icons', 'providers')
+  fs.rmSync(providerOut, { recursive: true, force: true })
+  fs.mkdirSync(providerOut, { recursive: true })
+  let providerFileCount = 0
+  for (const name of fs.readdirSync(PROVIDER_ASSETS)) {
+    if (name.endsWith('.ts')) continue
+    fs.copyFileSync(path.join(PROVIDER_ASSETS, name), path.join(providerOut, name))
+    providerFileCount += 1
+  }
+
   const lines = bundle.split('\n').length
-  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments)`)
+  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(lobeIcons).length} Lobe marks + ${Object.keys(providerIcons.icons).length} provider icons)`)
 
   const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
-  const exact = validateModelCopy(copy)
+  const exact = validateModelCopy(copy, lobeIcons, providerIcons.icons)
   fs.writeFileSync(path.join(LIB, MODEL_COPY), JSON.stringify(copy, null, 2) + '\n')
   console.log(`built lib/${MODEL_COPY} (${exact} exact entries, ${copy.families.length} family rules, ${copy.tiers.length} tier rules)`)
 }

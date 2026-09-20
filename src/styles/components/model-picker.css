@@ -47,11 +47,94 @@ body[data-dsh-claude-style] .dsh-claude-model-status {
   line-height: 20px !important;
   padding: 4px 8px !important;
 }
+/* The sub popover is taller than the first level; its provider labels stay
+   pinned to the top while the list scrolls, the next provider replacing the
+   previous one. */
+body[data-dsh-claude-style] .dsh-claude-model-popover-sub {
+  max-height: min(540px, calc(100vh - 80px)) !important;
+  padding-top: 0 !important;
+}
+
+body[data-dsh-claude-style] .dsh-claude-model-group-section {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+body[data-dsh-claude-style] .dsh-claude-model-group-row {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 6 !important;
+  align-self: stretch !important;
+  margin: 0 !important;
+  padding: 6px 8px 2px 8px !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-model-group-row {
+  background: #1e1e1d !important;
+}
+
 body[data-dsh-claude-style] .dsh-claude-model-group {
-  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  margin: 0 !important;
+  padding: 2px 8px !important;
+  background: #141413 !important;
+  color: #faf9f5 !important;
+  border-radius: 6px !important;
   font-size: 11px !important;
+  font-weight: 600 !important;
   line-height: 16px !important;
-  padding: 2px 8px 0 8px !important;
+}
+
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-model-group {
+  background: #faf9f5 !important;
+  color: #141413 !important;
+}
+
+/* Vendor mark: a vendored Lobe Icons mono SVG stamped into the row by the
+   picker (src/assets/icons/lobe/README.md). The SVG is `fill="currentColor"`, so the
+   surrounding colour paints it and there is no per-brand rule. The box is fixed
+   and always present, so a row whose vendor has no mark keeps the same text
+   column as its neighbours. */
+body[data-dsh-claude-style] .dsh-claude-model-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none !important;
+  color: var(--dsw-alias-label-secondary, #787672) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-brand svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-brand img {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  object-fit: contain !important;
+}
+/* Inside the provider pill the mark is part of the label: it takes the pill's
+   inverted colour and steps down to the label's own size. */
+body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand {
+  width: 13px !important;
+  height: 13px !important;
+  color: inherit !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand img {
+  width: 13px !important;
+  height: 13px !important;
 }
 /* Model / effort option: same row metrics and hover as the drawer items. */
 body[data-dsh-claude-style] .dsh-claude-model-option {

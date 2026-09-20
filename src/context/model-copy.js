@@ -54,6 +54,7 @@
     function indexModelCopy(doc) {
       if (!doc || typeof doc !== 'object') return null
       var exact = doc.exact && typeof doc.exact === 'object' ? doc.exact : {}
+      var brands = doc.brands && typeof doc.brands === 'object' ? doc.brands : {}
       var index = {
         ui: doc.ui && typeof doc.ui === 'object' ? doc.ui : {},
         settings: doc.settings && typeof doc.settings === 'object' ? doc.settings : {},
@@ -64,6 +65,8 @@
         foldedAliases: {},
         families: [],
         tiers: [],
+        providerBrands: brands.providers && typeof brands.providers === 'object' ? brands.providers : {},
+        brandRules: [],
       }
       for (var id in exact) index.folded[normalizeModelId(id)] = exact[id]
       for (var a in index.aliases) {
@@ -83,6 +86,17 @@
       }
       index.families = compile(doc.families)
       index.tiers = compile(doc.tiers)
+      // Brand rules carry no copy, only the mark's id; the build has already
+      // checked every id against the vendored marks.
+      var brandRules = []
+      for (var b = 0; b < (brands.models || []).length; b++) {
+        var brandRule = brands.models[b]
+        if (!brandRule || typeof brandRule.match !== 'string' || typeof brandRule.brand !== 'string') continue
+        try {
+          brandRules.push({ re: new RegExp(brandRule.match, 'i'), brand: brandRule.brand })
+        } catch (error) { /* a malformed rule is skipped, not fatal */ }
+      }
+      index.brandRules = brandRules
       return index
     }
 

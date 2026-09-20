@@ -217,6 +217,143 @@
     "ernie-5": "ernie-5.0",
     "minimax-m3-1m": "minimax-m3"
   },
+  "brands": {
+    "note": "Which brand mark a row shows. Every id names a vendored icon in src/assets/icons/lobe/ or src/assets/icons/providers/; scripts/build.mjs fails the build on an id that is not there. This is presentation data, kept out of the bundle like the rest of this document, and it is separate from the copy rules above: a vendor's mark and a vendor's description line change for different reasons. `providers` is keyed by the harness provider route id, which is exactly the group id the picker receives (`deepseek-official`, `zai`, `google-vertex`, …) — it is the mark on a level-2 group header. `models` is an ordered, anchored rule list resolved against the model id, exactly like `families` and with the same discipline: first match wins, so a broad rule must sit below the narrow ones and every rule must name its vendor (`step` cannot match `step-3.7-flash` by accident only if no earlier rule already claimed it). A model no rule matches falls back to its provider's mark; a provider no rule matches shows no mark, and the row keeps its alignment.",
+    "providers": {
+      "deepseek-official": "deepseek",
+      "deepseek": "deepseek",
+      "anthropic": "anthropic",
+      "openai": "openai",
+      "openai-codex": "codex",
+      "google": "google",
+      "google-vertex": "vertexai",
+      "amazon-bedrock": "bedrock",
+      "azure-openai-responses": "azure",
+      "baseten": "baseten",
+      "cerebras": "cerebras",
+      "cloudflare-ai-gateway": "cloudflare",
+      "cloudflare-workers-ai": "cloudflare",
+      "fireworks": "fireworks",
+      "github-copilot": "githubcopilot",
+      "groq": "groq",
+      "huggingface": "huggingface",
+      "kimi-coding": "kimi",
+      "minimax": "minimax",
+      "minimax-cn": "minimax",
+      "mistral": "mistral",
+      "moonshotai": "moonshot",
+      "moonshotai-cn": "moonshot",
+      "nvidia": "nvidia",
+      "opencode": "opencode",
+      "opencode-go": "opencode",
+      "openrouter": "openrouter",
+      "qwen-token-plan": "qwen",
+      "qwen-token-plan-cn": "qwen",
+      "qwen-token-plan-individual": "qwen",
+      "together": "together",
+      "vercel-ai-gateway": "vercel",
+      "xai": "xai",
+      "xiaomi": "xiaomimimo",
+      "xiaomi-token-plan-ams": "xiaomimimo",
+      "xiaomi-token-plan-cn": "xiaomimimo",
+      "xiaomi-token-plan-sgp": "xiaomimimo",
+      "zai": "zai",
+      "zai-coding-cn": "zai",
+      "ant-ling": "antgroup"
+    },
+    "models": [
+      {
+        "match": "deepseek",
+        "brand": "deepseek"
+      },
+      {
+        "match": "claude",
+        "brand": "anthropic"
+      },
+      {
+        "match": "codex",
+        "brand": "codex",
+        "note": "Before the OpenAI rule: a Codex row shows the Codex mark, not the parent mark."
+      },
+      {
+        "match": "gpt|(^|[/-])o[1-9](-|$)",
+        "brand": "openai"
+      },
+      {
+        "match": "gemini",
+        "brand": "gemini",
+        "note": "A Gemini row shows the model line's mark; the provider group header above it shows Google's, because providers resolve from `providers` and never from here."
+      },
+      {
+        "match": "glm",
+        "brand": "zai"
+      },
+      {
+        "match": "kimi|(^|-)k3($|-)",
+        "brand": "kimi"
+      },
+      {
+        "match": "qwen",
+        "brand": "qwen"
+      },
+      {
+        "match": "step",
+        "brand": "stepfun"
+      },
+      {
+        "match": "minimax|(^|-)m[23]($|-)",
+        "brand": "minimax"
+      },
+      {
+        "match": "muse-spark|llama",
+        "brand": "meta"
+      },
+      {
+        "match": "celeris",
+        "brand": "celestoai"
+      },
+      {
+        "match": "mercury|inception",
+        "brand": "inception"
+      },
+      {
+        "match": "grok",
+        "brand": "xai"
+      },
+      {
+        "match": "doubao|seed|volc",
+        "brand": "bytedance"
+      },
+      {
+        "match": "ernie",
+        "brand": "baidu"
+      },
+      {
+        "match": "hunyuan|(^|-)hy\\d",
+        "brand": "tencent"
+      },
+      {
+        "match": "mistral|magistral|codestral",
+        "brand": "mistral"
+      },
+      {
+        "match": "north|command-?[ar]|cohere",
+        "brand": "cohere"
+      },
+      {
+        "match": "phi-?\\d",
+        "brand": "microsoft"
+      },
+      {
+        "match": "nova",
+        "brand": "nova"
+      },
+      {
+        "match": "sonar|perplexity",
+        "brand": "perplexity"
+      }
+    ]
+  },
   "families": [
     {
       "match": "^deepseek.*(v4[-.]?1|4[-.]?1).*flash$|^deepseek-flash$",

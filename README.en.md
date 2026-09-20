@@ -56,9 +56,10 @@ Only one theme should be active at a time. After installing, **restart `dsh web`
 
 1. **Theme** — applies the whole canvas automatically after install; no configuration needed. Light and dark follow the system color scheme.
 2. **Permission segments** — the composer gets a Read | Edit | Auto segmented control replacing the shipped access-mode menu: read-only, workspace write, and full access (Auto is switched through the shipped risk-confirmation dialog).
-3. **Brand switch** — Settings (`Ctrl+,`) → **Claude Style**: the sidebar brand flips between the Claude starburst + the official Claude wordmark and Anthropic (`A\` + ANTHROPIC wordmark); the hero mark follows the choice with the clay fill. The choice persists in the browser; `claude` is the default.
-4. **Account drawer** — the sidebar footer button opens a hover popover with quick access to Settings (`Ctrl+,`) and plugin management.
-5. **Status polish** — thinking turns pick one of Claude Code's 185 spinner verbs per turn; the workspace loading state uses a Fluent-style circular indicator.
+3. **Model picker** — the composer's model seat becomes a two-level Claude-style menu: the first level lists DeepSeek's official models, a divider, the reasoning-effort row and "More models", and the second opens beside it. Every model row carries the mark of the **vendor that made the model** (not the provider reselling it), and the "More models" group headers carry the provider's mark. The marks are [Lobe Icons](https://lobehub.com/icons) mono glyphs painted in the theme's own text colour, so they stay legible on both canvases — no React dependency, and no full-colour logos.
+4. **Brand switch** — Settings (`Ctrl+,`) → **Claude Style**: the sidebar brand flips between the Claude starburst + the official Claude wordmark and Anthropic (`A\` + ANTHROPIC wordmark); the hero mark follows the choice with the clay fill. The choice persists in the browser; `claude` is the default.
+5. **Account drawer** — the sidebar footer button opens a hover popover with quick access to Settings (`Ctrl+,`) and plugin management.
+6. **Status polish** — thinking turns pick one of Claude Code's 185 spinner verbs per turn; the workspace loading state uses a Fluent-style circular indicator.
 
 ## Disable & Uninstall
 

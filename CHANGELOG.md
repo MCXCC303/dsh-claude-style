@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+- **模型选择器厂商标识**：模型行显示**模型所属厂商**的标识（而非转售该模型的 provider），「更多模型」的 provider 分组标题显示该 provider 的标识。标识取自 [Lobe Icons](https://lobehub.com/icons) 的静态 SVG（`@lobehub/icons-static-svg`，MIT），按仓库既有架构在构建期内联进 bundle——`@lobehub/icons` 是 React 组件包，装它就要破坏「零依赖、零打包器、单文件产物」这条约束。用单色字形（`fill="currentColor"`）随主题文字色绘制，亮暗两画布都清晰，也不与「陶烬橙唯一强调色」冲突；彩色变体不做——OpenAI、Anthropic、xAI、Moonshot、Z.ai、Vercel、Groq 等 12 家上游本就没有彩色版，且部分厂商色在 `#141413` 画布上不可见。绑定关系仍是数据：`model-descriptions.json` 的 `brands.providers` / `brands.models`，构建期校验引用的标识都已 vendored，写错即构建失败。
+
 ### Changed
+- **接入 cc-switch 全量供应商图标**：`src/assets/icons/providers` 引入其 107 个图标，build 解析 `index.ts` / `metadata.ts` 生成 `PROVIDER_ICONS` / `PROVIDER_ICON_METADATA`，宿主新增 `/dsh-claude-style/icons/providers/*` 路由；模型选择器优先用 cc-switch 图标，缺失时回退 Lobe。
+- **更多模型供应商标签改为推挤式 sticky**：每个供应商包成 section，滚动时上一个标签被下一个 section 往上推，而不是直接覆盖。
+- **附件输入框接缝优化**：移除附件轨 focus 时 1px 内圈阴影，消除图片区与文字区之间的分界线和阴影。
+- **更多模型子弹层**：适当提高弹层高度；供应商标签改为 sticky 顶部条，滚动时由下一个供应商标签替换。
+- **更多模型 provider 标签强化**：provider 分组标题改为黑底白字圆角矩形；深色模式为白底黑字。
 - **模型触发器 hover 去重**：删除 trailing 下针对 trigger/model 的额外 hover 规则，只保留模型触发器自身一层背景。
 - **标题中文回退改为黑体**：SERIF 栈移除 CJK 衬线回退，中文落到 Noto Sans SC / 微软雅黑等黑体；西文仍保持 Anthropic Serif / Georgia / Times。
 - **统计弹层合并**：统计行允许收缩省略（如 20轮...）；隐藏宿主两个独立弹层，改为一个自定义弹层：上下两个区块（会话统计 / Token 用量），每块 2×2 网格，无总标题，风格与权限弹层一致，内容字号加大。

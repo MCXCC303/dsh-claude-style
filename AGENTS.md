@@ -21,10 +21,10 @@ probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI UR
 
 ## 仓库布局
 
-- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-picker/account-footer/scheduler + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/*.svg`（品牌标识，构建期内联为 data URI）、`model-descriptions.json`（模型文案数据）。
+- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-picker/account-footer/scheduler + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/*.svg`（品牌标识，构建期内联为 data URI）、`assets/lobe/*.svg`（模型厂商标识，Lobe Icons 单色字形，构建期内联为 JS markup 表）、`model-descriptions.json`（模型文案数据 + `brands` 标识绑定）。
 - `lib/` 产物：`client.js`（生成）、`index.js`（宿主半边，手写，提供 `/dsh-claude-style/model-descriptions.json` 路由）、`model-descriptions.json`（构建期复制）。
 - `skin.json` 皮肤清单；`cordis.patch.yml` 把 `ui-skin-claude-style` 插入 web roster。
-- `scripts/` 构建与回归工具；`docs/` 文档与截图；`fonts/` 字体文件（JetBrains Mono 已入包，Anthropic 字体仅仓库下载）。
+- `scripts/` 构建与回归工具（`fetch-lobe-icons.mjs` 是唯一联网脚本，手工运行、不进构建）；`docs/` 文档与截图；`fonts/` 字体文件（JetBrains Mono 已入包，Anthropic 字体仅仓库下载）。
 - `.debug/`、`node_modules/` 不入库。
 
 ## 核心约定

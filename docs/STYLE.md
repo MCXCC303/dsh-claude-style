@@ -54,7 +54,9 @@ assembles the bundle:
 | Source | Content |
 |---|---|
 | `src/constants.js` | constants, spinner verbs, shared token values (evaluated at build time to fill `%%TOKEN%%` placeholders) |
-| `src/assets/*.svg` | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
+| `src/assets/brand/*.svg` | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
+| `src/assets/icons/lobe/*.svg` | model-vendor marks (Lobe Icons mono, MIT), inlined as a JS markup table at build time; bound to providers/models by `model-descriptions.json` → `brands` |
+| `src/assets/icons/providers/*` | cc-switch provider/vendor icon set (MIT); inline SVGs are bundled, raster/imported files are served by the host route |
 | `src/styles/tokens.css` | design tokens (dark base + ivory light) |
 | `src/styles/typography.css` | serif display / sans UI / mono code, editorial markdown |
 | `src/styles/chrome.css` | canvas, hairlines, clay accent, chrome details |
@@ -98,6 +100,20 @@ to the document's `fallback` locale. Lookup descends exact → family → tier �
 the catalog's own text; family rules are ordered and must stay anchored (the
 `flash` rule is scoped to `deepseek`, or another vendor's flash tier inherits
 DeepSeek's copy).
+
+The same document carries the picker's **brand marks** under `brands`:
+`brands.providers` maps a provider route id to a vendored mark (the level-2
+group header), and `brands.models` is an ordered, anchored rule list matching a
+model id (the row's vendor — the vendor that made the model, not the aggregator
+reselling it, with the provider's mark as the fallback). Both name ids vendored
+in `src/assets/icons/lobe/`, and the build fails on an id that is not there, so the
+binding cannot drift. The marks are the **mono** Lobe Icons glyphs
+(`fill="currentColor"`), stamped into the row as markup: the theme's own text
+colour paints them, which keeps them legible on both canvases and keeps the
+palette to its single clay accent. Full-colour variants are deliberately not
+used — a third of the vendors ship no colour version (OpenAI, Anthropic, xAI,
+Moonshot, Z.ai, Vercel, Groq), and several brand colours are near-black on the
+`#141413` canvas.
 
 ### Host selector discipline · 宿主选择器纪律
 

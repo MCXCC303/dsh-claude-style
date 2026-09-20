@@ -254,12 +254,107 @@
       var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
       var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
 
-      /** One selectable model row: name, description line and a check when current. */
+      /**
+       * The brand mark for a provider route, from the copy document's
+       * `brands.providers`. That table is keyed by the same provider id the
+       * picker receives as a group id, so this is an exact lookup.
+       *
+       * @param groupId - provider route id.
+       * @returns the vendored mark's id, or null when this provider has none.
+       */
+      function normalizeIconKey(value) {
+        return String(value === void 0 || value === null ? '' : value).toLowerCase().replace(/[^a-z0-9]+/g, '')
+      }
+
+      /**
+       * Map one provider/model id to a vendored icon name by exact normalized
+       * match. The copy document's `brands` table carries the curated
+       * provider/model → icon mapping; this is only the fallback for ids the
+       * table does not mention.
+       */
+      function providerIconName(value) {
+        var raw = String(value === void 0 || value === null ? '' : value).toLowerCase()
+        if (raw && PROVIDER_ICONS[raw]) return raw
+        var key = normalizeIconKey(value)
+        if (!key) return null
+        if (PROVIDER_ICONS[key]) return key
+        for (var name in PROVIDER_ICON_METADATA) {
+          var meta = PROVIDER_ICON_METADATA[name]
+          var candidates = [meta.name, meta.displayName]
+          if (meta.keywords) candidates = candidates.concat(meta.keywords)
+          for (var i = 0; i < candidates.length; i++) {
+            if (normalizeIconKey(candidates[i]) === key) return name
+          }
+        }
+        return null
+      }
+
+      function providerBrand(groupId) {
+        var id = String(groupId === void 0 || groupId === null ? '' : groupId)
+        var brand = modelCopy === null ? null : (modelCopy.providerBrands[id] || modelCopy.providerBrands[id.toLowerCase()])
+        if (typeof brand === 'string' && brand) return brand
+        return providerIconName(id)
+      }
+
+      /**
+       * The brand mark for one model: the vendor that made it, not the route it
+       * is resold through — an OpenRouter group listing Claude models shows
+       * Anthropic marks on the rows and OpenRouter's own mark on the header.
+       * Rules are ordered and anchored in the document; the first match wins,
+       * and a model no rule claims falls back to its provider's mark.
+       *
+       * @param groupId - provider route id, the fallback's source.
+       * @param modelId - catalog model id.
+       * @returns the vendored mark's id, or null when neither table claims it.
+       */
+      function modelBrand(groupId, modelId) {
+        if (modelCopy !== null) {
+          var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
+          for (var i = 0; i < modelCopy.brandRules.length; i++) {
+            if (modelCopy.brandRules[i].re.test(id)) return modelCopy.brandRules[i].brand
+          }
+        }
+        return providerIconName(modelId) || providerBrand(groupId)
+      }
+
+      /**
+       * The mark element for a row or a group header.
+       *
+       * The mark is stamped as markup rather than painted from CSS: the vendored
+       * Lobe Icons marks are `fill="currentColor"`, so the surrounding text
+       * colour paints them and no per-brand rule is needed. The box is always
+       * created, even when nothing matched, so labels stay in one column.
+       *
+       * @param brand - vendored mark id, or null.
+       * @returns the element to append.
+       */
+      function buildModelBrand(brand) {
+        var el = modelEl('span', 'dsh-claude-model-brand')
+        // Decorative: the row's label already names the model.
+        el.setAttribute('aria-hidden', 'true')
+        if (brand) {
+          var providerIcon = PROVIDER_ICONS[brand]
+          if (providerIcon && PROVIDER_ICON_URL_KEYS[brand]) {
+            var img = document.createElement('img')
+            img.src = providerIcon
+            img.alt = ''
+            el.appendChild(img)
+          } else if (providerIcon) {
+            el.innerHTML = providerIcon
+          } else if (LOBE_BRAND_SVGS[brand]) {
+            el.innerHTML = LOBE_BRAND_SVGS[brand]
+          }
+        }
+        return el
+      }
+
+      /** One selectable model row: brand mark, name, description line and a check when current. */
       function buildModelOption(group, model, selected) {
         var item = modelEl('button', 'dsh-claude-model-option')
         item.type = 'button'
         item.setAttribute('role', 'menuitemradio')
         item.setAttribute('aria-checked', selected ? 'true' : 'false')
+        item.appendChild(buildModelBrand(modelBrand(group.id, model.id)))
         var copy = modelEl('span', 'dsh-claude-model-copy')
         copy.appendChild(modelEl('span', 'dsh-claude-model-name', model.name))
         // One line, in the shell's language: the copy document is localized, so
@@ -375,6 +470,7 @@
             currentRow.type = 'button'
             currentRow.setAttribute('role', 'menuitemradio')
             currentRow.setAttribute('aria-checked', 'true')
+            currentRow.appendChild(buildModelBrand(modelBrand(current.group.id, current.model.id)))
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
             currentCopy.appendChild(modelEl('span', 'dsh-claude-model-name', current.group.id + '/' + current.model.id))
             currentRow.appendChild(currentCopy)
@@ -442,11 +538,20 @@
         for (var g2 = 0; g2 < groups.length; g2++) {
           var group = groups[g2]
           if (group.models.length === 0) continue
-          modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-group', group.name))
+          var groupSection = modelEl('div', 'dsh-claude-model-group-section')
+          var groupRow = modelEl('div', 'dsh-claude-model-group-row')
+          var groupLabel = modelEl('div', 'dsh-claude-model-group')
+          // The provider's own mark leads its label, so a level-2 list reads as
+          // "which provider" before "which model".
+          groupLabel.appendChild(buildModelBrand(providerBrand(group.id)))
+          groupLabel.appendChild(modelEl('span', 'dsh-claude-model-group-name', group.name))
+          groupRow.appendChild(groupLabel)
+          groupSection.appendChild(groupRow)
           for (var m = 0; m < group.models.length; m++) {
             var selected = current !== null && current.group.id === group.id && current.model.id === group.models[m].id
-            modelSubBody.appendChild(buildModelOption(group, group.models[m], selected))
+            groupSection.appendChild(buildModelOption(group, group.models[m], selected))
           }
+          modelSubBody.appendChild(groupSection)
         }
         if (modelSubBody.firstChild === null) {
             modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('empty', MODEL_EMPTY_LABEL)))

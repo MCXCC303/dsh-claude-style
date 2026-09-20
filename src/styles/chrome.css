@@ -96,9 +96,26 @@ body[data-dsh-claude-style] ::-webkit-scrollbar-thumb:hover {
   background: rgba(107, 106, 101, 0.9);
 }
 
+/* Text selection: two solid paints, identical on both canvases.
+   Focused is white on blue, unfocused is black on gray — the platform's own
+   pairing, which is what the selection has to look like. It replaces the
+   translucent clay wash this skin used before, and it deliberately ignores the
+   theme: a selection is a transient user gesture, not a surface, so it does not
+   follow the ivory/warm-black palette. Every value is a solid colour and
+   !important, because it has to override the colors the host and this skin put
+   on the text underneath (markdown links, inline code, syntax tokens) — a
+   selection that kept the underlying colour would be illegible on blue.
+   The unfocused rule is declared after the focused one and shares its weight,
+   so the attribute decides; the focus state itself is mirrored onto the
+   document by src/overrides/selection.js. */
 body[data-dsh-claude-style] ::selection {
-  background: rgba(217, 119, 87, 0.30);
-  color: inherit;
+  background-color: #0060df !important;
+  color: #ffffff !important;
+}
+
+body[data-dsh-claude-style][data-dsh-window-blur] ::selection {
+  background-color: #c8c8c8 !important;
+  color: #000000 !important;
 }
 
 body[data-dsh-claude-style] :is(button, input, textarea, select, [role="button"], [role="tab"], [role="treeitem"]) {

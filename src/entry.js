@@ -24,6 +24,7 @@
 
       var ui = {}
       var teardowns = []
+      teardowns.push(installSelectionFocus())
       teardowns.push(installCopy(ctx, ui))
       teardowns.push(installPermissions(ctx, ui))
       teardowns.push(installModelPicker(ctx, ui))
@@ -42,6 +43,7 @@
           body.removeAttribute(BRAND_ATTR)
           body.removeAttribute(FOOTER_ATTR)
           body.removeAttribute(COMPOSER_ATTR)
+          body.removeAttribute(WINDOW_BLUR_ATTR)
           var el = document.getElementById(STYLE_ID)
           if (el) el.remove()
         }

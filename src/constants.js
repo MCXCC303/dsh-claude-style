@@ -157,6 +157,15 @@
     var FOOTER_ATTR = 'data-dsh-claude-footer-takeover'
     /** Present while the composer restyle applies to the page currently shown. */
     var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
+    /**
+     * Present while the browser window does NOT hold focus.
+     *
+     * The window's focus state is the only thing that separates the two text
+     * selection paints (gray on black unfocused, blue on white focused), and no
+     * selector can read it — so src/overrides/selection.js mirrors it onto the
+     * document and the stylesheet switches on this attribute.
+     */
+    var WINDOW_BLUR_ATTR = 'data-dsh-window-blur'
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /** Route the browser half reads and writes preferences through (lib/index.js). */
