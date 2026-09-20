@@ -574,23 +574,28 @@
       var modelSubKind = null
       var modelBodySig = ''
       var modelSubSig = ''
-      /** Indexed model copy document, or null before the fetch settles and after it fails. */
-      var modelCopy = null
-      /** One fetch attempt per install: a failure must not re-request on every frame. */
-      var modelCopyRequested = false
       /** Locale subscription, so switching the shell language repaints the picker. */
       var localeUnsubscribe = null
       var modelCopyUnsubscribe = null
       /** Exact entry: `provider/model`, bare id, folded id, then the alias table. */
       function exactModelCopy(groupId, modelId) {
         if (modelCopy === null) return null
-        var byProvider = modelCopy.exact[groupId + '/' + modelId]
+        var gid = String(groupId === void 0 || groupId === null ? '' : groupId).toLowerCase()
+        var mid = String(modelId === void 0 || modelId === null ? '' : modelId)
+        var midLower = mid.toLowerCase()
+        var byProvider = modelCopy.exact[groupId + '/' + mid] || modelCopy.exact[gid + '/' + midLower]
         if (byProvider) return byProvider
-        if (modelCopy.exact[modelId]) return modelCopy.exact[modelId]
-        var folded = normalizeModelId(modelId)
+        if (modelCopy.exact[mid]) return modelCopy.exact[mid]
+        if (modelCopy.exact[midLower]) return modelCopy.exact[midLower]
+        var folded = normalizeModelId(mid)
         if (modelCopy.folded[folded]) return modelCopy.folded[folded]
-        var alias = modelCopy.aliases[modelId] || modelCopy.aliases[folded]
-        return alias && modelCopy.exact[alias] ? modelCopy.exact[alias] : null
+        var alias = modelCopy.aliases[mid] || modelCopy.aliases[midLower] || modelCopy.aliases[folded] || (modelCopy.foldedAliases && modelCopy.foldedAliases[folded])
+        if (alias) {
+          if (modelCopy.exact[alias]) return modelCopy.exact[alias]
+          var foldedAlias = normalizeModelId(alias)
+          if (modelCopy.folded[foldedAlias]) return modelCopy.folded[foldedAlias]
+        }
+        return null
       }
 
       /**
@@ -659,6 +664,7 @@
         }
         modelSubKind = null
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
+        renderModelBody()
         positionModelPopovers()
         if (modelPop) modelPop.setAttribute('data-open', 'true')
       }
@@ -666,6 +672,7 @@
       function openModelSub(kind) {
         cancelCloseModel()
         modelSubKind = kind
+        renderModelSub()
         positionModelPopovers()
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'true')
       }
@@ -785,7 +792,7 @@
       function modelDescription(groupId, model) {
         var id = typeof model.id === 'string' ? model.id : ''
         var pair = exactModelCopy(groupId, id) || familyModelCopy(groupId, id) || tierModelCopy(id)
-        var text = localized(pair)
+        var text = localized(pair, ctx)
         if (text) return text
         return typeof model.description === 'string' ? model.description : ''
       }

@@ -304,10 +304,15 @@
         aliases: doc.aliases && typeof doc.aliases === 'object' ? doc.aliases : {},
         fallback: typeof doc.fallback === 'string' && doc.fallback ? doc.fallback : MODEL_COPY_FALLBACK_LOCALE,
         folded: {},
+        foldedAliases: {},
         families: [],
         tiers: [],
       }
       for (var id in exact) index.folded[normalizeModelId(id)] = exact[id]
+      for (var a in index.aliases) {
+        index.foldedAliases[normalizeModelId(a)] = index.aliases[a]
+        index.foldedAliases[a.toLowerCase()] = index.aliases[a]
+      }
       var compile = function (rules) {
         var out = []
         for (var i = 0; i < (rules || []).length; i++) {
@@ -347,11 +352,17 @@
     /** One localized string out of a `{ locale: text }` pair, fallback locale last. */
     function localized(pair, ctx) {
       if (!pair || typeof pair !== 'object') return ''
-      var text = pair[activeLocale(ctx)]
+      var loc = activeLocale(ctx)
+      var text = pair[loc]
       if (typeof text === 'string' && text) return text
+      var prefix = typeof loc === 'string' && loc.indexOf('-') !== -1 ? loc.split('-')[0] : (typeof loc === 'string' && loc.indexOf('_') !== -1 ? loc.split('_')[0] : '')
+      if (prefix && typeof pair[prefix] === 'string' && pair[prefix]) return pair[prefix]
       var fallback = modelCopy === null ? MODEL_COPY_FALLBACK_LOCALE : modelCopy.fallback
       var backstop = pair[fallback]
-      return typeof backstop === 'string' ? backstop : ''
+      if (typeof backstop === 'string' && backstop) return backstop
+      var fallbackPrefix = typeof fallback === 'string' && fallback.indexOf('-') !== -1 ? fallback.split('-')[0] : ''
+      if (fallbackPrefix && typeof pair[fallbackPrefix] === 'string' && pair[fallbackPrefix]) return pair[fallbackPrefix]
+      return ''
     }
 
     /**
