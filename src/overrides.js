@@ -543,8 +543,15 @@
       function openModelPopover() {
         cancelCloseModel()
         modelDirectory()
-        if (modelDir) {
-          try { modelDir.load() } catch (error) { /* the store's error surface covers a failure */ }
+        // load() is async — the host itself guards with .catch(() => {}); a bare
+        // try/catch cannot see its rejection.
+        if (modelDir && typeof modelDir.load === 'function') {
+          try {
+            var pending = modelDir.load()
+            if (pending && typeof pending.catch === 'function') {
+              pending.catch(function () { /* the store's error surface covers a failure */ })
+            }
+          } catch (error) { /* synchronous failure — the store's error surface covers it */ }
         }
         modelSubKind = null
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
@@ -596,22 +603,36 @@
         if (modelSessionId === id && modelDir !== null) return modelDir
         dropModelSubscription()
         modelDir = null
-        modelSessionId = id
+        modelSessionId = null
         try {
           var dirs = ctx.get('modelDirectories')
           if (dirs && typeof dirs.directoryFor === 'function') {
             modelDir = dirs.directoryFor(id)
-            modelSub = modelDir.subscribe(function () { schedule() })
           }
         } catch (error) {
           modelDir = null
+        }
+        modelSessionId = id
+        // The directory INSTANCE only carries load/select — its reactive state
+        // hangs off the `.store` snapshot store (the host hands that same store
+        // to its own menu as `directory`). Subscribe to the store, never to the
+        // instance, and never let a subscribe failure discard the directory.
+        if (modelDir !== null) {
+          var store = modelDir.store
+          if (store && typeof store.subscribe === 'function') {
+            try {
+              modelSub = store.subscribe(function () { schedule() })
+            } catch (error) {
+              modelSub = null
+            }
+          }
         }
         return modelDir
       }
 
       function modelSnapshot() {
-        if (modelDir === null) return null
-        try { return modelDir.getSnapshot() } catch (error) { return null }
+        if (modelDir === null || !modelDir.store) return null
+        try { return modelDir.store.getSnapshot() } catch (error) { return null }
       }
 
       /** The current selection resolved to its group + model entries. */
@@ -713,7 +734,10 @@
         var dir = modelDirectory()
         if (dir === null) return
         try {
-          dir.select({ provider: provider, model: modelId })
+          // select() is async and rejects on a failed selection; swallow the
+          // rejection the way the host's own seat wrapper does.
+          var pending = dir.select({ provider: provider, model: modelId })
+          if (pending && typeof pending.catch === 'function') pending.catch(function () {})
         } catch (error) { /* rejected selections surface on the host's toast */ }
         closeModelPopovers()
       }
@@ -725,7 +749,8 @@
         var selection = { provider: snap.current.provider, model: snap.current.model }
         if (effort !== void 0) selection.reasoningEffort = effort
         try {
-          dir.select(selection)
+          var pending = dir.select(selection)
+          if (pending && typeof pending.catch === 'function') pending.catch(function () {})
         } catch (error) { /* rejected selections surface on the host's toast */ }
         closeModelPopovers()
       }
