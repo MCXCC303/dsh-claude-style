@@ -463,6 +463,34 @@
         }
       }
 
+      /**
+       * The composer is chat-view-only. The host mounts the seat inside the
+       * conversation root on every tab (轨迹 / 上下文 even reserve room for
+       * it), so the skin reflects the active view on <body> and CSS drops the
+       * whole bottom area unless the chat tab is selected.
+       *
+       * Scope: the conversation tablist lives in the panel header, which is
+       * the root's first child — any other tablist (the trajectory detail
+       * panel, say) renders later inside the ledger. The chat view registers
+       * at order 0, so it is always the tablist's FIRST tab; reading that
+       * tab's aria-selected is locale-independent. No tab bar at all (hero /
+       * single view) means the chat surface is all there is.
+       */
+      function syncChatTabComposer() {
+        var chatActive = true
+        var seat = document.querySelector('[data-composer-seat]')
+        var root = seat && seat.closest ? seat.closest('[data-phase]') : null
+        if (root) {
+          var list = root.querySelector('[role="tablist"]')
+          if (list) {
+            var first = list.querySelector('[role="tab"]')
+            if (first) chatActive = first.getAttribute('aria-selected') === 'true'
+          }
+        }
+        if (chatActive) document.body.removeAttribute('data-dsh-claude-composer-hidden')
+        else document.body.setAttribute('data-dsh-claude-composer-hidden', '')
+      }
+
       // --- 4.3 Account Footer & Popover ---
       var accountBtn = null
       var accountPopover = null
@@ -1149,6 +1177,7 @@
           syncAttachmentState()
           mergeStatsIntoRow()
           syncSegments()
+          syncChatTabComposer()
           syncAccountFooter()
           if (composerCardObserver) {
             var currentCard = document.querySelector('[data-composer-card]')
@@ -1167,8 +1196,9 @@
         characterData: true,
         subtree: true,
         attributes: true,
-        // The shipped trigger carries the current preset in its aria-label.
-        attributeFilter: ['aria-label'],
+        // The shipped trigger carries the current preset in its aria-label;
+        // the conversation tabs carry the active view in aria-selected.
+        attributeFilter: ['aria-label', 'aria-selected'],
       })
       schedule()
 
