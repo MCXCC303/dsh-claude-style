@@ -38,6 +38,29 @@ body[data-dsh-claude-style] [data-composer-input] {
   height: auto !important;
 }
 
+/* The hero's hint, for the times the skin has to supply it.
+   The host renders its own placeholder only while the draft is empty AND
+   nothing is attached (`draft === "" && attachments.length === 0`), so pasting
+   an image with no text removes it — and the skin's synthetic stand-in carries
+   none of the host's classes, so without this rule it fell back to a static
+   block in the card's own ink colour, below the field instead of on it. The
+   hero keeps the host's field metrics (the skin only raises its min-height), so
+   the stand-in takes the host's own inset — 4px down, 14px in — rather than the
+   inline variant's zero-origin line box. The host's `.grow` is already
+   `position: relative`, so the offsets resolve against the field. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="hero"] [data-dsh-synthetic-placeholder] {
+  position: absolute !important;
+  top: 4px !important;
+  left: 14px !important;
+  right: 8px !important;
+  color: var(--dsw-alias-label-caption) !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
 /* Tight bottom padding below the button controls row. The selector must
    be `[class*="_row"]`: a bare `[class*="row"]` substring-matches the
    shipped input growth wrapper `.p_FcLG_grow` ("grow" contains "row"),
