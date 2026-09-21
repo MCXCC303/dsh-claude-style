@@ -9,6 +9,7 @@
         if (target && ui.model && !ui.model.owns(target)) {
           ui.model.close()
         }
+        if (ui.settings) ui.settings.sync()
         if (!ui.footer || !ui.footer.isOpen()) return
         if (target && ui.footer.owns(target)) return
         ui.footer.close()
@@ -151,6 +152,7 @@
           if (ui.permissions) ui.permissions.sync()
           if (ui.model) ui.model.sync()
           if (ui.footer) ui.footer.sync()
+          if (ui.settings) ui.settings.sync()
           // Covers the rail toggle (and any reflow) while the popover is open:
           // its anchor moved without a window resize or a page scroll.
           if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()

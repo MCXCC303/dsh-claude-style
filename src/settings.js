@@ -31,6 +31,7 @@
       // The skin's own apply-side writes land here too (a reload, a conflict
       // re-read), so the page never drifts from what the document says.
       React.useEffect(function () {
+        syncSettingsNav()
         var alive = true
         var unsubscribe = subscribePrefs(function (next) {
           if (alive) {
@@ -241,15 +242,35 @@
      *      which `dsh-client-ui-settings-general` publishes later. Registering
      *      eagerly instead would throw and fail the boot.
      *
-     * `order: 22` sorts the section after the shipped ones (general 0, models 10,
-     * plugins 15, agent-presets 20, chat-import 21). The slot accepts no icon
-     * field, so the navigation entry takes the host's default glyph.
-     *
-     * @param ctx - client root context.
-     * @returns a disposer that tears the registration down.
+    /**
+     * Stamped onto the Claude Style nav button in the settings dialog so CSS
+     * can replace the host's default settings gear with the black Claude mark.
      */
-    function installSettingsSection(ctx) {
+    function syncSettingsNav() {
+      var navList = document.querySelector(':is([class*="settingsArea"], [class*="_overlay"], [class*="SettingsRoot"]) [class*="_navList"]')
+      if (!navList) return
+      var buttons = navList.querySelectorAll('button')
+      var targetTitle = (typeof settingsCopy === 'function' ? settingsCopy('title', 'Claude Style') : 'Claude Style') || 'Claude Style'
+      for (var i = 0; i < buttons.length; i++) {
+        var btn = buttons[i]
+        var label = btn.querySelector('[class*="_navLabel"]') || btn
+        var text = (label.textContent || '').trim()
+        if (text === 'Claude Style' || text === targetTitle) {
+          if (btn.getAttribute('data-dsh-section') !== 'claude-style') {
+            btn.setAttribute('data-dsh-section', 'claude-style')
+          }
+          return
+        }
+      }
+    }
+
+    function installSettingsSection(ctx, ui) {
       loadModelCopy()
+      if (ui) {
+        ui.settings = {
+          sync: syncSettingsNav,
+        }
+      }
       if (typeof ctx.inject !== 'function') return function () {}
       var fiber = ctx.inject(['slots'], function (scope) {
         var slots = scope.get('slots')
@@ -271,6 +292,9 @@
         }, 'dsh-claude-style: settings section')
       })
       return function () {
+        if (ui && ui.settings) {
+          delete ui.settings
+        }
         try {
           if (fiber && typeof fiber.dispose === 'function') fiber.dispose()
         } catch (error) {

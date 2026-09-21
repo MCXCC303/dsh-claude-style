@@ -7,9 +7,12 @@
 
 ### Changed
 - **composer 形态判断从 CSS 结构感知的 `:has()` 改为 JS 写属性，降低流式输出期间的样式重算开销**：皮肤原先用约 60 处 `[class*="composerStack"]` 上的 hero/inline 分支（`[class*="composerStack"]:has([class*="heroWorkspaceRow"])` 及其 `:not()` 形式）在 CSS 里判断输入卡处于主屏 hero 形态还是会话内联形态。流式输出时每秒几十次 DOM 变更，每次都要重算这些昂贵的选择器，是渲染压力的主要来源。现在 `syncSegments()` 在每轮 pass 里把同一个 `data-composer-variant="hero|inline"` 属性镜像写到卡片所属的 `composerStack` 祖先上（写前比对旧值避免同值重复写触发无谓的样式失效，同轮去重避免多卡命中同一栈反复写），CSS 改为直接读属性：hero 分支读 `[class*="composerStack"][data-composer-variant="hero"]`，inline 分支读 `[class*="composerStack"]:not([data-composer-variant="hero"])`。属性缺席时按 inline 渲染——inline 是流式高频路径，首帧不闪；hero 屏无流式，属性在首个 pass 补上即可。交互驱动与低频的 `:has()`（`:hover`、`:focus-within`、弹窗、placeholder）按原样保留。
+- **设置页 Claude Style 导航 Tab 图标替换为 Claude 标识**：设置弹窗内「Claude Style」Tab 默认由宿主回退为通用的齿轮图标（`IconSettingsOutline16`）。现通过 CSS 蒙版与调度器轻量属性标记，将其替换为黑色的 Claude 经典星芒图标（亮色模式下为纯正墨黑，暗色模式下随文字主色白亮），与左侧导航栏其他选项的视觉语汇保持一致。
+- **亮色模式背景层级色调调优**：为解决浅色界面在纯白控件反衬下局部偏黄的问题，将亮色模式的背景层级收敛至更清爽中性的象牙白阶梯：一级层级（`--dsw-alias-bg-layer-1`）对齐主画布采用 `#FCFCFB`，二级层级（`--dsw-alias-bg-layer-2`）调整为 `#FBFBF9`，三级层级（`--dsw-alias-bg-layer-3`）调整为 `#F9F9F6`；设置弹窗面板亦对齐主画布底色（`#FCFCFB`），保持整体视觉明净统一。
 - **去 AI 化与精简**：清理 `.debug/` 临时调试日志与历史规划文档；移除 `src/overrides/` 拆分残留的旧章节编号与重复注释；精简 README 冗余功能表格并修正更新日志中对内部开发路径的提及。
 
 ### Fixed
+- **inline 输入框聚焦时的底纹把输入框刷成了另一种颜色**：会话内单行输入框聚焦时，画布色的三层底纹（`box-shadow`）原本挂在 rail 上，而 rail 是 `z-index: 4`、输入框本体是 `z-index: 2`——底纹于是刷在输入框**上面**：盖住输入框自己的背景（两个盒子读起来不同色），也盖住草稿第一行。现在底纹移到卡片（`[data-composer-card]`）身上，与 hero 卡片同一位置，所有子元素共用一个底纹，谁也压不住谁；rail 那份去掉，亮暗两态的 rail 规则只保留描边色。
 - **封号彩蛋语言选不动**：设置里选「中文」立刻弹回英文，且没有任何提示。根因是宿主半边（`lib/index.js`）只在 app 启动时被 import 一次，而它是后来才认识 `banLocale` 这个字段的——旧宿主半边的写入口不认这个键，把它丢掉之后按「没有可写字段」当成一次读取返回，客户端拿到原值就把刚做的选择覆盖回去了（浏览器半边每次刷新都是新的，宿主半边不是，两边版本就此错位）。现在 `banLocale` 与用户名走同一套浏览器本地兜底：宿主不认这个键时把选择存在本地（`localStorage`）并立刻按它渲染，页面刷新后仍在；等宿主半边重启、第一次读取时自动把待写入的值补写一次，宿主回显确认后本地兜底才清除——所以选择既不会丢，也不会和宿主长期打架。
 
 ## [0.3.0] - 2026-09-20

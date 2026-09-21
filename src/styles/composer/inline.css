@@ -9,7 +9,14 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within {
   background: transparent !important;
   border: none !important;
-  box-shadow: none !important;
+  /* The canvas wash lives HERE, on the card — the same place the hero card
+     carries it — so there is one wash behind every child and nothing can paint
+     over anything else. It used to sit on the rail and on the field separately,
+     and since the rail is z-index 4 while the field is z-index 2, the rail's
+     wash (three layers of the canvas colour) painted across the TOP of the
+     field: over the field's own background, which made the two boxes read as
+     different colours, and over the draft's first line. */
+  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
   outline: none !important;
   padding: 0 !important;
   gap: 0 !important;
@@ -68,7 +75,9 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   min-height: 162px !important;
   height: auto !important;
   overflow: visible !important;
-  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  /* No wash of its own: the card behind it carries the one wash (see the card
+     rule above), so the rail cannot paint the canvas colour over the field. */
+  box-shadow: none !important;
   position: relative !important;
   z-index: 4 !important;
   transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
@@ -81,12 +90,10 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:n
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
   border-color: rgba(20, 20, 19, 0.18) !important;
-  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [class*="rail"]:not([class*="trailing"]),
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within [class*="rail"]:not([class*="trailing"]) {
   border-color: rgba(250, 249, 245, 0.22) !important;
-  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
 }
 /* The attachment rail nests two levels: ComposerAttachments' outer rail wraps
    AttachmentRail's scrolling inner rail, and BOTH substring-match

@@ -80,9 +80,9 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
 /* ================= light variant: ivory editorial ================= */
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-alias-bg-base: #fcfcfb;
-  --dsw-alias-bg-layer-1: #f5f3ee;
-  --dsw-alias-bg-layer-2: #f0eee6;
-  --dsw-alias-bg-layer-3: #e8e6dc;
+  --dsw-alias-bg-layer-1: #fcfcfb;
+  --dsw-alias-bg-layer-2: #fbfbf9;
+  --dsw-alias-bg-layer-3: #f9f9f6;
   --dsw-alias-bg-overlay: #ffffff;
   --dsw-alias-border-l1: #e8e6dc;
   --dsw-alias-border-l2: #dedcd2;
@@ -102,7 +102,7 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-alias-link: #c6613f;
   --dsw-specific-input-major: #ffffff;
   --dsw-specific-menu: #ffffff;
-  --dsw-specific-selector: #f0eee6;
+  --dsw-specific-selector: #fbfbf9;
   --dsw-specific-sidebar-fill: #fbfbf9;
   --dsh-claude-hover-bg: rgba(0, 0, 0, 0.08);
   --dsh-claude-inline-code-bg: rgba(0, 0, 0, 0.05);

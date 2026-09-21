@@ -1,3 +1,32 @@
+/* ---------- Settings dialog: modal panel background ---------- */
+/* In light mode, the host dialog defaults to var(--dsw-alias-bg-layer-2);
+   align the dialog card with the main canvas (#fcfcfb). */
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is([class*="settingsArea"] [class*="_panel"], [class*="settingsArea"] [role="dialog"], [class*="_overlay"] > [class*="_panel"]) {
+  background: var(--dsw-alias-bg-base) !important;
+}
+
+/* ---------- Settings dialog: Claude Style tab icon ---------- */
+/* Replace the host's default settings gear icon on the Claude Style nav tab
+   with the monochrome Claude starburst icon (black in light mode). */
+body[data-dsh-claude-style] button[data-dsh-section="claude-style"] [class*="_navIcon"] {
+  display: none !important;
+}
+
+body[data-dsh-claude-style] button[data-dsh-section="claude-style"]::before {
+  content: "";
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask: %%CLAUDE_MARK%% center / contain no-repeat;
+  mask: %%CLAUDE_MARK%% center / contain no-repeat;
+}
+
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) button[data-dsh-section="claude-style"]::before {
+  background-color: #141413;
+}
+
 /* ---------- Claude Code layout: settings page ---------- */
 /* The skin's own page in the settings dialog. Its segmented controls reuse the
    composer permission picker's classes (`.dsh-claude-segments` /
