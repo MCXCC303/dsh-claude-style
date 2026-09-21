@@ -77,6 +77,7 @@
       // whichever is open must re-resolve it.
       function onFixedPopoverViewportChange() {
         if (ui.model) ui.model.reposition()
+        if (ui.heroMenu) ui.heroMenu.reposition()
         if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
       }
       window.addEventListener('resize', onFixedPopoverViewportChange)
@@ -148,6 +149,7 @@
           if (ui.copy) ui.copy.sync()
           if (ui.permissions) ui.permissions.sync()
           if (ui.model) ui.model.sync()
+          if (ui.heroMenu) ui.heroMenu.sync()
           if (ui.footer) ui.footer.sync()
           if (ui.settings) ui.settings.sync()
           // Covers the rail toggle (and any reflow) while the popover is open:

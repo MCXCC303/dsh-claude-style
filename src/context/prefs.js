@@ -62,7 +62,7 @@
     var prefs = {
       brand: DEFAULT_BRAND,
       collapseFooter: true,
-      autoPopover: true,
+      autoPopover: DEFAULT_AUTO_POPOVER,
       composerScope: 'all',
       modelPicker: true,
       username: '',
@@ -161,13 +161,24 @@
       } catch (error) { /* no fetch: defaults stay */ }
     }
 
+    /**
+     * Clamp the hover-open preference. It used to be a boolean, and a value
+     * stored in that shape still has to land on a scope: `true` meant every
+     * popover, `false` meant click-only.
+     */
+    function normalizeAutoPopover(value) {
+      if (value === true) return AUTO_POPOVER_ALL
+      if (value === false) return AUTO_POPOVER_OFF
+      return AUTO_POPOVER_SCOPES.indexOf(value) === -1 ? DEFAULT_AUTO_POPOVER : value
+    }
+
     /** Clamp one host value into the preference shape (the host already did this). */
     function normalizePrefs(value) {
       var section = value && typeof value === 'object' ? value : {}
       return {
         brand: section.brand === BRAND_ANTHROPIC || section.brand === BRAND_OFF ? section.brand : BRAND_CLAUDE,
         collapseFooter: section.collapseFooter !== false,
-        autoPopover: section.autoPopover !== false,
+        autoPopover: normalizeAutoPopover(section.autoPopover),
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
         modelPicker: section.modelPicker !== false,
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,

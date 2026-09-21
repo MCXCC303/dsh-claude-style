@@ -152,6 +152,11 @@
         { value: BAN_LOCALE_ZH, label: settingsCopy('banLocaleZh', '中文') },
         { value: BAN_LOCALE_EN, label: settingsCopy('banLocaleEn', 'English') },
       ]
+      var autoPopoverOptions = [
+        { value: AUTO_POPOVER_OFF, label: settingsCopy('autoPopoverOff', 'Off') },
+        { value: AUTO_POPOVER_ACCOUNT, label: settingsCopy('autoPopoverAccount', 'Account only') },
+        { value: AUTO_POPOVER_ALL, label: settingsCopy('autoPopoverAll', 'All') },
+      ]
 
       var rows = [
         row(
@@ -198,8 +203,8 @@
         row(
           'autoPopover',
           settingsCopy('autoPopoverTitle', 'Open popovers on hover'),
-          settingsCopy('autoPopoverDesc', 'Hover opens the account, model, and permission popovers. Off switches them to click-to-open.'),
-          toggle(prefs.autoPopover, function (value) { write({ autoPopover: value }) }),
+          settingsCopy('autoPopoverDesc', 'Which popovers hover opens. Off leaves them all click-to-open.'),
+          segment(autoPopoverOptions, prefs.autoPopover, function (value) { write({ autoPopover: value }) }),
         ),
         row(
           'composerScope',

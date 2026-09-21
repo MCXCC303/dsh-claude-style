@@ -25,6 +25,7 @@
       teardowns.push(installCopy(ctx, ui))
       teardowns.push(installPermissions(ctx, ui))
       teardowns.push(installModelPicker(ctx, ui))
+      teardowns.push(installHeroMenu(ctx, ui)) // hero 行的目录/预设弹层：打标记给样式表用
       teardowns.push(installAccountFooter(ctx, ui))
       teardowns.push(installBanScreen(ctx, ui)) // 账户横条的封号彩蛋（账户弹层把点击交给 ui.ban）
       teardowns.push(installThemeFlip()) // 主题翻转瞬间抑制过渡，修掉「先色后样」

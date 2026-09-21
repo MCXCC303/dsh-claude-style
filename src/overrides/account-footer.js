@@ -605,12 +605,13 @@
           // Hover is the default way in; the "Open popovers on hover"
           // preference turns it off, leaving the click handler below as the only
           // way in (and the only way out, so a click-opened popover does not
-          // vanish when the pointer leaves).
+          // vanish when the pointer leaves). The account row is the one popover
+          // the `account` scope keeps on hover.
           accountBtn.addEventListener('mouseenter', function () {
-            if (readPrefs().autoPopover) openPopover()
+            if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) openPopover()
           })
           accountBtn.addEventListener('mouseleave', function () {
-            if (readPrefs().autoPopover && !popoverOpenedByClick) scheduleClosePopover()
+            if (readPrefs().autoPopover !== AUTO_POPOVER_OFF && !popoverOpenedByClick) scheduleClosePopover()
           })
           accountBtn.addEventListener('click', function (e) {
             e.stopPropagation()

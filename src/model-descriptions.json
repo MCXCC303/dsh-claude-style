@@ -24,9 +24,12 @@
     },
     "autoPopoverTitle": { "zh": "自动弹出弹层", "en": "Open popovers on hover" },
     "autoPopoverDesc": {
-      "zh": "鼠标移入即展开账户、模型和权限弹层。",
-      "en": "Hover opens the account, model, and permission popovers. Off switches them to click-to-open."
+      "zh": "哪些弹层悬停即展开。「仅账号区」只让侧栏账户弹层这样；「全部」再加上权限、模型、会话统计与首页的目录/预设。",
+      "en": "Which popovers hover opens. \"Account only\" keeps it to the sidebar account popover; \"All\" adds the permission, model, session-stats and the home page's workspace and preset pickers."
     },
+    "autoPopoverOff": { "zh": "关闭", "en": "Off" },
+    "autoPopoverAccount": { "zh": "仅账号区", "en": "Account only" },
+    "autoPopoverAll": { "zh": "全部", "en": "All" },
     "composerTitle": { "zh": "对话框样式改动范围", "en": "Composer restyle" },
     "composerDesc": {
       "zh": "重绘输入区，可选新会话页、对话内或两者。",

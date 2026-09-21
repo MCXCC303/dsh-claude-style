@@ -166,6 +166,14 @@
     /** Present while the composer restyle applies to the page currently shown. */
     var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
     /**
+     * Stamped on the host's shared menu card while it is the hero row's picker
+     * (the workspace chip or the agent-preset seat opened it). The host portals
+     * that card to <body> with no marker of its own, so the stylesheet cannot
+     * tell it from the host's other menus; src/overrides/hero-menu.js stamps it
+     * and components/hero-menu.css switches on this attribute.
+     */
+    var HERO_MENU_ATTR = 'data-dsh-claude-hero-menu'
+    /**
      * Present while the browser window does NOT hold focus.
      *
      * The window's focus state is the only thing that separates the two text
@@ -176,6 +184,16 @@
     var WINDOW_BLUR_ATTR = 'data-dsh-window-blur'
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
+    /**
+     * How eagerly the skin's popovers open on hover: `off` is click-only,
+     * `account` auto-opens the sidebar account popover alone, and `all` adds the
+     * permission, model, session-stats and the host's two hero-row pickers.
+     */
+    var AUTO_POPOVER_OFF = 'off'
+    var AUTO_POPOVER_ACCOUNT = 'account'
+    var AUTO_POPOVER_ALL = 'all'
+    var AUTO_POPOVER_SCOPES = [AUTO_POPOVER_OFF, AUTO_POPOVER_ACCOUNT, AUTO_POPOVER_ALL]
+    var DEFAULT_AUTO_POPOVER = AUTO_POPOVER_ALL
     /** Route the browser half reads and writes preferences through (lib/index.js). */
     var PREFS_ROUTE = '/dsh-claude-style/prefs'
     /** Route that resolves the host OS user once; never polled. */

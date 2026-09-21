@@ -58,6 +58,7 @@ const FRAGMENTS = [
   'overrides/permissions.js',
   'overrides/model-brand.js',
   'overrides/model-picker.js',
+  'overrides/hero-menu.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',
@@ -78,6 +79,7 @@ const STYLE_FILES = [
   { file: 'components/account-footer.css' },
   { file: 'components/ban-screen.css' },
   { file: 'components/model-picker.css' },
+  { file: 'components/hero-menu.css', gate: true },
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },
   { file: 'components/settings.css' },
@@ -126,7 +128,7 @@ function loadTokens() {
   const factory = new Function(`
     ${constants}
     return {
-      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC, BRAND_CLAUDE, FOOTER_ATTR, COMPOSER_ATTR,
+      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC, BRAND_CLAUDE, FOOTER_ATTR, COMPOSER_ATTR, HERO_MENU_ATTR,
       // "a skin brand is selected": the brand preference's third value is
       // "off", which must match neither variant — so the shared rules that
       // hide the host's mark and paint the ::before are gated on this rather

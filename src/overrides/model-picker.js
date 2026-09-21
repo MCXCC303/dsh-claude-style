@@ -318,7 +318,7 @@
         cell.appendChild(chevron)
         cell.addEventListener('mouseenter', (function (k) {
           return function () {
-            if (readPrefs().autoPopover) openModelSub(k)
+            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelSub(k)
           }
         })(kind))
         cell.addEventListener('click', (function (k) {
@@ -607,13 +607,13 @@
           modelBtn.className = 'dsh-claude-model-btn'
           modelBtn.setAttribute('aria-haspopup', 'menu')
           modelBtn.innerHTML = '<span class="dsh-claude-model-btn-label"></span>'
-          // Same contract as the account trigger: hover unless the preference
-          // says click-only.
+          // Same contract as the account trigger: hover under the "All" scope,
+          // click-only otherwise.
           modelBtn.addEventListener('mouseenter', function () {
-            if (readPrefs().autoPopover) openModelPopover()
+            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelPopover()
           })
           modelBtn.addEventListener('mouseleave', function () {
-            if (readPrefs().autoPopover) scheduleCloseModel()
+            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) scheduleCloseModel()
           })
           modelBtn.addEventListener('click', function (e) {
             e.stopPropagation()

@@ -94,6 +94,74 @@ empty wash above and below the text. The skin sets `line-height: 1.2` on inline
 code (27px → 22px, with the 1px padding as the visible inset); lower values
 start clipping descenders. The fill, hairline, radius and size are unchanged.
 
+## Popovers · 多选一弹层
+
+Every single-choice popover in the skin — the permission menu, the model picker,
+the account drawer, the session-stats card, and the host's own menu primitive
+under the hero row's workspace and preset pickers — is meant to start from one
+recipe. New popovers take it rather than inventing a card.
+
+**Card**
+
+| Property | Value |
+|---|---|
+| background | `var(--dsw-alias-bg-overlay)`; dark `#1e1e1d` |
+| border | `1px solid var(--dsw-alias-border-l1)`; dark `#2e2c29` |
+| radius | 12px |
+| shadow | `0 8px 30px rgba(20,20,19,.12), 0 2px 8px rgba(20,20,19,.06)`; dark `rgba(0,0,0,.5)` / `rgba(0,0,0,.3)` |
+| padding | 6px |
+| layout | flex column, `gap: 6px` |
+| z-index | 99999, above the host's own menus (1100) |
+| open | `opacity 0 → 1`, `translateY(4px) scale(.98) → none`, `.15s ease`, origin on the anchor's side |
+
+**Row**
+
+| Property | Value |
+|---|---|
+| min-height | 32px — a floor, not a cap: a two-line row grows |
+| padding | `2px 7px` |
+| radius | 6px |
+| text | 13px / 20px, `var(--dsw-alias-label-primary)` |
+| hover | `var(--dsh-claude-hover-bg, rgba(0, 0, 0, .08))` |
+| icon | 16px, `var(--dsw-alias-label-secondary)` |
+| two-line row | name 13px / 16px at 500; description 11px / 14px in `label-tertiary` |
+| current row | trailing `IconCheckOutline16` in `var(--dsw-alias-brand-primary)` — the accent is what marks the choice |
+| disabled | `opacity: .4`, `cursor: not-allowed` |
+
+**Heading, separator, footer**
+
+- heading row: 11px / 16px at 600, `letter-spacing: .04em`, uppercase, `label-tertiary`, `padding: 6px 7px 2px`
+- separator: 1px `var(--dsw-alias-border-l1)`, `margin: 2px 4px`
+- pinned footer: `margin-top` / `padding-top` 4px, `1px solid var(--dsw-alias-border-l1)` above
+
+**Host surfaces**
+
+The host's dropdown menus are one shared primitive (primitives' `Menu`), and its
+two class-name families hash in opposite directions: the primitive ships inside
+the web shell as `_<local>_<hash>_<n>` (`_itemWrap_1nxmc_92`,
+`_itemLabel_1nxmc_174`), while the client-ui packages hash as `<hash>_<local>`
+(`daogkW_itemName`, `p_FcLG_cardWorkspaceTrigger`). A substring matcher therefore
+takes the longest stable piece of whichever family it targets — `_itemWrap_`,
+`_itemLabel_`, `_viewport_` on one side, `_itemName`, `_itemDesc` on the other —
+never the bare local name.
+
+The hero row's two pickers are that primitive, portaled to `<body>` with no
+marker of their own. `src/overrides/hero-menu.js` stamps the open card with
+`data-dsh-claude-hero-menu` and `components/hero-menu.css` restyles it; the
+host's other menus (sidebar row menus, the settings permission row, submenus)
+keep the host's own design on purpose. What that replaces: a 20px radius card
+with 4px padding, 40px rows at 10px radius, and 14px text.
+
+**All five are aligned**: the account drawer and the stats card were the outliers
+(8px row radius, 2px and 4px card gap, 8px padding, 220 / 260px min-width,
+z-index 1000 and 100000) and now follow the table above. The hero row's pickers are the host's own menu primitive, which differs in
+two ways that CSS cannot change: it mounts instead of toggling a `data-open`
+attribute, so it takes the same fade/scale as a one-shot `0.15s` animation; and
+the host places it *below* its trigger, which is where the composer sits — so
+`src/overrides/hero-menu.js` re-places it beside the trigger (bottom-aligned,
+growing upward into the empty hero space, flipping left when the viewport is
+tight) with an `important` inline write that outranks the host's own.
+
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
@@ -122,6 +190,7 @@ assembles the bundle:
 | `src/styles/components/account-footer.css` | account row and floating popover |
 | `src/styles/components/ban-screen.css` | the account-hold easter egg (full-window overlay) |
 | `src/styles/components/model-picker.css` | model picker popovers |
+| `src/styles/components/hero-menu.css` | the host's menu primitive under the hero row's workspace/preset pickers (composer-gated) |
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
 | `src/styles/components/settings.css` | settings page section |
@@ -133,6 +202,7 @@ assembles the bundle:
 | `src/overrides/copy.js` | composer/copy rewrites installer |
 | `src/overrides/permissions.js` | permission segments/popover installer |
 | `src/overrides/model-picker.js` | model picker installer |
+| `src/overrides/hero-menu.js` | stamps the host menu card the hero row's pickers open |
 | `src/overrides/account-footer.js` | account footer/popover installer |
 | `src/overrides/ban-screen.js` | account-hold easter egg installer |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |

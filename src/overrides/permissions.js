@@ -120,10 +120,10 @@
         permHoverIntent = createHoverIntent(openPerm, closePermMenu, 150)
 
         btn.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover) openPerm()
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openPerm()
         })
         btn.addEventListener('mouseleave', function () {
-          if (readPrefs().autoPopover) permHoverIntent.scheduleClose()
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) permHoverIntent.scheduleClose()
         })
         popover.addEventListener('mouseenter', function () {
           permHoverIntent.cancel()
@@ -630,16 +630,18 @@
       function bindStatsHover(root) {
         if (root.__dshStatsHoverBound) return
         root.__dshStatsHoverBound = true
-        // Gated like the account, model and permission popovers. The setting promises
-        // "hover opens these; off makes them click-to-open", and the stats popover was
-        // the one that opened on hover no matter what — so it ignored the switch. With
-        // the setting off, a click still reaches the host's own stats dialog, which is
-        // exactly what that button is for.
+        // Gated like the account, model and permission popovers — and on the
+        // strictest scope: the stats card is not a picker, so it only auto-opens
+        // under "All". The setting promises "hover opens these; off makes them
+        // click-to-open", and the stats popover was the one that opened on hover
+        // no matter what — so it ignored the switch. With the setting off, a
+        // click still reaches the host's own stats dialog, which is exactly what
+        // that button is for.
         root.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover) showStatsPopover(root)
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) showStatsPopover(root)
         })
         root.addEventListener('mouseleave', function () {
-          if (readPrefs().autoPopover) scheduleHideStatsPopover()
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) scheduleHideStatsPopover()
         })
       }
 

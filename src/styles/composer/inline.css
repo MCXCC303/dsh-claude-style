@@ -656,21 +656,22 @@ body[data-dsh-claude-style] [role="dialog"]:has([data-session-stats-usage]) {
    content below, roomy type. */
 body[data-dsh-claude-style] .dsh-claude-stats-popover {
   position: fixed !important;
-  z-index: 100000 !important;
-  min-width: 260px !important;
+  z-index: 99999 !important;
+  min-width: 248px !important;
   max-width: min(380px, calc(100vw - 16px)) !important;
   box-sizing: border-box !important;
-  padding: 8px !important;
+  padding: 6px !important;
   background: var(--dsw-alias-bg-overlay, #ffffff) !important;
   border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 4px !important;
+  gap: 6px !important;
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateY(4px) scale(0.98) !important;
+  transform-origin: bottom left !important;
   transition: opacity 0.15s ease, transform 0.15s ease !important;
   font-family: var(--dsw-font-family) !important;
 }
@@ -708,8 +709,9 @@ body[data-dsh-claude-style] .dsh-claude-stats-popover-item {
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
-  padding: 6px 8px !important;
-  border-radius: 8px !important;
+  min-height: 32px !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
 }
 body[data-dsh-claude-style] .dsh-claude-stats-popover-item:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;

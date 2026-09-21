@@ -104,7 +104,7 @@ body[data-dsh-claude-style] .dsh-claude-perm-btn[data-open="true"] .dsh-claude-p
 }
 body[data-dsh-claude-style] .dsh-claude-perm-popover {
   position: fixed !important;
-  min-width: 220px !important;
+  min-width: 248px !important;
   background: var(--dsw-alias-bg-overlay, #ffffff) !important;
   border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
   border-radius: 12px !important;
