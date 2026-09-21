@@ -6,10 +6,10 @@ Design tokens for `dsh-claude-style`, recreating the Claude Code Desktop aesthet
 
 | Token | Value | Use |
 |---|---|---|
-| ivory light | `#FCFCFB` | light canvas |
-| sidebar light | `#FBFBF9` | light sidebar |
-| ivory | `#F0EEE6` | secondary surfaces |
-| ivory dark | `#E8E6DC` | hover / section bg |
+| ivory light | `#FCFCFB` | light canvas / layer 1 |
+| sidebar light | `#FBFBF9` | light sidebar / layer 2 |
+| ivory neutral | `#F9F9F6` | layer 3 / section bg |
+| ivory border | `#E8E6DC` | border l1 |
 | slate dark | `#141413` | text (light mode), canvas (dark mode) |
 | warm gray | `#B0AEA5` | metadata |
 | clay | `#D97757` | single accent — CTA / links |
@@ -26,6 +26,12 @@ Rules:
 - **Serif display** — headings / editorial statements (`--dsw-font-serif`).
 - **Sans UI** — chrome, body (`--dsw-font-family`).
 - **Mono** — code, technical labels (`--dsw-font-code`).
+- **Vendor face** — one model name in the picker, where the row already wears the
+  vendor's mark (`--dsw-font-brand-gemini`: a Latin-only Google Sans Flex subset,
+  standard weight, SIL OFL 1.1). A vendor face is a *material*, not a new UI role:
+  it never replaces the sans stack, it sits in front of it, so text the subset does
+  not cover falls through instead of turning to tofu. Rebuilt with
+  `scripts/slim-google-sans.py`; licence in `fonts/OFL-GoogleSansFlex.txt`.
 
 ## Shapes
 

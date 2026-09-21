@@ -5,6 +5,13 @@ body[data-dsh-claude-style] {
   --dsw-font-serif: %%SERIF%%;
   --dsw-font-prose: %%PROSE%%;
   --dsw-font-code: %%MONO%%;
+  /* The picker's vendor face: a model row may wear the typeface of the vendor
+     that made the model, exactly as it already wears that vendor's mark. Only
+     Gemini has one today — a Latin-only Google Sans Flex subset (standard
+     weight, upright, SIL OFL 1.1, fonts/OFL-GoogleSansFlex.txt) — and the UI
+     face stays behind it in the stack, so a label carrying a character outside
+     the subset still renders instead of falling to tofu. */
+  --dsw-font-brand-gemini: 'Google Sans Flex Picker', var(--dsw-font-family);
   /* Markdown document headings keep the host's own ladder, steepened from
      21/19/18 toward Claude's measured ≈21/17/15; h1 and h4 keep the host's
      values. The host reads these through a `font:` shorthand that names

@@ -25,17 +25,18 @@
 
 ## Fonts
 
-> **Important: the JetBrains Mono code font ships with the plugin and is served to the browser as a webfont by the plugin host — no installation needed. The Anthropic Sans/Serif fonts are NOT shipped with the npm package**; they remain in the repository [`fonts/`](fonts/) for download. You can either install them on the system, or skip installation entirely: drop the two `.ttf` files into the plugin package's `fonts/` directory and the host serves them as webfonts the same way (identical files, identical result). Either way, refresh / restart web afterwards.
+> **Important: the JetBrains Mono code font, plus the Google Sans Flex Picker face used only by Gemini rows in the model picker, ship with the plugin and are served to the browser as webfonts by the plugin host — no installation needed. The Anthropic Sans/Serif fonts are NOT shipped with the npm package**; they remain in the repository [`fonts/`](fonts/) for download. You can either install them on the system, or skip installation entirely: drop the two `.ttf` files into the plugin package's `fonts/` directory and the host serves them as webfonts the same way (identical files, identical result). Either way, refresh / restart web afterwards.
 
 | Font | Used for | File |
 |---|---|---|
 | Anthropic Sans Web Text | UI chrome | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
 | Anthropic Serif Web Text | Conversation body / markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | Code / code blocks | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf), [`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
+| Google Sans Flex Picker | Model picker · Gemini row name | Shipped with the package: [`fonts/GoogleSansFlexPicker.woff2`](fonts/GoogleSansFlexPicker.woff2) |
 
 Enabling the Anthropic faces (pick one): ① install on the system — double-click the `.ttf` on Windows → *Install*, or import via *Font Book* on macOS; ② no-install — copy the `.ttf` files into the plugin package's `fonts/` directory (next to `JetBrainsMonoVariable.ttf`). Refresh the page afterwards.
 
-> JetBrains Mono is distributed under the [SIL Open Font License](fonts/OFL.txt). The Anthropic Sans/Serif typefaces are Anthropic's property, provided for personal use only and not covered by the MIT license above. See [LICENSE](LICENSE) for the font notice.
+> JetBrains Mono is distributed under the [SIL Open Font License](fonts/OFL.txt). Google Sans Flex Picker is a renamed Latin-only subset of Google Sans Flex, distributed under the same [SIL Open Font License](fonts/OFL-GoogleSansFlex.txt). The Anthropic Sans/Serif typefaces are Anthropic's property, provided for personal use only and not covered by the MIT license above. See [LICENSE](LICENSE) for the font notice.
 
 ## Install
 

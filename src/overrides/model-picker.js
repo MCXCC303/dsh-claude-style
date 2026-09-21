@@ -353,7 +353,15 @@
         item.type = 'button'
         item.setAttribute('role', 'menuitemradio')
         item.setAttribute('aria-checked', selected ? 'true' : 'false')
-        item.appendChild(buildModelBrand(modelBrand(group.id, model.id)))
+        var brand = modelBrand(group.id, model.id)
+        // The mark id is also the hook the stylesheet needs to give a vendor's
+        // rows their own typography (see .dsh-claude-model-name in
+        // styles/components/model-picker.css). The mark itself stays markup: the
+        // Lobe glyphs are `fill="currentColor"`, so no per-brand rule paints them.
+        // The scheduler's attributeFilter does not watch data-*, so this write
+        // cannot re-trigger a pass.
+        if (brand) item.setAttribute('data-brand', brand)
+        item.appendChild(buildModelBrand(brand))
         var copy = modelEl('span', 'dsh-claude-model-copy')
         copy.appendChild(modelEl('span', 'dsh-claude-model-name', model.name))
         // One line, in the shell's language: the copy document is localized, so

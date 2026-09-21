@@ -45,6 +45,23 @@
   font-display: swap;
 }
 
+/* The one vendor typeface the skin borrows: a Gemini row's name is set in
+   Google Sans Flex, so the row reads as Google's model rather than as one more
+   Claude-labelled entry — the row already carries the vendor's mark, and the
+   label is the only string in the picker that names a model instead of the
+   shell. It ships in the package as a Latin-only subset (standard weight,
+   upright, kerned; ~9 KB from a 4.2 MB six-axis variable font) built by
+   scripts/slim-google-sans.py under SIL OFL 1.1 — fonts/OFL-GoogleSansFlex.txt.
+   Latin-only is the point: characters outside the subset fall through to the
+   stack in --dsw-font-brand-gemini, which is why this is a static 400 cut. */
+@font-face {
+  font-family: 'Google Sans Flex Picker';
+  src: url('/dsh-claude-style/fonts/GoogleSansFlexPicker.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ---------- typography: serif display + sans UI + mono code ---------- */
 body[data-dsh-claude-style] {
   font-family: var(--dsw-font-family);
