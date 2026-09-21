@@ -1,0 +1,74 @@
+# 架构决策记录
+
+本文件记录本仓库**为什么**是现在这个样子：每条决策写背景、决定、代价，以及什么情况下允许重审。
+操作手册看 README，硬性规则看 AGENTS.md，视觉令牌看 docs/STYLE.md；本文件只管「权衡」。
+
+执行约束：
+
+- 任何重构/拆分方案若与本文件已记录的决策冲突，必须先修改对应条目、说明旧决策为何失效，再动手。禁止静默推翻。
+- 新决策追加在文末，编号递增，不删旧条目；被推翻的条目改为「已废弃 + 指向新决策」。
+
+---
+
+## D1. 零构建工具链，构建期逐字拼接
+
+- **背景**：DSH Web 的模块加载器没有相对 require、没有资产 URL 机制，常规打包器（esbuild/rollup）产出的 chunk 拆分与资产引用无处安放。
+- **决定**：`scripts/build.mjs` 把 `src/` 碎片按固定顺序逐字拼接成单个 `lib/client.js`；所有碎片共享一个工厂作用域，禁止 import/export，React 只能经加载器 `require('react')` 取得；资产（SVG/字体）构建期内联为 data URI 或走宿主路由。
+- **代价**：碎片写法受限（ES5 风格、4 空格基础缩进、`%%TOKEN%%` 占位）；没有 tree-shaking，bundle 体积靠自律控制。
+- **重审条件**：DSH 加载器原生支持 ES module 相对导入与资产 URL 之时。
+
+## D2. 纯浏览器半边实现，不动宿主
+
+- **背景**：主题是皮肤，不应 fork DSH；宿主升级要快跟随。
+- **决定**：一切效果通过 CSS 覆盖与客户端 DOM override 实现；宿主半边（`lib/index.js`）只提供静态路由（模型文案 JSON、位图图标）。
+- **代价**：依赖宿主带哈希的 CSS-module 类名，宿主改版可能击穿选择器——用 D3 的纪律和 probe 回归对冲。
+- **重审条件**：DSH 官方开放主题 API / 插槽覆盖所 target 的区域时，逐步迁移过去。
+
+## D3. 宿主选择器纪律：最长稳定片段
+
+- **背景**：宿主类名带哈希（`_54WpYG_imageItem`），短子串（`[class*="row"]`）极易误伤不相关组件，曾出过事故。
+- **决定**：子串匹配只用最长稳定片段（`[class*="_row"]`）；不得覆盖 `[class*="viewArea"]` 的活跃期布局契约；新增子串选择器必须检查误伤面。
+- **代价**：选择器冗长；需要人肉维护「哪些片段稳定」的经验。
+- **重审条件**：宿主提供稳定的 data-* 契约后全面迁移。
+
+## D4. composer 样式构建期门控（composer-gate）
+
+- **背景**：composer 是性能与正确性最敏感的区域；皮肤规则若在未启用皮肤时泄漏到宿主 DOM 会造成事故。
+- **决定**：composer 相关规则必须位于 `/* @composer-gate */` 标记之下，构建把 `[%%COMPOSER_ATTR%%]` 门控盖到标记以下每条规则，漏盖即构建失败。
+- **代价**：写 composer 样式多一道心智负担；构建脚本要维护门控逻辑。
+- **重审条件**：无（这是安全网，不是权衡）。
+
+## D5. 模型文案是数据，不进 bundle
+
+- **背景**：模型目录日新月异，文案更新不应要求改 JS 发版。
+- **决定**：`src/model-descriptions.json` 构建期校验后复制到 `lib/`，浏览器首次绘制选择器时经宿主路由 fetch；查找按 精确条目 → 家族规则 → 档位规则 → 目录自带文本 逐级降级；不写「最强/旗舰」等最高级（钉住版本的精确条目除外）。
+- **代价**：首次绘制选择器有一次异步 fetch；文案体系有学习成本。
+- **重审条件**：宿主模型目录 API 直接提供本地化文案时。
+
+## D6. 单一 scheduler 统一所有 override 的生命周期
+
+- **背景**：多个 override 各自挂 observer/listener 会互相踩踏、泄漏、重复扫树。
+- **决定**：`overrides/scheduler.js` 持有唯一的 MutationObserver（body 子树、attributes 过滤到 aria-label/aria-selected），用 requestAnimationFrame 合并为每帧一次 pass，统一驱动各 `ui.*.sync()`；teardown 统一清理。
+- **代价**：每个 sync 必须有廉价的 early-out；新增 override 要接入同一调度器而不是自立门户。
+- **已知代价与对策**：流式输出期间每帧一次全量 pass 是性能热点，见 D9。
+
+## D7. UI 行为优化内置在本插件，不拆独立插件（2026-09 定）
+
+- **背景**：模型选择器、权限分段、账户抽屉等「UI 优化」与皮肤共享同一套宿主锚点（选择器纪律）、同一调度器（D6）、同一 popover 工具与 teardown。
+- **决定**：行为层（`src/overrides/`）与皮肤层（`src/styles/`、tokens、品牌资产）在源码内保持分离，但发布为同一个包。不想要 Claude 皮肤的用户用设置里的品牌切换回到接近宿主的观感。
+- **代价**：包名与主题绑定，「只用 UI 优化不要皮」的诉求没有独立入口。
+- **重审条件**：出现第二个真实消费者（另一个主题包或宿主官方）需要复用 overrides 层时，把 overrides 抽成独立包，皮肤包依赖它。
+
+## D8. 多主题走「单仓库构建期分包」，不多合一、不抽运行时公共包（2026-09 定）
+
+- **背景**：做 Codex / Kimi Code 等第二个主题时，多合一会让包名（claude）名不副实；分仓库会让共享机制（build.mjs、scheduler、popover-utils、选择器纪律）多处漂移；抽 npm 运行时公共包则违反 D1（加载器没有相对 require）。
+- **决定**：第二个主题立项时，把本仓库改为单仓库多主题：共享碎片留仓库级 `src/`，主题私有碎片（tokens、品牌资产、copy、主题特有 overrides）收进 `themes/<name>/`，`build.mjs` 参数化 `--theme`，每个主题产出自包含单文件、各自发 npm 包。`dsh-claude-style` 包名不动。
+- **触发条件（重要）**：仅当新主题有**行为分叉**（不同的 DOM override、不同的 composer 结构）才动手。若只是换色板与 logo，先用现有品牌切换机制（settings.js）在包内消化，不提前改造。
+- **代价**：改造时 build.mjs 与目录布局有一次性手术；两个主题之后共享碎片的改动需要双主题回归。
+
+## D9. composer 的 :has() 分支改 JS 写属性（2026-09 定，性能方向）
+
+- **背景**：皮肤在流式输出期间的渲染压力主要来自两处：D6 的每帧全量 pass，以及 CSS 中约 70 处对 DOM 结构敏感的 `:has()`（绝大多数是 `[class*="composerStack"]` 上的 hero/inline 分支）——每次 DOM 变更都触发昂贵的选择器重算。
+- **决定**：把「结构感知」从 CSS 移到 JS：`permissions.js` 的 `syncSegments()` 在 scheduler 每轮 pass 里为 composerStack 祖先写 `data-composer-variant="hero|inline"` 属性（observer 的 attributeFilter 不含 data-*，不会反触发；写前比较旧值防抖动；同轮去重避免多卡命中同一 stack 反复写），CSS 改为读属性。交互敏感的 `:has()`（`:hover`、`:focus-within`）与低频的 dialog `:has()` 保留。
+- **落地**：已执行完毕（代码见 `d0fb6f7`），一次性计划文档 `docs/plans/2026-09-composer-mode-attr.md` 按惯例删除，决策与重审条件保留在本条目。仍未消除的结构感知 `:has()` 只剩 placeholder 那条（`card` 上的 `:not(:has([data-composer-placeholder]))`）：`copy.js` 本就管理 placeholder，可在它的 sync 里同步写 `data-has-placeholder` 再改 CSS，属可选的后续优化，不在本次范围。
+- **重审条件**：实测证明 :has() 不再是热点，或宿主提供 hero/inline 的稳定属性契约。

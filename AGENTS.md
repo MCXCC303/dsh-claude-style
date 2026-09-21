@@ -8,6 +8,8 @@
 - 零构建工具链、零运行时依赖：`scripts/build.mjs` 把 `src/` 碎片按固定顺序逐字拼接成单文件 `lib/client.js`。**不引入 esbuild/rollup 等打包器，不引入任何新依赖**（DSH 模块加载器没有相对 require、没有资产 URL，这个架构必须保留）。
 - `lib/` 是构建产物，**禁止手改**；改 `src/` 后跑 `npm run build`。
 - npm 包不分发 Anthropic Sans/Serif 字体；`fonts/` 供仓库下载，Anthropic 字体版权归 Anthropic 所有，不适用 MIT。JetBrains Mono 代码字体随插件库分发，采用 SIL OFL。
+- 结构性改动前先读 `docs/architecture.md`（架构决策与权衡），不违背已记录的决策；确需推翻时先在该文档说明旧决策为何失效。
+- 冲突优先级：用户当次指令 > 仓库代码现状 > 本文件 > docs/。被当次指令推翻的约定，由用户决定是否回填进文档，AI 不现场猜。
 
 ## 命令
 
@@ -42,6 +44,12 @@ probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI UR
 ### JS 碎片
 
 所有碎片共享一个工厂作用域：**禁止 import/export**，保持 4 空格基础缩进与 ES5 风格；`%%TOKEN%%` 由构建替换，产物不得有残留；React 只能经加载器 `require('react')` 取得。碎片清单与拼接顺序见 `scripts/build.mjs`，完整布局见 `docs/STYLE.md`。
+
+### 体量停止线（机械触发，不靠判断）
+
+- `src/` 下任一碎片（.js/.css）超过 750 行：停止往里加新功能，先输出一份拆分/治理提案等用户确认；提案未批准前该文件只做 bugfix。
+- 同一宿主选择器模式、同一 DOM 查询逻辑出现第 3 处副本时：同样停下来提案，不写第 4 处。
+- 这两条是给执行模型的硬停止线，触发即停，不需要先判断「是否值得」。
 
 ### 模型文案是数据，不进 bundle
 
