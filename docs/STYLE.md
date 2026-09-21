@@ -109,8 +109,8 @@ assembles the bundle:
 |---|---|
 | `src/constants.js` | constants, spinner verbs, shared token values (evaluated at build time to fill `%%TOKEN%%` placeholders) |
 | `src/assets/brand/*.svg` | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
-| `src/assets/icons/lobe/*.svg` | model-vendor marks (Lobe Icons mono, MIT), inlined as a JS markup table at build time; bound to providers/models by `model-descriptions.json` → `brands` |
-| `src/assets/icons/providers/*` | cc-switch provider/vendor icon set (MIT); inline SVGs are bundled, raster/imported files are served by the host route |
+| `src/assets/icons/combine/*.svg` | vendor lockups (Lobe Icons mark + wordmark composed into one SVG, MIT), inlined as JS markup tables at build time; bound to models by `model-descriptions.json` → `brands` |
+| `src/assets/icons/providers/*` | cc-switch provider icon set (MIT); only the icon keys ride the bundle, the metadata is brand-resolution data |
 | `src/styles/tokens.css` | design tokens (dark base + ivory light) |
 | `src/styles/typography.css` | serif display / sans UI / mono code, editorial markdown |
 | `src/styles/chrome.css` | canvas, hairlines, clay accent, chrome details |
@@ -159,14 +159,15 @@ the catalog's own text; family rules are ordered and must stay anchored (the
 DeepSeek's copy).
 
 The same document carries the picker's **brand marks** under `brands`:
-`brands.providers` maps a provider route id to a vendored mark (the level-2
-group header), and `brands.models` is an ordered, anchored rule list matching a
-model id (the row's vendor — the vendor that made the model, not the aggregator
-reselling it, with the provider's mark as the fallback). Both name ids vendored
-in `src/assets/icons/lobe/`, and the build fails on an id that is not there, so the
-binding cannot drift. The marks are the **mono** Lobe Icons glyphs
-(`fill="currentColor"`), stamped into the row as markup: the theme's own text
-colour paints them, which keeps them legible on both canvases and keeps the
+`brands.providers` maps a provider route id to a brand (the fallback for a group
+whose models no rule claims), and `brands.models` is an ordered, anchored rule
+list matching a model id (the row's vendor — the vendor that made the model, not
+the aggregator reselling it). Both name ids with a vendored lockup in
+`src/assets/icons/combine/` or a provider icon key, and the build fails on an id
+that is not there, so the binding cannot drift. A lockup carries the vendor's mark
+and its wordmark as one piece of art: the colour mark on the ivory canvas, the
+mono one in `currentColor` on the warm black canvas (where a brand colour like
+`#000` would vanish), so the label stays legible on both.
 palette to its single clay accent. Full-colour variants are deliberately not
 used — a third of the vendors ship no colour version (OpenAI, Anthropic, xAI,
 Moonshot, Z.ai, Vercel, Groq), and several brand colours are near-black on the

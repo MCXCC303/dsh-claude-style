@@ -16,7 +16,7 @@
 ```sh
 npm run build            # 拼接 src/ → lib/client.js，校验 %%TOKEN%%、CSS gate、语法与 model-descriptions.json
 node scripts/probe.cjs --token <launch-token>   # 无头 Chrome 对运行中的 GUI 断言 composer 不变量
-node scripts/probe-timing.cjs --token <launch-token>   # 分项计时：启动长任务与资源、模型目录就绪、打开延迟、行构成、字标 markup 解析、堆
+node scripts/probe-timing.cjs --token <launch-token>   # 分项计时：启动长任务与资源、模型目录就绪、打开延迟、行构成、锁定标 markup 解析、堆
 node scripts/shoot.cjs --token <launch-token>   # 重拍 README 截图（docs/light.png / docs/dark.png）
 ```
 
@@ -24,10 +24,10 @@ probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI UR
 
 ## 仓库布局
 
-- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-brand/model-picker/account-footer/scheduler/selection + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/brand/*.svg`（品牌标识，构建期内联为 data URI）、`assets/icons/lobe/*.svg`（模型厂商标识，Lobe Icons 单色字形，构建期内联为 JS markup 表）、`assets/icons/wordmarks/*.svg`（厂商字标，构建期内联方式同 Lobe 标识）、`assets/icons/providers/*`（cc-switch 供应商图标，内联 SVG 进 bundle、位图走宿主路由）、`model-descriptions.json`（模型文案数据 + `brands` 标识绑定）。
+- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-brand/model-picker/account-footer/scheduler/selection + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/brand/*.svg`（品牌标识，构建期内联为 data URI）、`assets/icons/combine/*.svg`（厂商锁定标：图标 + 厂商字标合成为一个 SVG，构建期内联为 JS markup 表）、`assets/icons/providers/*`（cc-switch 供应商图标；只有 id 集合与元数据进 bundle）、`model-descriptions.json`（模型文案数据 + `brands` 品牌绑定）。
 - `lib/` 产物：`client.js`（生成）、`index.js`（宿主半边，手写，提供 `/dsh-claude-style/model-descriptions.json` 路由）、`model-descriptions.json`（构建期复制）。
 - `skin.json` 皮肤清单；`cordis.patch.yml` 把 `ui-skin-claude-style` 插入 web roster。
-- `scripts/` 构建与回归工具（`fetch-lobe-icons.mjs` 是唯一联网脚本，手工运行、不进构建）；`docs/` 文档与截图；`fonts/` 字体文件（JetBrains Mono 已入包，Anthropic 字体仅仓库下载）。
+- `scripts/` 构建与回归工具（`fetch-lobe-combines.py` 是唯一联网脚本，手工运行、不进构建；它按 `model-descriptions.json` 的品牌表抓取 Lobe 素材并合成锁定标）；`docs/` 文档与截图；`fonts/` 字体文件（JetBrains Mono 已入包，Anthropic 字体仅仓库下载）。
 - `.debug/`、`node_modules/` 不入库。
 
 ## 核心约定

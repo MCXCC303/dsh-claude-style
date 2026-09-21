@@ -8,8 +8,10 @@
  *
  *   src/constants.js             constants & tokens (evaluated to substitute
  *                                %%TOKEN%% placeholders); brand SVGs live in src/assets/
- *   src/assets/icons/lobe/*.svg        model-vendor marks, inlined as a JS markup table
- *   src/assets/icons/wordmarks/*.svg   vendor wordmarks, inlined the same way
+ *   src/assets/icons/combine/*.svg     vendor lockups (mark + wordmark in one),
+ *                                inlined as JS markup tables
+ *   src/assets/icons/providers/*       cc-switch provider icons; only the keys
+ *                                ride the bundle, the rest is brand data
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
@@ -33,10 +35,8 @@ const SRC = path.join(ROOT, 'src')
 const ASSETS = path.join(SRC, 'assets')
 /** Brand marks inlined as CSS data URIs. */
 const BRAND_ASSETS = path.join(ASSETS, 'brand')
-/** Vendored Lobe Icons marks (src/assets/icons/lobe/README.md); one SVG per brand id. */
-const LOBE_ASSETS = path.join(ASSETS, 'icons', 'lobe')
-/** Vendored vendor wordmarks (src/assets/icons/wordmarks); one SVG per brand id. */
-const WORDMARK_ASSETS = path.join(ASSETS, 'icons', 'wordmarks')
+/** Vendored vendor lockups (src/assets/icons/combine); mark + wordmark per brand id. */
+const COMBINE_ASSETS = path.join(ASSETS, 'icons', 'combine')
 /** Vendored cc-switch provider icons (src/assets/icons/providers); source is its index.ts. */
 const PROVIDER_ASSETS = path.join(ASSETS, 'icons', 'providers')
 /** Host route the browser half uses for raster provider icons. */
@@ -234,59 +234,34 @@ function loadSvgAssets() {
 }
 
 /**
- * The vendored Lobe Icons marks, keyed by brand id.
+ * The vendored vendor lockups, keyed by brand id.
  *
- * These are injected as SVG *markup* rather than as CSS data URIs: the picker
- * stamps them into the row with `innerHTML`, so the mark inherits the row's
- * `color` and the theme paints it — a data URI in a stylesheet cannot follow
- * `currentColor`. Discovered from the directory, so adding a vendor is a file
- * drop plus a reference from the copy document (see src/assets/icons/lobe/README.md).
+ * One file per vendor, already composed from Lobe's mark and wordmark by
+ * scripts/fetch-lobe-combines.py, with the vendor's own word in a
+ * `data-combine-word` attribute (the word is not derivable from the brand id:
+ * `moonshot` draws "MoonshotAI", `zai` draws "zai"). Markup rather than a CSS
+ * data URI, because the picker stamps it into the row with `innerHTML` so the
+ * mono layer inherits the row's `color`.
  *
- * @returns brand id → normalised single-line SVG markup.
+ * @returns brand id → { svg, word }.
  */
-function loadLobeIcons() {
+function loadCombines() {
   const out = {}
-  for (const name of fs.readdirSync(LOBE_ASSETS).sort()) {
+  if (!fs.existsSync(COMBINE_ASSETS)) return out
+  for (const name of fs.readdirSync(COMBINE_ASSETS).sort()) {
     if (!name.endsWith('.svg')) continue
     const id = name.slice(0, -4)
-    const svg = fs.readFileSync(path.join(LOBE_ASSETS, name), 'utf8').replace(/\r\n/g, '\n').trim()
+    const svg = fs.readFileSync(path.join(COMBINE_ASSETS, name), 'utf8').replace(/\r\n/g, '\n').trim()
     if (!svg.startsWith('<svg') || !svg.includes('viewBox=')) {
-      throw new Error(`build: src/assets/icons/lobe/${name} is not a scalable SVG (needs <svg viewBox=…>)`)
+      throw new Error(`build: src/assets/icons/combine/${name} is not a scalable SVG (needs <svg viewBox=…>)`)
     }
-    // The marks are pasted into the document; a stray quote or a `</script>`
-    // style sequence would break out of the JS string that carries them.
-    if (svg.includes('</') && /<\/script/i.test(svg)) throw new Error(`build: src/assets/icons/lobe/${name} carries a script end tag`)
-    if (svg.includes('\n')) throw new Error(`build: src/assets/icons/lobe/${name} is multi-line; run scripts/fetch-lobe-icons.mjs`)
-    out[id] = svg
+    if (svg.includes('</') && /<\/script/i.test(svg)) throw new Error(`build: src/assets/icons/combine/${name} carries a script end tag`)
+    if (svg.includes('\n')) throw new Error(`build: src/assets/icons/combine/${name} is multi-line; run scripts/fetch-lobe-combines.py`)
+    const word = /data-combine-word="([^"]+)"/.exec(svg)
+    if (word === null) throw new Error(`build: src/assets/icons/combine/${name} has no data-combine-word`)
+    out[id] = { svg, word: word[1] }
   }
-  if (Object.keys(out).length === 0) throw new Error('build: src/assets/icons/lobe/ holds no icons; run scripts/fetch-lobe-icons.mjs')
-  return out
-}
-
-/**
- * The vendored vendor wordmarks, keyed by brand id.
- *
- * Same markup-in-bundle treatment as the Lobe marks (see loadLobeIcons), but a
- * wordmark stands in for a *word* inside a row's label rather than for the mark
- * beside it, so it is keyed by the brand id the copy document already binds.
- * The directory is optional: a vendor without a wordmark simply has no file.
- *
- * @returns brand id → normalised single-line SVG markup.
- */
-function loadWordmarks() {
-  const out = {}
-  if (!fs.existsSync(WORDMARK_ASSETS)) return out
-  for (const name of fs.readdirSync(WORDMARK_ASSETS).sort()) {
-    if (!name.endsWith('.svg')) continue
-    const id = name.slice(0, -4)
-    const svg = fs.readFileSync(path.join(WORDMARK_ASSETS, name), 'utf8').replace(/\r\n/g, '\n').trim()
-    if (!svg.startsWith('<svg') || !svg.includes('viewBox=')) {
-      throw new Error(`build: src/assets/icons/wordmarks/${name} is not a scalable SVG (needs <svg viewBox=…>)`)
-    }
-    if (svg.includes('</') && /<\/script/i.test(svg)) throw new Error(`build: src/assets/icons/wordmarks/${name} carries a script end tag`)
-    if (svg.includes('\n')) throw new Error(`build: src/assets/icons/wordmarks/${name} is multi-line`)
-    out[id] = svg
-  }
+  if (Object.keys(out).length === 0) throw new Error('build: src/assets/icons/combine/ holds no lockups; run scripts/fetch-lobe-combines.py')
   return out
 }
 
@@ -372,7 +347,8 @@ function substitute(file, text, tokens) {
  * language, or a document with no `exact` table at all.
  *
  * Brand bindings are checked too: every id named by `brands.providers` and
- * `brands.models[].brand` must be vendored under src/assets/icons/lobe/, and every
+ * `brands.models[].brand` must be a vendored lockup under src/assets/icons/combine/
+ * or a known provider icon key, and every
  * model rule must compile — a typo there would otherwise render as a silently
  * missing mark on one row.
  *
@@ -390,7 +366,7 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
 
   const requireBrand = (where, brand) => {
     if (typeof brand !== 'string' || brand === '') fail(`${where} is not a brand id string`)
-    if (!(brand in lobeBrands) && !(brand in providerBrands)) fail(`${where} names brand "${brand}", which is not vendored in src/assets/icons/lobe/ or src/assets/icons/providers/`)
+    if (!(brand in lobeBrands) && !(brand in providerBrands)) fail(`${where} names brand "${brand}", which has no vendored lockup in src/assets/icons/combine/ and no provider icon in src/assets/icons/providers/`)
   }
 
   const locales = new Set([doc.fallback])
@@ -446,9 +422,9 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
 
 function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
-  const lobeIcons = loadLobeIcons()
-  const wordmarks = loadWordmarks()
+  const combines = loadCombines()
   const providerIcons = loadProviderIcons()
+  const providerKeys = Object.fromEntries(Object.keys(providerIcons.icons).map((key) => [key, true]))
 
   const cssText = STYLE_FILES
     .map((fileDef) => {
@@ -469,27 +445,16 @@ function main() {
     "    ].join('\\n')",
   ].join('\n')
 
-  // Brand marks ride the bundle as markup (see loadLobeIcons). They sit beside
-  // the stylesheet block so every fragment below can read the table; the picker
-  // stamps one into a row and the row's `color` paints it.
-  const brandDecl = [
+  // Vendor lockups: one markup table plus the word each lockup stands in for.
+  const combineDecl = [
     '    // ============================================================================',
-    '    // 模型厂商标识（由 src/assets/icons/lobe/*.svg 内联生成，勿手改） (Brand marks)',
+    '    // 厂商锁定标（由 src/assets/icons/combine/*.svg 内联生成，勿手改） (Vendor lockups)',
     '    // ============================================================================',
-    '    var LOBE_BRAND_SVGS = {',
-    ...Object.entries(lobeIcons).map(([id, svg]) => `      ${JSON.stringify(id)}: ${JSON.stringify(svg)},`),
+    '    var COMBINE_SVGS = {',
+    ...Object.entries(combines).map(([id, item]) => `      ${JSON.stringify(id)}: ${JSON.stringify(item.svg)},`),
     '    }',
-  ].join('\n')
-
-  // Vendor wordmarks ride the bundle the same way (see loadWordmarks). Keyed by
-  // brand id, which is also how MODEL_WORDMARKS in model-brand.js names the word
-  // each mark stands in for.
-  const wordmarkDecl = [
-    '    // ============================================================================',
-    '    // 厂商字标（由 src/assets/icons/wordmarks/*.svg 内联生成，勿手改） (Vendor wordmarks)',
-    '    // ============================================================================',
-    '    var WORDMARK_SVGS = {',
-    ...Object.entries(wordmarks).map(([id, svg]) => `      ${JSON.stringify(id)}: ${JSON.stringify(svg)},`),
+    '    var COMBINE_WORDS = {',
+    ...Object.entries(combines).map(([id, item]) => `      ${JSON.stringify(id)}: ${JSON.stringify(item.word)},`),
     '    }',
   ].join('\n')
 
@@ -499,8 +464,7 @@ function main() {
     '    // ============================================================================',
     '    // 供应商/厂商图标（来自 cc-switch src/icons/extracted，勿手改） (Provider icons)',
     '    // ============================================================================',
-    '    var PROVIDER_ICONS = ' + JSON.stringify(providerIcons.icons, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
-    '    var PROVIDER_ICON_URL_KEYS = ' + JSON.stringify(Object.fromEntries(providerIcons.urlKeys.map((key) => [key, true])), null, 2).split('\n').map((line) => '    ' + line).join('\n'),
+    '    var PROVIDER_ICON_KEYS = ' + JSON.stringify(providerKeys, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
     '    var PROVIDER_ICON_METADATA = ' + JSON.stringify(providerIcons.metadata, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
   ].join('\n')
 
@@ -523,8 +487,7 @@ function main() {
     HEADER,
     fragment(FRAGMENTS[0]),
     cssDecl,
-    brandDecl,
-    wordmarkDecl,
+    combineDecl,
     providerDecl,
     ...FRAGMENTS.slice(1).map(fragment),
     FOOTER,
@@ -555,10 +518,10 @@ function main() {
   }
 
   const lines = bundle.split('\n').length
-  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(lobeIcons).length} Lobe marks + ${Object.keys(wordmarks).length} wordmarks + ${Object.keys(providerIcons.icons).length} provider icons)`)
+  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(combines).length} lockups + ${Object.keys(providerIcons.icons).length} provider icons)`)
 
   const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
-  const exact = validateModelCopy(copy, lobeIcons, providerIcons.icons)
+  const exact = validateModelCopy(copy, combines, providerKeys)
   fs.writeFileSync(path.join(LIB, MODEL_COPY), JSON.stringify(copy, null, 2) + '\n')
   console.log(`built lib/${MODEL_COPY} (${exact} exact entries, ${copy.families.length} family rules, ${copy.tiers.length} tier rules)`)
 }

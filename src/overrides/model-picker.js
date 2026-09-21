@@ -281,16 +281,14 @@
         item.setAttribute('role', 'menuitemradio')
         item.setAttribute('aria-checked', selected ? 'true' : 'false')
         var brand = modelBrand(group.id, model.id)
-        // The mark id is also the hook the stylesheet needs to give a vendor's
-        // rows their own typography (see .dsh-claude-model-name in
-        // styles/components/model-picker.css). The mark itself stays markup: the
-        // Lobe glyphs are `fill="currentColor"`, so no per-brand rule paints them.
-        // The scheduler's attributeFilter does not watch data-*, so this write
-        // cannot re-trigger a pass.
+        // The brand id is the row's styling hook — it is what gives a vendor's rows
+        // their own typography (see .dsh-claude-model-name in
+        // styles/components/model-picker.css). The vendor's mark is no longer drawn
+        // here: it rides inside the label's lockup. The scheduler's attributeFilter
+        // does not watch data-*, so this write cannot re-trigger a pass.
         if (brand) item.setAttribute('data-brand', brand)
-        item.appendChild(buildModelBrand(brand))
         var copy = modelEl('span', 'dsh-claude-model-copy')
-        copy.appendChild(buildModelName(model.name, brand))
+        copy.appendChild(buildModelLabel(model.name, brand))
         // The description belongs to level 1 only: that list is the official
         // catalog, short enough that the line is what tells the models apart,
         // while "More models" is every provider's full catalog and reads better
@@ -415,11 +413,10 @@
             var currentBrand = modelBrand(current.group.id, current.model.id)
             var currentName = current.model.name || current.model.id
             // The brand id is the row's styling hook here too, so this row wears
-            // the same vendor mark and face as the list entry it stands for.
+            // the same vendor lockup and face as the list entry it stands for.
             if (currentBrand) currentRow.setAttribute('data-brand', currentBrand)
-            currentRow.appendChild(buildModelBrand(currentBrand))
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
-            var currentLabel = buildModelName(currentName, currentBrand)
+            var currentLabel = buildModelLabel(currentName, currentBrand)
             // The provider's own display name; the route id only stands in when
             // the catalog gives the group no name.
             var currentProvider = current.group.name || current.group.id
@@ -495,9 +492,8 @@
           var groupSection = modelEl('div', 'dsh-claude-model-group-section')
           var groupRow = modelEl('div', 'dsh-claude-model-group-row')
           var groupLabel = modelEl('div', 'dsh-claude-model-group')
-          // The provider's own mark leads its label, so a level-2 list reads as
-          // "which provider" before "which model".
-          groupLabel.appendChild(buildModelBrand(providerBrand(group.id)))
+          // The group label is the provider's name alone: a mark there would repeat
+          // what the rows below already carry inside their lockups.
           groupLabel.appendChild(modelEl('span', 'dsh-claude-model-group-name', group.name))
           groupRow.appendChild(groupLabel)
           groupSection.appendChild(groupRow)

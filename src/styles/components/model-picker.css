@@ -96,46 +96,6 @@ body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-model-group {
   color: #141413 !important;
 }
 
-/* Vendor mark: a vendored Lobe Icons mono SVG stamped into the row by the
-   picker (src/assets/icons/lobe/README.md). The SVG is `fill="currentColor"`, so the
-   surrounding colour paints it and there is no per-brand rule. The box is fixed
-   and always present, so a row whose vendor has no mark keeps the same text
-   column as its neighbours. */
-body[data-dsh-claude-style] .dsh-claude-model-brand {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 16px !important;
-  height: 16px !important;
-  flex: none !important;
-  color: var(--dsw-alias-label-secondary, #787672) !important;
-}
-body[data-dsh-claude-style] .dsh-claude-model-brand svg {
-  display: block !important;
-  width: 16px !important;
-  height: 16px !important;
-}
-body[data-dsh-claude-style] .dsh-claude-model-brand img {
-  display: block !important;
-  width: 16px !important;
-  height: 16px !important;
-  object-fit: contain !important;
-}
-/* Inside the provider pill the mark is part of the label: it takes the pill's
-   inverted colour and steps down to the label's own size. */
-body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand {
-  width: 13px !important;
-  height: 13px !important;
-  color: inherit !important;
-}
-body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand svg {
-  width: 13px !important;
-  height: 13px !important;
-}
-body[data-dsh-claude-style] .dsh-claude-model-group .dsh-claude-model-brand img {
-  width: 13px !important;
-  height: 13px !important;
-}
 /* Model / effort option: same row metrics and hover as the drawer items. */
 body[data-dsh-claude-style] .dsh-claude-model-option {
   display: flex !important;
@@ -178,35 +138,38 @@ body[data-dsh-claude-style] .dsh-claude-model-name {
 body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='gemini'] .dsh-claude-model-name {
   font-family: var(--dsw-font-brand-gemini) !important;
 }
-/* A vendor wordmark stands in for the vendor's name inside a row's label: the
-   vendor's own lettering, so the label keeps naming the vendor while the row
-   already wears its mark. Its height follows the label's own cap height — `cap`
-   is the font's cap-height unit, and the em value in front of it is the fallback
-   for browsers without that unit (Anthropic Sans measures cap 1440/2000, so the
-   two agree exactly on the shipped face). Both declarations carry !important, or
-   the fallback would win on order. */
-body[data-dsh-claude-style] .dsh-claude-model-wordmark {
+/* A vendor lockup: the mark and the vendor's own wordmark as one piece of art,
+   drawn in place of the vendor's name in the label. Its viewBox is the wordmark's
+   capital band, so the label's own cap height sizes it and the mark — which is
+   taller — paints outside the box, which is what the visible overflow is for.
+   Two mark layers ship inside the file: the colour artwork on the ivory canvas,
+   the mono one in currentColor on the warm black canvas, where a brand colour
+   like #000 or #F1F0E8 would disappear. A vendor with no colour artwork carries
+   both classes on its single layer, so it shows on either canvas. */
+body[data-dsh-claude-style] .dsh-claude-model-combine {
   display: inline-block !important;
   height: 0.72em !important;
   height: 1cap !important;
   margin-right: 0.25em !important;
   vertical-align: baseline !important;
 }
-/* Each wordmark's viewBox is cropped to its lettering — DeepSeek's to its
-   capitals, so its box bottom edge is the baseline; Grok's to its ink, round "G"
-   overshoot and all. Whatever the art draws outside that box (DeepSeek's "k"
-   ascender and its "p" descender) still paints, because overflow stays visible,
-   exactly where a text ascender and descender would. */
-body[data-dsh-claude-style] .dsh-claude-model-wordmark svg {
+body[data-dsh-claude-style] .dsh-claude-model-combine svg {
   display: block !important;
   height: 100% !important;
   width: auto !important;
   overflow: visible !important;
 }
-/* The word the mark stands in for stays in the accessibility tree: the mark is
-   decorative markup, so without this a screen reader would announce "K3" where
-   the row means "Kimi K3". */
-body[data-dsh-claude-style] .dsh-claude-model-wordmark-alt {
+body[data-dsh-claude-style] .dsh-claude-model-combine .dsh-combine-mark-color {
+  display: none !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-model-combine .dsh-combine-mark-color {
+  display: block !important;
+}
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-model-combine .dsh-combine-mark-mono:not(.dsh-combine-mark-color) {
+  display: none !important;
+}
+/* The word the lockup stands in for stays in the accessibility tree. */
+body[data-dsh-claude-style] .dsh-claude-model-combine-alt {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;

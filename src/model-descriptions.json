@@ -196,7 +196,7 @@
     "minimax-m3-1m": "minimax-m3"
   },
   "brands": {
-    "note": "Which brand mark a row shows. Every id names a vendored icon in src/assets/icons/lobe/ or src/assets/icons/providers/; scripts/build.mjs fails the build on an id that is not there. This is presentation data, kept out of the bundle like the rest of this document, and it is separate from the copy rules above: a vendor's mark and a vendor's description line change for different reasons. `providers` is keyed by the harness provider route id, which is exactly the group id the picker receives (`deepseek-official`, `zai`, `google-vertex`, …) — it is the mark on a level-2 group header. `models` is an ordered, anchored rule list resolved against the model id, exactly like `families` and with the same discipline: first match wins, so a broad rule must sit below the narrow ones and every rule must name its vendor (`step` cannot match `step-3.7-flash` by accident only if no earlier rule already claimed it). A model no rule matches falls back to its provider's mark; a provider no rule matches shows no mark, and the row keeps its alignment.",
+    "note": "Which brand mark a row shows. Every id names a vendored lockup in src/assets/icons/combine/ or a provider icon in src/assets/icons/providers/; scripts/build.mjs fails the build on an id that is not there. This is presentation data, kept out of the bundle like the rest of this document, and it is separate from the copy rules above: a vendor's mark and a vendor's description line change for different reasons. `providers` is keyed by the harness provider route id, which is exactly the group id the picker receives (`deepseek-official`, `zai`, `google-vertex`, …) — it is the fallback brand for a group whose models no rule claims. `models` is an ordered, anchored rule list resolved against the model id, exactly like `families` and with the same discipline: first match wins, so a broad rule must sit below the narrow ones and every rule must name its vendor (`step` cannot match `step-3.7-flash` by accident only if no earlier rule already claimed it). A model no rule matches falls back to its provider's brand; a brand with no lockup renders the label without a mark.",
     "providers": {
       "deepseek-official": "deepseek",
       "deepseek": "deepseek",
@@ -241,7 +241,11 @@
     },
     "models": [
       { "match": "deepseek", "brand": "deepseek" },
-      { "match": "claude", "brand": "anthropic" },
+      {
+        "match": "claude",
+        "brand": "claude",
+        "note": "Claude rows draw Claude's own lockup, not the parent Anthropic one: the label names the model line, and a wordmark has to match the word it stands in for — the same reason Grok rows draw Grok's rather than xAI's. Anthropic stays the fallback for the `anthropic` route."
+      },
       {
         "match": "codex",
         "brand": "codex",
