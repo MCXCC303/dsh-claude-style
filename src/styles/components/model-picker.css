@@ -192,10 +192,11 @@ body[data-dsh-claude-style] .dsh-claude-model-wordmark {
   margin-right: 0.25em !important;
   vertical-align: baseline !important;
 }
-/* Each wordmark's viewBox is cropped to its capitals, so the box's bottom edge is
-   the baseline and whatever the art draws above or below that band falls outside
-   it — DeepSeek's "k" ascender and its "p" descender. Overflow stays visible so
-   they paint anyway, exactly where a text ascender and descender would. */
+/* Each wordmark's viewBox is cropped to its lettering — DeepSeek's to its
+   capitals, so its box bottom edge is the baseline; Grok's to its ink, round "G"
+   overshoot and all. Whatever the art draws outside that box (DeepSeek's "k"
+   ascender and its "p" descender) still paints, because overflow stays visible,
+   exactly where a text ascender and descender would. */
 body[data-dsh-claude-style] .dsh-claude-model-wordmark svg {
   display: block !important;
   height: 100% !important;

@@ -404,7 +404,8 @@
       },
       {
         "match": "grok",
-        "brand": "xai"
+        "brand": "grok",
+        "note": "Grok is the model line, xAI the company: a Grok row shows Grok's own mark, while the provider group header above it still shows xAI's, because providers resolve from `providers` and never from here."
       },
       {
         "match": "doubao|seed|volc",

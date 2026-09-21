@@ -122,7 +122,7 @@
      * lettering — so a row that wants the vendor's name alone cannot use it as it
      * stands.
      */
-    var MODEL_WORDMARKS = { kimi: 'Kimi', deepseek: 'DeepSeek' }
+    var MODEL_WORDMARKS = { kimi: 'Kimi', deepseek: 'DeepSeek', grok: 'Grok' }
 
     /**
      * The wordmark a label should draw, if any.

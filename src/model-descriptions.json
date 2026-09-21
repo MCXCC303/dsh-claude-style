@@ -261,7 +261,11 @@
       { "match": "muse-spark|llama", "brand": "meta" },
       { "match": "celeris", "brand": "celestoai" },
       { "match": "mercury|inception", "brand": "inception" },
-      { "match": "grok", "brand": "xai" },
+      {
+        "match": "grok",
+        "brand": "grok",
+        "note": "Grok is the model line, xAI the company: a Grok row shows Grok's own mark, while the provider group header above it still shows xAI's, because providers resolve from `providers` and never from here."
+      },
       { "match": "doubao|seed|volc", "brand": "bytedance" },
       { "match": "ernie", "brand": "baidu" },
       { "match": "hunyuan|(^|-)hy\\d", "brand": "tencent" },
