@@ -93,7 +93,10 @@ async function main() {
   })
   const evalJs = async (expression) => {
     const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
-    if (r.result && r.result.exceptionDetails) throw new Error('page eval failed: ' + JSON.stringify(r.result.exceptionDetails).slice(0, 300))
+    if (r.result && r.result.exceptionDetails) {
+      const detail = JSON.stringify(r.result.exceptionDetails).slice(0, 200)
+      throw new Error(`page eval failed: ${detail}\n  expression: ${expression.replace(/\s+/g, ' ').slice(0, 160)}`)
+    }
     return r.result && r.result.result ? r.result.result.value : undefined
   }
 
@@ -124,9 +127,10 @@ async function main() {
   const navigatedAt = Date.now()
   await send('Page.navigate', { url: `${BASE}/?token=${TOKEN}` })
 
-  // Wait for the skin, then for the composer seat the picker replaces.
+  // Wait for the skin, then for the composer seat the picker replaces. `body` is
+  // null until the parser gets there, so the first polls must not assume it.
   for (let i = 0; i < 120; i++) {
-    if (await evalJs(`!!document.body.hasAttribute('data-dsh-claude-style')`)) break
+    if (await evalJs(`!!(document.body && document.body.hasAttribute('data-dsh-claude-style'))`)) break
     await sleep(250)
   }
   const skinAt = Date.now() - navigatedAt
@@ -140,7 +144,7 @@ async function main() {
   console.log(`  skin applied:            ${skinAt} ms after navigation`)
   console.log(`  model trigger in DOM:    ${triggerAt} ms after navigation`)
 
-  const longtasks = await evalJs(`window.__timing.longtasks`)
+  const longtasks = await evalJs(`(window.__timing && window.__timing.longtasks) || []`)
   const blocking = (longtasks || []).reduce((sum, t) => sum + t.dur, 0)
   console.log(`  long tasks:              ${(longtasks || []).length} (${blocking} ms total blocking)`)
   for (const t of (longtasks || []).slice(0, 8)) console.log(`    at ${t.start} ms: ${t.dur} ms`)
@@ -156,7 +160,7 @@ async function main() {
   for (const r of resources || []) console.log(`    ${String(r.start).padStart(6)} ms  ${String(r.dur).padStart(5)} ms  ${String(r.size).padStart(7)} B  ${r.name}`)
 
   console.log('\n=== the model label (the catalog RPC’s observable end) ===')
-  const label = await evalJs(`window.__timing.label`)
+  const label = await evalJs(`(window.__timing && window.__timing.label) || []`)
   let firstChange = null
   const first = label && label[0] ? label[0].text : null
   for (const entry of label || []) {
@@ -232,6 +236,38 @@ async function main() {
     return { perRowMs: (performance.now() - t0) / n }
   })()`)
   if (plainCost) console.log(`  plain label textContent: ${plainCost.perRowMs.toFixed(4)} ms/row (floor)`)
+
+  // The control: reload the page (fresh client, so the catalog cache is empty)
+  // and open the picker again. The host has answered once already, so if this is
+  // just as slow, the cost is per call on the host side rather than cold start-up.
+  console.log('\n=== control: a second page load against the same host ===')
+  const reloadAt = Date.now()
+  await send('Page.navigate', { url: `${BASE}/?token=${TOKEN}` })
+  for (let i = 0; i < 200; i++) {
+    if (await evalJs(`!!document.querySelector('.dsh-claude-model-btn')`)) break
+    await sleep(250)
+  }
+  const trigger2At = Date.now() - reloadAt
+  await evalJs(`(() => {
+    const btn = document.querySelector('.dsh-claude-model-btn')
+    if (!btn) return false
+    btn.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
+    btn.click()
+    return true
+  })()`)
+  const open2Start = Date.now()
+  let rows2 = 0
+  for (let i = 0; i < 300; i++) {
+    rows2 = await evalJs(`document.querySelectorAll('.dsh-claude-model-option').length`)
+    if (rows2 > 0) break
+    await sleep(50)
+  }
+  const open2Ms = Date.now() - open2Start
+  console.log(`  trigger in DOM:            ${trigger2At} ms after the reload`)
+  console.log(`  rows painted:              ${rows2} in ${open2Ms} ms`)
+  console.log(`  first open was ${openMs} ms, second page ${open2Ms} ms`)
+  console.log('  → comparable numbers mean the cost is per catalog call on the host,')
+  console.log('    not cold start-up of the process (a warm client would show ~0 ms)')
 
   cleanup()
   process.exit(0)
