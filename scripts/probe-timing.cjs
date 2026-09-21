@@ -266,8 +266,10 @@ async function main() {
   console.log(`  trigger in DOM:            ${trigger2At} ms after the reload`)
   console.log(`  rows painted:              ${rows2} in ${open2Ms} ms`)
   console.log(`  first open was ${openMs} ms, second page ${open2Ms} ms`)
-  console.log('  → comparable numbers mean the cost is per catalog call on the host,')
-  console.log('    not cold start-up of the process (a warm client would show ~0 ms)')
+  console.log('  → comparable numbers mean the cost is paid once per page load rather')
+  console.log('    than once per process. It does NOT yet separate the host\'s catalog')
+  console.log('    build from the client-side work: both start empty on a reload. To')
+  console.log('    attribute it, time the modelCatalog frames themselves (CDP Network).')
 
   cleanup()
   process.exit(0)
