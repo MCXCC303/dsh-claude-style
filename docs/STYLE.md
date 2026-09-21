@@ -160,10 +160,11 @@ the catalog's own text; family rules are ordered and must stay anchored (the
 DeepSeek's copy).
 
 The same document carries the picker's **brand marks** under `brands`:
-`brands.providers` maps a provider route id to a brand (the fallback for a group
-whose models no rule claims), and `brands.models` is an ordered, anchored rule
-list matching a model id (the row's vendor — the vendor that made the model, not
-the aggregator reselling it). Both name ids with a vendored lockup in
+`brands.providers` is deliberately empty — a model no rule claims draws **no**
+lockup rather than its provider's, because a reseller's own lockup on a model it did
+not make reads as a wrong answer rather than a missing one. `brands.models` is an
+ordered, anchored rule list matching a model id (the row's vendor — the vendor that
+made the model, not the aggregator reselling it). Both name ids with a vendored lockup in
 `src/assets/icons/combine/` or a provider icon key, and the build fails on an id
 that is not there, so the binding cannot drift. A lockup carries the vendor's mark
 and its wordmark as one piece of art: the colour mark on the ivory canvas, the

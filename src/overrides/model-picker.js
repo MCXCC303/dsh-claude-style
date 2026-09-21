@@ -497,9 +497,17 @@
           groupLabel.appendChild(modelEl('span', 'dsh-claude-model-group-name', group.name))
           groupRow.appendChild(groupLabel)
           groupSection.appendChild(groupRow)
-          for (var m = 0; m < group.models.length; m++) {
-            var selected = current !== null && current.group.id === group.id && current.model.id === group.models[m].id
-            groupSection.appendChild(buildModelOption(group, group.models[m], selected, false))
+          // A provider's models read in id order, so the list is scannable and stays
+          // put between visits; the catalog's own order is whatever the provider
+          // happened to send. Sorted on a copy — the snapshot belongs to the store.
+          var groupModels = group.models.slice().sort(function (a, b) {
+            var left = String(a.id)
+            var right = String(b.id)
+            return left < right ? -1 : left > right ? 1 : 0
+          })
+          for (var m = 0; m < groupModels.length; m++) {
+            var selected = current !== null && current.group.id === group.id && current.model.id === groupModels[m].id
+            groupSection.appendChild(buildModelOption(group, groupModels[m], selected, false))
           }
           modelSubBody.appendChild(groupSection)
         }

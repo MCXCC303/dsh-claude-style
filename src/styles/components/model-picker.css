@@ -103,7 +103,7 @@ body[data-dsh-claude-style] .dsh-claude-model-option {
   gap: 8px !important;
   width: 100% !important;
   min-height: 32px !important;
-  padding: 4px 8px !important;
+  padding: 3px 8px !important;
   border: none !important;
   border-radius: 6px !important;
   background: transparent !important;
@@ -209,7 +209,7 @@ body[data-dsh-claude-style] .dsh-claude-model-cell {
   gap: 8px !important;
   width: 100% !important;
   min-height: 32px !important;
-  padding: 4px 8px !important;
+  padding: 3px 8px !important;
   border: none !important;
   border-radius: 6px !important;
   background: transparent !important;

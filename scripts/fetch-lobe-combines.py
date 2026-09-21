@@ -472,8 +472,12 @@ def main():
                     if halves is None:
                         raise ValueError('cannot tell the mark from the wordmark')
                     mark_part, text_part = halves
-                    # Hand-provided art often carries no fill at all (the SVG default
-                    # is black), which would vanish on the warm black canvas.
+                    # Hand-provided art often carries no fill attribute at all (the SVG
+                    # default is black) or hides one in an inline style, which wins over
+                    # a presentation attribute — Inkscape exports `style="fill:#000000"`,
+                    # and that is what kept ChatGPT's knot black on the dark canvas.
+                    mark_part = re.sub(r'style="[^"]*?"', lambda m: m.group(0) if 'fill' not in m.group(0) else 'style=""', mark_part)
+                    text_part = re.sub(r'style="[^"]*?"', lambda m: m.group(0) if 'fill' not in m.group(0) else 'style=""', text_part)
                     if 'fill=' not in mark_part:
                         mark_part = '<g fill="currentColor">%s</g>' % mark_part
                     if 'fill=' not in text_part:

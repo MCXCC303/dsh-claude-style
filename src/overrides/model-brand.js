@@ -60,15 +60,19 @@
     }
 
     /**
-     * The brand mark for one model: the vendor that made it, not the route it
-     * is resold through — an OpenRouter group listing Claude models shows
-     * Anthropic marks on the rows and OpenRouter's own mark on the header.
-     * Rules are ordered and anchored in the document; the first match wins,
-     * and a model no rule claims falls back to its provider's mark.
+     * The brand mark for one model: the vendor that made it, not the route it is
+     * resold through — an OpenRouter group listing Claude models shows Anthropic
+     * marks on the rows, never OpenRouter's own.
      *
-     * @param groupId - provider route id, the fallback's source.
+     * Rules are ordered and anchored in the document; the first match wins. There is
+     * deliberately **no fallback to the provider route**: a model no rule claims
+     * draws no lockup at all. The fallback used to put the reseller's lockup on a
+     * model it did not make (an OpenCode row wearing OpenCode's mark beside
+     * "LongCat-2.0"), which reads as a wrong answer rather than a missing one.
+     *
+     * @param groupId - provider route id (unused; kept for call-site symmetry).
      * @param modelId - catalog model id.
-     * @returns the vendored mark's id, or null when neither table claims it.
+     * @returns the vendored lockup's id, or null when no rule claims it.
      */
     function modelBrand(groupId, modelId) {
       if (modelCopy !== null) {
@@ -77,7 +81,7 @@
           if (modelCopy.brandRules[i].re.test(id)) return modelCopy.brandRules[i].brand
         }
       }
-      return providerIconName(modelId) || providerBrand(groupId)
+      return null
     }
 
     /**
