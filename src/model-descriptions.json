@@ -202,7 +202,7 @@
       "deepseek": "deepseek",
       "anthropic": "anthropic",
       "openai": "openai",
-      "openai-codex": "codex",
+      "openai-codex": "openai",
       "google": "google",
       "google-vertex": "vertexai",
       "amazon-bedrock": "bedrock",
@@ -246,12 +246,17 @@
         "brand": "claude",
         "note": "Claude rows draw Claude's own lockup, not the parent Anthropic one: the label names the model line, and a wordmark has to match the word it stands in for — the same reason Grok rows draw Grok's rather than xAI's. Anthropic stays the fallback for the `anthropic` route."
       },
-      {
-        "match": "codex",
-        "brand": "codex",
-        "note": "Before the OpenAI rule: a Codex row shows the Codex mark, not the parent mark."
-      },
       { "match": "gpt|(^|[/-])o[1-9](-|$)", "brand": "openai" },
+      {
+        "match": "nano-?banana",
+        "brand": "nanobanana",
+        "note": "Nano Banana is a Gemini image model with its own identity in the catalog, so it draws its own lockup rather than the Gemini one."
+      },
+      {
+        "match": "gemma",
+        "brand": "gemma",
+        "note": "Gemma is Google's open model line, so it draws its own lockup rather than the parent Google one — the same reason Claude and Grok do."
+      },
       {
         "match": "gemini",
         "brand": "gemini",
@@ -272,13 +277,23 @@
       },
       { "match": "doubao|seed|volc", "brand": "bytedance" },
       { "match": "ernie", "brand": "baidu" },
-      { "match": "hunyuan|(^|-)hy\\d", "brand": "tencent" },
+      { "match": "hunyuan|(^|-)hy(\\d|-?mt)", "brand": "tencent" },
       { "match": "mistral|magistral|codestral", "brand": "mistral" },
       { "match": "north|command-?[ar]|cohere", "brand": "cohere" },
       { "match": "phi-?\\d", "brand": "microsoft" },
       { "match": "nova", "brand": "nova" },
       { "match": "sonar|perplexity", "brand": "perplexity" }
-    ]
+    ],
+    "lockups": {
+      "note": "Per-brand overrides for the vendored lockup, applied by scripts/fetch-lobe-combines.py. `word` is the word the lockup stands in for inside a model name (it must match how the catalog spells it, which is not always Lobe's TITLE), `mark` and `text` name the Lobe icons the two halves are taken from (so a model line can wear its own mark with its parent's wordmark), and `keep` crops a wordmark to a fraction of its ink width (GLM-V's \"-V\" is not part of the name).",
+      "meta": { "word": "Meta", "lockup": true },
+      "openai": { "word": "GPT", "local": "openai.svg", "textFrom": 0.529 },
+      "tencent": { "word": "Hunyuan", "mark": "hunyuan", "text": "tencent" },
+      "stepfun": { "word": "Step", "mark": "stepfun", "text": "stepfun" },
+      "xiaomimimo": { "word": "MiMo", "mark": "xiaomimimo", "text": "xiaomimimo" },
+      "nanobanana": { "word": "Nano Banana" },
+      "zai": { "word": "GLM", "mark": "zai", "text": "glmv", "keep": 0.62 }
+    }
   },
   "families": [
     {

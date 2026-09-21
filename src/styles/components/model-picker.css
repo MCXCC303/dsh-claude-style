@@ -138,6 +138,11 @@ body[data-dsh-claude-style] .dsh-claude-model-name {
 body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='gemini'] .dsh-claude-model-name {
   font-family: var(--dsw-font-brand-gemini) !important;
 }
+/* Claude's wordmark is set in Anthropic's serif, so the rest of the label follows
+   it — the row reads as one piece of lettering rather than serif art beside sans. */
+body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='claude'] .dsh-claude-model-name {
+  font-family: var(--dsw-font-brand-claude) !important;
+}
 /* A vendor lockup: the mark and the vendor's own wordmark as one piece of art,
    drawn in place of the vendor's name in the label. Its viewBox is the wordmark's
    capital band, so the label's own cap height sizes it and the mark — which is

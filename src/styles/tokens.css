@@ -12,6 +12,11 @@ body[data-dsh-claude-style] {
      face stays behind it in the stack, so a label carrying a character outside
      the subset still renders instead of falling to tofu. */
   --dsw-font-brand-gemini: 'Google Sans Flex Picker', var(--dsw-font-family);
+  /* Claude's lockup is drawn in Anthropic's serif, so its rows take the same face:
+     the wordmark and the rest of the label then read as one piece of lettering.
+     The face is already served for the UI (see typography.css); the serif token
+     stays behind it so a missing font degrades to the shipped serif, not to sans. */
+  --dsw-font-brand-claude: 'Anthropic Serif Web Text', var(--dsw-font-serif);
   /* Markdown document headings keep the host's own ladder, steepened from
      21/19/18 toward Claude's measured ≈21/17/15; h1 and h4 keep the host's
      values. The host reads these through a `font:` shorthand that names
