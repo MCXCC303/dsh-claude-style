@@ -64,6 +64,7 @@
       collapseFooter: true,
       autoPopover: true,
       composerScope: 'all',
+      modelPicker: true,
       username: '',
       banLocale: fallbackBanLocale || DEFAULT_BAN_LOCALE,
     }
@@ -168,6 +169,7 @@
         collapseFooter: section.collapseFooter !== false,
         autoPopover: section.autoPopover !== false,
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
+        modelPicker: section.modelPicker !== false,
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
         banLocale: resolveBanLocale(section.banLocale),
       }

@@ -208,6 +208,12 @@
           segment(scopeOptions, prefs.composerScope, function (value) { write({ composerScope: value }) }),
         ),
         row(
+          'modelPicker',
+          settingsCopy('pickerTitle', 'Redraw the model picker'),
+          settingsCopy('pickerDesc', 'Replace the composer\'s model seat with the two-level Claude-style menu. Off hands the model menu back to the host; the rest of the composer restyle is unaffected.'),
+          toggle(prefs.modelPicker, function (value) { write({ modelPicker: value }) }),
+        ),
+        row(
           'banLocale',
           settingsCopy('banLocaleTitle', 'Account-hold easter egg language'),
           settingsCopy('banLocaleDesc', 'The language the account-hold page (click the account row in the sidebar footer popover) is written in. It is its own choice, so the page reads the way Claude wrote it whatever the interface language is.'),

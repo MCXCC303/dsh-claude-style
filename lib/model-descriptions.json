@@ -68,6 +68,14 @@
       "zh": "重绘输入区，可选新会话页、对话内或两者。",
       "en": "Which input area the skin restyles: the new-conversation page, the conversation, or both. The hero brand mark and headline are unaffected."
     },
+    "pickerTitle": {
+      "zh": "重做模型选择器",
+      "en": "Redraw the model picker"
+    },
+    "pickerDesc": {
+      "zh": "把输入框的模型席位换成 Claude 风格的两级弹层。关闭后交回系统自己的模型菜单，输入区其余改动不受影响。",
+      "en": "Replace the composer's model seat with the two-level Claude-style menu. Off hands the model menu back to the host; the rest of the composer restyle is unaffected."
+    },
     "usernameTitle": {
       "zh": "用户名",
       "en": "Username"
