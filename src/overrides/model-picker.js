@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 模型选择器 (Model Picker)
-    // ============================================================================
     function installModelPicker(ctx, ui) {
       /**
        * The host's model seat is a click-triggered two-pane menu (Model /

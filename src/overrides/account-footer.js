@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 账户页脚与弹层 (Account Footer & Popover)
-    // ============================================================================
     function installAccountFooter(ctx, ui) {
       var accountBtn = null
       var accountPopover = null

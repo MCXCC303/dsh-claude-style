@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 权限段控件与会话内弹层 (Permission Segments & Popover)
-    // ============================================================================
     function installPermissions(ctx, ui) {
       var segments = null
       var permContainer = null

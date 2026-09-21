@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 设置页 (Settings Section)
-    // ============================================================================
     /**
      * The settings page section, mounted by the host into the `settings.section`
      * slot. That slot hands a section only `{ close }` plus the standard hooks,

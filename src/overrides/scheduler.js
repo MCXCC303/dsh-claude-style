@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 响应式调度与生命周期清理 (Scheduler & Teardown)
-    // ============================================================================
     function installScheduler(ctx, ui) {
       function onGlobalPointerDown(e) {
         var target = e.target

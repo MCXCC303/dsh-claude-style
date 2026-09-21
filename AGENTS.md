@@ -24,7 +24,7 @@ probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI UR
 
 ## 仓库布局
 
-- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-brand/model-picker/account-footer/scheduler/selection + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/brand/*.svg`（品牌标识，构建期内联为 data URI）、`assets/icons/combine/*.svg`（厂商锁定标：图标 + 厂商字标合成为一个 SVG，构建期内联为 JS markup 表）、`assets/icons/combine-src/*.svg`（手工提供的锁定标资产，vendoring 时优先于联网抓取）、`model-descriptions.json`（模型文案数据 + `brands` 品牌绑定与 `brands.lockups` 覆写表）。
+- `src/` 全部源码：`constants.js`（常量与 185 个思考动词，构建期求值填 token）、`context/*.js`（host/prefs/model-copy/i18n）、`overrides/*.js`（copy/permissions/model-brand/model-picker/account-footer/scheduler/selection + 共享 popover-utils）、`settings.js`（设置页品牌切换）、`entry.js`（`apply()` 编排器）、`styles/**/*.css`（按 composer 与 components 拆分）、`assets/brand/*.svg`（品牌标识，构建期内联为 data URI）、`assets/icons/combine/*.svg`（厂商锁定标：图标 + 厂商字标合成为一个 SVG，构建期内联为 JS markup 表）、`assets/icons/*.svg`（手工提供的锁定标资产，与生成的 `combine/` 同级，vendoring 时优先于联网抓取）、`model-descriptions.json`（模型文案数据 + `brands` 品牌绑定与 `brands.lockups` 覆写表）。
 - `lib/` 产物：`client.js`（生成）、`index.js`（宿主半边，手写，提供 `/dsh-claude-style/model-descriptions.json` 路由）、`model-descriptions.json`（构建期复制）。
 - `skin.json` 皮肤清单；`cordis.patch.yml` 把 `ui-skin-claude-style` 插入 web roster。
 - `scripts/` 构建与回归工具（`fetch-lobe-combines.py` 是唯一联网脚本，手工运行、不进构建；它按 `model-descriptions.json` 的品牌表抓取 Lobe 素材并合成锁定标）；`docs/` 文档与截图；`fonts/` 字体文件（JetBrains Mono 已入包，Anthropic 字体仅仓库下载）。

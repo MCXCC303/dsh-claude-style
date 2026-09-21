@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 文本选区焦点态 (Text Selection Focus State)
-    // ============================================================================
     /**
      * Text selection has two paints and CSS cannot tell them apart: gray on
      * black while the browser window is unfocused, blue on white while it is

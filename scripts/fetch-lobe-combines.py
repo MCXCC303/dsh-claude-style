@@ -51,7 +51,7 @@ COPY = os.path.join(ROOT, 'src', 'model-descriptions.json')
 OUT_DIR = os.path.join(ROOT, 'src', 'assets', 'icons', 'combine')
 # Hand-provided artwork (a ready-made lockup, or one file holding both halves) is
 # preferred over anything fetched: <brand>.svg here wins.
-COMBINE_SRC = os.path.join(ROOT, 'src', 'assets', 'icons', 'combine-src')
+COMBINE_SRC = os.path.join(ROOT, 'src', 'assets', 'icons')
 
 # Canvas colours the contrast check is run against (src/styles/tokens.css).
 LIGHT_CANVAS = '#fcfcfb'

@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 文案改写 (Copy Rewrites)
-    // ============================================================================
     function installCopy(ctx, ui) {
       /** Shipped idle composer hints (zh / en, hero / default) this skin replaces. */
       var HINT_SOURCES = [

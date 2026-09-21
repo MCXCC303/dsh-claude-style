@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 宿主上下文访问器与辅助 (Host Context & Helpers)
-    // ============================================================================
     function findAccessTrigger() {
       var prefixes = ['访问模式', 'Access mode']
       var buttons = document.querySelectorAll('button[aria-label]')

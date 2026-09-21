@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 主题翻转：瞬时抑制过渡 (Theme Flip: Instant Swap)
-    // ============================================================================
     /**
      * The skin's own 0.12s border/box-shadow transitions (composer card, input
      * scroll, attachment rail, hero tray) are worth keeping for hover/focus, but

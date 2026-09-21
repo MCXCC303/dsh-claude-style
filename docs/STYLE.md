@@ -110,7 +110,7 @@ assembles the bundle:
 | `src/constants.js` | constants, spinner verbs, shared token values (evaluated at build time to fill `%%TOKEN%%` placeholders) |
 | `src/assets/brand/*.svg` | brand marks, inlined as CSS `url()` data URIs at build time (the loader exposes no asset URLs) |
 | `src/assets/icons/combine/*.svg` | vendor lockups (Lobe Icons mark + wordmark composed into one SVG, MIT), inlined as JS markup tables at build time; bound to models by `model-descriptions.json` → `brands` |
-| `src/assets/icons/combine-src/*.svg` | hand-provided lockup artwork (e.g. ChatGPT), which the vendoring step prefers over anything fetched; `brands.lockups` may also point a brand's two halves at different Lobe icons or crop a wordmark |
+| `src/assets/icons/*.svg` | hand-provided lockup artwork (e.g. ChatGPT), which the vendoring step prefers over anything fetched; `brands.lockups` may also point a brand's two halves at different Lobe icons or crop a wordmark |
 | `src/styles/tokens.css` | design tokens (dark base + ivory light) |
 | `src/styles/typography.css` | serif display / sans UI / mono code, editorial markdown |
 | `src/styles/chrome.css` | canvas, hairlines, clay accent, chrome details |

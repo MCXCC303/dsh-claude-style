@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 账户封禁彩蛋 (Account-ban Easter Egg)
-    // ============================================================================
     /**
      * The "Your account is on hold" screen, reproduced from Claude's own
      * account-hold page. It is an EASTER EGG, not a real state: nothing here

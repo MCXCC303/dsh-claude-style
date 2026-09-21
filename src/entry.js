@@ -1,6 +1,3 @@
-    // ============================================================================
-    // 插件入口与导出 (Plugin Entry & Export)
-    // ============================================================================
     function apply(ctx) {
       var body = document.body
       body.setAttribute('data-dsh-claude-style', '')
