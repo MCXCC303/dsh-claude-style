@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-21
+
 ### Added
 - **声明最低运行时与商店截图清单**：`package.json` 的 `dsh` 对象新增 `engines.dsh: ">=0.1.5-rc.2"`（README 标注的实测版本），dsh-market.com 的插件卡片、插件管理器的更新检查与 awesome-dsh-plugin 商店的 host-aware 过滤都会读取它，避免在不满足条件的宿主上被安装或被误判不兼容；仓库根新增 `screenshots.json` 指向 `docs/light.png` 与 `docs/dark.png`，供 dsh-market 等商店以 App Store 式截图展示——截图随仓库推送更新、商店夜间构建自动拾取，之后换图不必再提任何 PR。
 - **模型选择器里 Gemini 行的名称改用 Google Sans Flex**：模型行自 0.2.7 起带厂商标识，但名称仍与其他行同一字体——「这是 Google 的模型」这个信号只给了一半，同一行里标识说厂商、字体说本主题。现在 Gemini 行的名称用上游 Google Sans Flex 的标准字重正体绘制，与标识构成同一个信号。字体由 `scripts/slim-google-sans.py`（手工工具，不进构建——它需要 Python 与 fontTools，而本仓库的 Node 构建必须保持零依赖）从 4.2 MB 的六轴可变字体得到：6 个轴全部钉在**字体自身的默认值**（wght 400 / slnt 0 / wdth 100 / GRAD 0 / ROND 0 / opsz 18，默认值读自 `fvar` 而非写死，上游改默认值时这里不会静默改变「标准」的含义），只保留拉丁字母、数字与标签用得到的标点（ASCII 可打印、不换行空格、间隔号、长/短破折号、弯引号、省略号），并且只保留 `kern` 特性——标签里不该发生连字替换。产物 9 KB，随 npm 包分发，采用 SIL OFL 1.1（`fonts/OFL-GoogleSansFlex.txt` 带上游版权声明与许可证全文）。家族名改为 `Google Sans Flex Picker`：上游没有声明 Reserved Font Name，子集沿用原名并不违规，但一个只含拉丁字符的同名字体会在页面上盖掉用户系统里安装的完整版。样式表的挂载点是行上的 `data-brand`（厂商标识 id）：今天只有 Gemini 解析到字体，其他厂商的行保持界面字体，将来给别的厂商加字体是加一行 CSS 的事；字体栈把界面字体留在后面，子集覆盖不到的字符逐个回落而不是变豆腐块。
