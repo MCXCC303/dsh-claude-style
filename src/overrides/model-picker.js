@@ -277,7 +277,7 @@
         item.type = 'button'
         item.setAttribute('role', 'menuitemradio')
         item.setAttribute('aria-checked', selected ? 'true' : 'false')
-        var brand = modelBrand(group.id, model.id)
+        var brand = modelBrand(model.id)
         // The brand id is the row's styling hook — it is what gives a vendor's rows
         // their own typography (see .dsh-claude-model-name in
         // styles/components/model-picker.css). The vendor's mark is no longer drawn
@@ -407,7 +407,7 @@
             currentRow.type = 'button'
             currentRow.setAttribute('role', 'menuitemradio')
             currentRow.setAttribute('aria-checked', 'true')
-            var currentBrand = modelBrand(current.group.id, current.model.id)
+            var currentBrand = modelBrand(current.model.id)
             var currentName = current.model.name || current.model.id
             // The brand id is the row's styling hook here too, so this row wears
             // the same vendor lockup and face as the list entry it stands for.

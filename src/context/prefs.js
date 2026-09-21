@@ -244,16 +244,3 @@
           return null
         })
     }
-
-    /**
-     * The brand to show. `off` leaves the brand area entirely to the host, so
-     * the stylesheet matches neither brand variant for it.
-     *
-     * @param brand - the stored choice.
-     * @returns the brand actually applied.
-     */
-    function applyBrand(brand) {
-      var next = brand === BRAND_ANTHROPIC || brand === BRAND_OFF ? brand : BRAND_CLAUDE
-      document.body.setAttribute(BRAND_ATTR, next)
-      return next
-    }

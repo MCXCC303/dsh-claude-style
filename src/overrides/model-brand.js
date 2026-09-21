@@ -1,12 +1,3 @@
-    // 从 model-picker.js 抽出（体量停止线：该文件已达 737/750 行）。碎片共享一个
-    // 工厂作用域，所以这里能直接看到 context/model-copy.js 的 modelCopy 与构建生成
-    // 的 COMBINE_SVGS / COMBINE_WORDS，
-    // 不需要 import；函数声明会提升，所以本文件在 build.mjs 的 FRAGMENTS 里的位置
-    // 不影响调用。
-    //
-    // modelEl 是行构建器共用的元素工厂，随它的消费者一起搬过来（原先与这些函数同
-    // 在 installModelPicker 内）。
-
     function modelEl(tag, cls, text) {
       var el = document.createElement(tag)
       if (cls) el.className = cls
@@ -25,11 +16,10 @@
      * model it did not make (an OpenCode row wearing OpenCode's mark beside
      * "LongCat-2.0"), which reads as a wrong answer rather than a missing one.
      *
-     * @param groupId - provider route id (unused; kept for call-site symmetry).
      * @param modelId - catalog model id.
      * @returns the vendored lockup's id, or null when no rule claims it.
      */
-    function modelBrand(groupId, modelId) {
+    function modelBrand(modelId) {
       if (modelCopy !== null) {
         var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
         for (var i = 0; i < modelCopy.brandRules.length; i++) {

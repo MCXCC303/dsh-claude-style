@@ -141,38 +141,17 @@ assembles the bundle:
 | `src/entry.js` | `apply()` orchestrator + exports |
 | `src/model-descriptions.json` | model copy (picker labels + per-model descriptions); validated at build time and **copied** to `lib/`, not inlined |
 
-Fragments share one factory scope at runtime: keep the 4-space base
-indentation and do not use `import`/`export` inside fragments. The build
-script rejects unsubstituted `%%TOKENS%%` and refuses to emit a bundle that
-fails to parse.
+Fragments share one factory scope at runtime — no `import`/`export`, 4-space
+base indent; the build rejects unsubstituted `%%TOKENS%%` and refuses to emit a
+bundle that fails to parse. The hard rules for fragments, model copy and host
+selectors live in `AGENTS.md` (the selector section below is the detail page it
+points to); the reasoning behind them is in `docs/architecture.md` (D1, D3, D5).
 
-`src/model-descriptions.json` is the one thing that does **not** go into the
-bundle. Model copy is data: the build validates it and copies it to
-`lib/model-descriptions.json`, and the host half (`lib/index.js`) serves it at
-`/dsh-claude-style/model-descriptions.json` for the browser half to fetch on
-first use. So the table grows without a rebuild, and no model text ships inside
-`lib/client.js`. Every entry is a `{ locale: text }` pair — the picker renders
-one line in the language the shell's own `locale` service reports, falling back
-to the document's `fallback` locale. Lookup descends exact → family → tier →
-the catalog's own text; family rules are ordered and must stay anchored (the
-`flash` rule is scoped to `deepseek`, or another vendor's flash tier inherits
-DeepSeek's copy).
-
-The same document carries the picker's **brand marks** under `brands`:
-`brands.providers` is deliberately empty — a model no rule claims draws **no**
-lockup rather than its provider's, because a reseller's own lockup on a model it did
-not make reads as a wrong answer rather than a missing one. `brands.models` is an
-ordered, anchored rule list matching a model id (the row's vendor — the vendor that
-made the model, not the aggregator reselling it). Both name ids with a vendored lockup in
-`src/assets/icons/combine/` or a provider icon key, and the build fails on an id
-that is not there, so the binding cannot drift. A lockup carries the vendor's mark
-and its wordmark as one piece of art: the colour mark on the ivory canvas, the
-mono one in `currentColor` on the warm black canvas (where a brand colour like
-`#000` would vanish), so the label stays legible on both.
-palette to its single clay accent. Full-colour variants are deliberately not
-used — a third of the vendors ship no colour version (OpenAI, Anthropic, xAI,
-Moonshot, Z.ai, Vercel, Groq), and several brand colours are near-black on the
-`#141413` canvas.
+Model copy is the one thing that does **not** go into the bundle: the build
+copies `src/model-descriptions.json` to `lib/` and the host half serves it, so
+the table grows without a rebuild. The picker's brand bindings ride the same
+document under `brands`; the note inside the file explains why a model no rule
+claims draws no lockup at all.
 
 ### Host selector discipline · 宿主选择器纪律
 

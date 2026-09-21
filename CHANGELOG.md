@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- **清掉一批开发期痕迹，行为无变化**：删除从未被调用的 `applyBrand`（它连同注释一直被打进 bundle）、`modelBrand` 一个未使用的参数、`model-brand.js` 开头讲文件来历的注释，以及架构文档里指向某次提交与某个已删除计划文档的引用；`docs/STYLE.md` 中与 `AGENTS.md` 重复的模型文案规则与选择器纪律改为指向后者，并修掉那里一处断了主语的句子、README 里过期的锁定标数量与 Star History 图。
+
 ## [0.3.2] - 2026-09-21
 
 ### Added
