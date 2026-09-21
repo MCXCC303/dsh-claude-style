@@ -59,6 +59,7 @@ const FRAGMENTS = [
   'overrides/selection.js',
   'overrides/copy.js',
   'overrides/permissions.js',
+  'overrides/model-brand.js',
   'overrides/model-picker.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
