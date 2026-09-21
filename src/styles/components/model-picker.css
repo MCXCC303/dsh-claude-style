@@ -7,7 +7,11 @@ body[data-dsh-claude-style] .dsh-claude-model-popover {
   position: fixed !important;
   min-width: 248px !important;
   max-width: min(360px, calc(100vw - 16px)) !important;
-  max-height: min(440px, calc(100vh - 96px)) !important;
+  /* The first level is sized by its content like the second: the cap is only
+     the viewport, so a short list does not leave a tall empty card. The level-1
+     list scrolls inside the body instead (see the scoped rule below); this
+     overflow-y stays for the sub popover, whose whole card scrolls. */
+  max-height: calc(100vh - 80px) !important;
   overflow-y: auto !important;
   background: var(--dsw-alias-bg-overlay, #ffffff) !important;
   border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
@@ -41,17 +45,35 @@ body[data-dsh-claude-style] .dsh-claude-model-popover-body {
   gap: 3px !important;
   min-width: 0 !important;
 }
+/* Level 1 splits into a scrollable list and a pinned footer: the model rows
+   scroll under the divider / effort / more-models rows, which never leave the
+   viewport edge of the card. Only the first level does this — the sub popover
+   keeps scrolling as one card, with its provider labels pinned (below). */
+body[data-dsh-claude-style] .dsh-claude-model-popover:not(.dsh-claude-model-popover-sub) {
+  overflow: hidden !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-popover:not(.dsh-claude-model-popover-sub) .dsh-claude-model-popover-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-footer {
+  flex: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
 body[data-dsh-claude-style] .dsh-claude-model-status {
   color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
   font-size: 12px !important;
   line-height: 20px !important;
   padding: 4px 8px !important;
 }
-/* The sub popover is taller than the first level; its provider labels stay
-   pinned to the top while the list scrolls, the next provider replacing the
-   previous one. */
+/* The sub popover is taller than the first level and sized by its content: the
+   cap is only the viewport, so a short provider list does not leave a tall empty
+   card. Provider labels stay pinned to the top while the list scrolls. */
 body[data-dsh-claude-style] .dsh-claude-model-popover-sub {
-  max-height: min(540px, calc(100vh - 80px)) !important;
   padding-top: 0 !important;
 }
 
@@ -59,7 +81,9 @@ body[data-dsh-claude-style] .dsh-claude-model-group-section {
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 3px !important;
+  /* Level 2 rows sit close together: the 3px the body uses between sections
+     read as a gap between models of the same provider. */
+  gap: 1px !important;
   min-width: 0 !important;
 }
 
@@ -200,11 +224,41 @@ body[data-dsh-claude-style] .dsh-claude-model-check {
   align-items: center !important;
   color: var(--dsw-alias-brand-primary, #d97757) !important;
 }
-body[data-dsh-claude-style] .dsh-claude-model-divider {
+/* The picker's two hairlines share one declaration: the provider header's rule
+   and the divider that closes the model list. Same colour, same thickness, same
+   insets — the only difference left is that the header's line starts after the
+   provider's name, which is the point of that row. */
+body[data-dsh-claude-style] .dsh-claude-model-divider,
+body[data-dsh-claude-style] .dsh-claude-model-rule::after {
   height: 1px !important;
   background: var(--dsw-alias-border-l1, #e8e6dc) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-divider {
   margin: 2px 4px !important;
   flex: none !important;
+}
+/* The provider header: the name first, then the rule running to the right edge.
+   The line is what is left of that row, not a separate full-width rule above it
+   — one rule per provider boundary, and nothing more. An empty label leaves the
+   bare rule, which is how a provider that needs no naming (the official source)
+   is separated. */
+body[data-dsh-claude-style] .dsh-claude-model-rule {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 2px 4px !important;
+  flex: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-rule::after {
+  content: "" !important;
+  flex: 1 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-rule-name {
+  flex: none !important;
+  font-size: 11px !important;
+  line-height: 14px !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+  letter-spacing: 0.02em !important;
 }
 /* Level-2 row: label + current value + chevron; hover opens its own level. */
 body[data-dsh-claude-style] .dsh-claude-model-cell {
@@ -333,6 +387,15 @@ body[data-dsh-claude-style] .dsh-claude-popover-item-badge {
   border-radius: 8px !important;
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.08)) !important;
   color: var(--dsw-alias-label-secondary, #787672) !important;
+}
+/* A provider the catalog no longer offers: its stored row stays checked but is
+   muted, so it reads as "this used to be picked" and can be unchecked away. */
+body[data-dsh-claude-style] .dsh-claude-popover-item.dsh-claude-model-stale .dsh-claude-popover-item-text,
+body[data-dsh-claude-style] .dsh-claude-popover-item.dsh-claude-model-stale .dsh-claude-popover-item-badge {
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-popover-item.dsh-claude-model-stale .dsh-claude-popover-item-badge {
+  background: transparent !important;
 }
 
 /* Ensure popover items only display inside the popover */

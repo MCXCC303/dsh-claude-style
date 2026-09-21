@@ -88,6 +88,30 @@
       "zh": "把输入框的模型席位换成 Claude 风格的两级弹层。关闭后交回系统自己的模型菜单，输入区其余改动不受影响。",
       "en": "Replace the composer's model seat with the two-level Claude-style menu. Off hands the model menu back to the host; the rest of the composer restyle is unaffected."
     },
+    "quickTitle": {
+      "zh": "快捷供应商",
+      "en": "Quick providers"
+    },
+    "quickDesc": {
+      "zh": "官方服务始终列在一级弹层最前面，不在这份清单里；勾选的供应商跟在它后面，各自的模型之间用一条横线分隔。已被移除的供应商会留在清单里，带「已移除」标记，取消勾选即可清除。",
+      "en": "The official service always leads the picker's first level and is not listed here; picked providers follow it, one rule between providers. A provider removed from the catalog stays in the list, marked \"Removed\", and can be unchecked to clear it."
+    },
+    "quickNone": {
+      "zh": "未选择",
+      "en": "None"
+    },
+    "quickCount": {
+      "zh": "{count} 个供应商",
+      "en": "{count} providers"
+    },
+    "quickLoading": {
+      "zh": "正在加载模型目录…",
+      "en": "Loading providers…"
+    },
+    "quickRemoved": {
+      "zh": "已移除",
+      "en": "Removed"
+    },
     "usernameTitle": {
       "zh": "用户名",
       "en": "Username"

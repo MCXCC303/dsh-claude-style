@@ -58,6 +58,23 @@
         }
       }
 
+      // Focus moving into the composer means the user is about to type: every
+      // popover the skin keeps open around the card is in the way there, so all
+      // of them close. `focusin` bubbles (unlike focus), so one listener covers
+      // the card and everything inside it; the observer's attributeFilter does
+      // not watch focus events, so this cannot feed itself another pass.
+      function onComposerFocusIn(e) {
+        var target = e.target
+        if (!target || typeof target.closest !== 'function') return
+        if (target.closest('[data-composer-card]') === null) return
+        if (ui.model) ui.model.close()
+        if (ui.permissions) ui.permissions.closeMenu()
+        if (ui.permissions && ui.permissions.closeStats) ui.permissions.closeStats()
+        if (ui.footer) ui.footer.close()
+        if (ui.heroMenu) ui.heroMenu.close()
+        if (ui.quickProviders) ui.quickProviders.close()
+      }
+
       function onComposerInput(e) {
         var target = e.target
         if (!target) return
@@ -71,6 +88,7 @@
       document.addEventListener('keydown', onGlobalKeyDown, true)
       document.addEventListener('input', onComposerInput, true)
       document.addEventListener('compositionend', onComposerInput, true)
+      document.addEventListener('focusin', onComposerFocusIn, true)
 
       // Both fixed popovers are anchored to their trigger; scroll of the page
       // (not the conversation's own auto-stick) and resizes move the anchor, so
@@ -218,6 +236,7 @@
         document.removeEventListener('keydown', onGlobalKeyDown, true)
         document.removeEventListener('input', onComposerInput, true)
         document.removeEventListener('compositionend', onComposerInput, true)
+        document.removeEventListener('focusin', onComposerFocusIn, true)
         // Safety-net DOM sweep. Feature teardowns run after this and tolerate
         // nodes already being detached.
         var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, .dsh-claude-ban, [data-dsh-synthetic-placeholder]')

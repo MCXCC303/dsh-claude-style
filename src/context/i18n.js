@@ -48,9 +48,13 @@
      * the picker copy, so the page follows the shell language too — and the
      * English constants stay as the fallback for a failed fetch.
      */
-    function settingsCopy(key, fallback) {
+    function settingsCopy(key, fallback, params) {
       var text = modelCopy === null || !modelCopy.settings ? '' : localized(modelCopy.settings[key])
-      return text || fallback
+      if (!text) text = fallback
+      if (!params) return text
+      return text.replace(/\{(\w+)\}/g, function (match, name) {
+        return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+      })
     }
 
     /**

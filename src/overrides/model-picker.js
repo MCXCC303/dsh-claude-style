@@ -17,6 +17,7 @@
       var modelPop = null
       var modelSubPop = null
       var modelBody = null
+      var modelFooter = null
       var modelSubBody = null
       var modelHoverIntent = createHoverIntent(openModelPopover, closeModelPopovers, 180)
       var modelDir = null
@@ -26,6 +27,8 @@
       var modelSubKind = null
       var modelBodySig = ''
       var modelSubSig = ''
+      /** Settings-page listeners waiting on the provider list. */
+      var providerListeners = []
 
       /** Exact entry: `provider/model`, bare id, folded id, then the alias table. */
       function exactModelCopy(groupId, modelId) {
@@ -176,7 +179,7 @@
           var store = modelDir.store
           if (store && typeof store.subscribe === 'function') {
             try {
-              modelSub = store.subscribe(function () { if (ui.schedule) ui.schedule() })
+              modelSub = store.subscribe(function () { notifyProviders(); if (ui.schedule) ui.schedule() })
             } catch (error) {
               modelSub = null
             }
@@ -188,6 +191,37 @@
       function modelSnapshot() {
         if (modelDir === null || !modelDir.store) return null
         try { return modelDir.store.getSnapshot() } catch (error) { return null }
+      }
+
+      /**
+       * The catalog's providers, in catalog order, each with its model count.
+       *
+       * The settings page's quick-provider picker is the other consumer, and it
+       * may be opened before the picker itself ever was — so this resolves the
+       * directory and starts the shared catalog load rather than requiring a
+       * first popover open.
+       */
+      function modelProviders() {
+        modelDirectory()
+        warmModelCatalog()
+        var snap = modelSnapshot()
+        var groups = (snap && snap.groups) || []
+        var out = []
+        for (var i = 0; i < groups.length; i++) {
+          if (groups[i].models.length === 0) continue
+          out.push({ id: groups[i].id, name: groups[i].name || groups[i].id, count: groups[i].models.length })
+        }
+        return out
+      }
+
+      /** Tell the settings picker the provider list moved (catalog arrived, changed). */
+      function notifyProviders() {
+        if (providerListeners.length === 0) return
+        var list = modelProviders()
+        var listeners = providerListeners.slice()
+        for (var i = 0; i < listeners.length; i++) {
+          try { listeners[i](list) } catch (error) { /* one listener must not block the rest */ }
+        }
       }
 
       /**
@@ -270,6 +304,25 @@
 
       var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
       var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
+
+      /** Catalog order is whatever the provider happened to send; id order is scannable. */
+      function byModelId(a, b) {
+        var left = String(a.id)
+        var right = String(b.id)
+        return left < right ? -1 : left > right ? 1 : 0
+      }
+
+      /**
+       * The rule that separates one provider's models from the next. The provider
+       * name rides the rule itself rather than trailing the model in parentheses:
+       * one quiet line above the group says who serves it, and the model names
+       * stay clean.
+       */
+      function buildProviderRule(name) {
+        var rule = modelEl('div', 'dsh-claude-model-rule')
+        if (name) rule.appendChild(modelEl('span', 'dsh-claude-model-rule-name', name))
+        return rule
+      }
 
       /** One selectable model row: brand mark, name, optional description line and a check when current. */
       function buildModelOption(group, model, selected, withDescription) {
@@ -364,45 +417,70 @@
         var groups = (snap && snap.groups) || []
         var current = modelCurrent(snap)
         var effort = modelEffort(snap)
-        var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : ''].join('|')
+        var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : '', readPrefs().quickProviders.join(',')].join('|')
         for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
         if (sig === modelBodySig) return
         modelBodySig = sig
         while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
+        while (modelFooter && modelFooter.firstChild) modelFooter.removeChild(modelFooter.firstChild)
 
         if (status === 'idle' || status === 'loading' || status === 'selecting') {
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('loading', MODEL_LOADING_LABEL)))
         } else {
-          var official = null
-          for (var g2 = 0; g2 < groups.length; g2++) {
-            if (groups[g2].id === MODEL_OFFICIAL_GROUP) { official = groups[g2]; break }
-          }
-          var rows = []
-          if (official) {
-            for (var m = 0; m < official.models.length; m++) rows.push({ group: official, model: official.models[m] })
-          } else {
-            for (var g3 = 0; g3 < groups.length; g3++) {
-              for (var m2 = 0; m2 < groups[g3].models.length; m2++) rows.push({ group: groups[g3], model: groups[g3].models[m2] })
+          // Level 1 always leads with the official service: it is the default
+          // provider, not a choice in the settings, so it stays first no matter
+          // what else is picked. The quick providers the settings page picked
+          // follow it, each under its own rule. Only when the catalog has no
+          // (non-empty) official service at all does the list fall back to the
+          // picked providers, and with none picked to every provider.
+          var sections = []
+          var chosen = readPrefs().quickProviders
+          for (var g0 = 0; g0 < groups.length; g0++) {
+            if (groups[g0].id === MODEL_OFFICIAL_GROUP && groups[g0].models.length > 0) {
+              sections.push(groups[g0])
+              break
             }
           }
-          if (rows.length === 0) {
+          for (var g2 = 0; g2 < groups.length; g2++) {
+            if (chosen.indexOf(groups[g2].id) === -1 || groups[g2].id === MODEL_OFFICIAL_GROUP || groups[g2].models.length === 0) continue
+            sections.push(groups[g2])
+          }
+          if (sections.length === 0) {
+            for (var g4 = 0; g4 < groups.length; g4++) {
+              if (groups[g4].models.length > 0) sections.push(groups[g4])
+            }
+          }
+          if (sections.length === 0) {
             modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('empty', MODEL_EMPTY_LABEL)))
           } else {
-            for (var r = 0; r < rows.length; r++) {
-              var selected = current !== null && current.group.id === rows[r].group.id && current.model.id === rows[r].model.id
-              modelBody.appendChild(buildModelOption(rows[r].group, rows[r].model, selected, true))
+            for (var s = 0; s < sections.length; s++) {
+              var section = sections[s]
+              // The official source needs no naming, and the first section needs
+              // no rule: a bare line above the list would be one line too many.
+              var sectionLabel = section.id === MODEL_OFFICIAL_GROUP ? '' : (section.name || section.id)
+              if (sectionLabel !== '' || s > 0) modelBody.appendChild(buildProviderRule(sectionLabel))
+              var sectionModels = section.models.slice().sort(byModelId)
+              for (var m = 0; m < sectionModels.length; m++) {
+                var selected = current !== null && current.group.id === section.id && current.model.id === sectionModels[m].id
+                modelBody.appendChild(buildModelOption(section, sectionModels[m], selected, true))
+              }
             }
           }
-          modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
-          // When the active model is not on the official service, surface it under
-          // the official list so the current seat is still visible before the
-          // effort/More rows. It reads `model (provider)` in display names, never
-          // ids, and the provider trails the model instead of leading it: a
-          // wordmark may stand at the front of the label, and the seat has to say
-          // both which model it is on and which provider serves it — a wordmark
-          // names the vendor, not the route. It carries a description like any
-          // level-1 row, because this is the row the seat is read from.
-          if (current !== null && current.group.id !== MODEL_OFFICIAL_GROUP) {
+          // The current seat is surfaced under the list when none of the sections
+          // above already carries it, so the row the seat is read from is always
+          // on screen. Its provider rides a rule of its own rather than trailing
+          // the model in parentheses — the same idiom the sections use. It stays
+          // above the divider: the divider closes the model list, so anything
+          // that belongs to the list has to sit on its side of it.
+          var currentListed = false
+          for (var c = 0; c < sections.length; c++) {
+            if (current !== null && sections[c].id === current.group.id) currentListed = true
+          }
+          if (current !== null && !currentListed) {
+            // The divider above already draws a line, so a provider that needs no
+            // naming (the official source) adds nothing here.
+            var currentRuleName = current.group.id === MODEL_OFFICIAL_GROUP ? '' : (current.group.name || current.group.id)
+            if (currentRuleName !== '') modelBody.appendChild(buildProviderRule(currentRuleName))
             var currentRow = modelEl('button', 'dsh-claude-model-option')
             currentRow.type = 'button'
             currentRow.setAttribute('role', 'menuitemradio')
@@ -414,10 +492,6 @@
             if (currentBrand) currentRow.setAttribute('data-brand', currentBrand)
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
             var currentLabel = buildModelLabel(currentName, currentBrand)
-            // The provider's own display name; the route id only stands in when
-            // the catalog gives the group no name.
-            var currentProvider = current.group.name || current.group.id
-            if (currentProvider) currentLabel.appendChild(document.createTextNode(' (' + currentProvider + ')'))
             currentCopy.appendChild(currentLabel)
             var currentDesc = modelDescription(current.group.id, current.model)
             if (currentDesc) currentCopy.appendChild(modelEl('span', 'dsh-claude-model-desc', currentDesc))
@@ -431,8 +505,14 @@
             })
             modelBody.appendChild(currentRow)
           }
-          if (effort) modelBody.appendChild(buildModelCell(copyLabel('effortLabel', MODEL_EFFORT_LABEL), effort.label, 'effort'))
-          modelBody.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL), '', 'more'))
+          // The divider closes the model list and the two drill rows follow it;
+          // all three live in the footer, OUTSIDE the scroll area — the list
+          // above scrolls under them while the controls stay reachable.
+          if (modelFooter) {
+            modelFooter.appendChild(modelEl('div', 'dsh-claude-model-divider'))
+            if (effort) modelFooter.appendChild(buildModelCell(copyLabel('effortLabel', MODEL_EFFORT_LABEL), effort.label, 'effort'))
+            modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL), '', 'more'))
+          }
         }
       }
 
@@ -497,11 +577,7 @@
           // A provider's models read in id order, so the list is scannable and stays
           // put between visits; the catalog's own order is whatever the provider
           // happened to send. Sorted on a copy — the snapshot belongs to the store.
-          var groupModels = group.models.slice().sort(function (a, b) {
-            var left = String(a.id)
-            var right = String(b.id)
-            return left < right ? -1 : left > right ? 1 : 0
-          })
+          var groupModels = group.models.slice().sort(byModelId)
           for (var m = 0; m < groupModels.length; m++) {
             var selected = current !== null && current.group.id === group.id && current.model.id === groupModels[m].id
             groupSection.appendChild(buildModelOption(group, groupModels[m], selected, false))
@@ -537,6 +613,9 @@
           modelBody = document.createElement('div')
           modelBody.className = 'dsh-claude-model-popover-body'
           modelPop.appendChild(modelBody)
+          modelFooter = document.createElement('div')
+          modelFooter.className = 'dsh-claude-model-footer'
+          modelPop.appendChild(modelFooter)
           modelPop.addEventListener('mouseenter', cancelCloseModel)
           modelPop.addEventListener('mouseleave', scheduleCloseModel)
           document.body.appendChild(modelPop)
@@ -577,6 +656,7 @@
           modelPop = null
           modelSubPop = null
           modelBody = null
+          modelFooter = null
           modelSubBody = null
           modelSubKind = null
           modelBodySig = ''
@@ -596,6 +676,18 @@
         var slot = document.querySelector('[data-slot="conversation.input.model"]')
         if (slot === null) return
         // Hide the host's own seat (React owns the node; re-mark on swap).
+        // Idempotent against a torn-down-less reload, like the account footer:
+        // client HMR drops the old fiber's disposals, so a previous generation's
+        // trigger and popovers are still in the DOM while this fresh scope starts
+        // from null. Sweep the strays, or the seat renders twice.
+        var strayBtns = slot.querySelectorAll('.dsh-claude-model-btn')
+        for (var sb = 0; sb < strayBtns.length; sb++) {
+          if (strayBtns[sb] !== modelBtn) strayBtns[sb].parentElement.removeChild(strayBtns[sb])
+        }
+        var strayPops = document.querySelectorAll('body > .dsh-claude-model-popover')
+        for (var sp = 0; sp < strayPops.length; sp++) {
+          if (strayPops[sp] !== modelPop && strayPops[sp] !== modelSubPop) strayPops[sp].parentElement.removeChild(strayPops[sp])
+        }
         var hostRoot = slot.firstElementChild
         if (hostRoot !== null && !hostRoot.hasAttribute('data-dsh-claude-model-host')) {
           hostRoot.setAttribute('data-dsh-claude-model-host', '')
@@ -665,6 +757,14 @@
                  (modelSubPop !== null && modelSubPop.contains(target))
         },
         reposition: positionModelPopovers,
+        providers: modelProviders,
+        onProviders: function (listener) {
+          providerListeners.push(listener)
+          return function () {
+            var at = providerListeners.indexOf(listener)
+            if (at !== -1) providerListeners.splice(at, 1)
+          }
+        },
         invalidateCopy: function () {
           modelBodySig = ''
           modelSubSig = ''
@@ -679,6 +779,7 @@
           modelPop = null
           modelSubPop = null
           modelBody = null
+          modelFooter = null
           modelSubBody = null
           modelSubKind = null
           modelBodySig = ''

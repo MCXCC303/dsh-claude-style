@@ -65,6 +65,7 @@
       autoPopover: DEFAULT_AUTO_POPOVER,
       composerScope: 'all',
       modelPicker: true,
+      quickProviders: [],
       username: '',
       banLocale: fallbackBanLocale || DEFAULT_BAN_LOCALE,
     }
@@ -172,6 +173,25 @@
       return AUTO_POPOVER_SCOPES.indexOf(value) === -1 ? DEFAULT_AUTO_POPOVER : value
     }
 
+    /**
+     * The provider ids the picker's first level carries. Ids rather than names:
+     * a provider can be renamed by the catalog at any time, and the stored
+     * selection has to survive that. Order is the caller's, duplicates dropped.
+     * The official service is the picker's default, not a choice, so a stored
+     * id for it is dropped: the first level shows it whenever nothing else is
+     * picked, which is what "default" means.
+     */
+    function normalizeQuickProviders(value) {
+      if (!Array.isArray(value)) return []
+      var out = []
+      for (var i = 0; i < value.length; i++) {
+        var id = value[i]
+        if (typeof id !== 'string' || id === '' || id === MODEL_OFFICIAL_GROUP || out.indexOf(id) !== -1) continue
+        out.push(id)
+      }
+      return out
+    }
+
     /** Clamp one host value into the preference shape (the host already did this). */
     function normalizePrefs(value) {
       var section = value && typeof value === 'object' ? value : {}
@@ -181,6 +201,7 @@
         autoPopover: normalizeAutoPopover(section.autoPopover),
         composerScope: COMPOSER_SCOPES.indexOf(section.composerScope) === -1 ? 'all' : section.composerScope,
         modelPicker: section.modelPicker !== false,
+        quickProviders: normalizeQuickProviders(section.quickProviders),
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
         banLocale: resolveBanLocale(section.banLocale),
       }

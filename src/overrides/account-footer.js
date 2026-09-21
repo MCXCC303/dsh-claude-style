@@ -587,6 +587,20 @@
         }
         var username = getUsername(ctx)
 
+        // Idempotent against a torn-down-less reload: client HMR drops the old
+        // fiber's disposals instead of running them, so a previous generation's
+        // button and popover are still in the DOM and this fresh scope knows
+        // nothing of them. Sweep the strays before deciding whether to build —
+        // otherwise the row renders twice (and the orphan keeps a stale name).
+        var strayBtns = footArea.querySelectorAll('.dsh-claude-account-btn')
+        for (var sb = 0; sb < strayBtns.length; sb++) {
+          if (strayBtns[sb] !== accountBtn) strayBtns[sb].parentElement.removeChild(strayBtns[sb])
+        }
+        var strayPops = document.querySelectorAll('body > .dsh-claude-account-popover')
+        for (var sp = 0; sp < strayPops.length; sp++) {
+          if (strayPops[sp] !== accountPopover) strayPops[sp].parentElement.removeChild(strayPops[sp])
+        }
+
         if (accountBtn === null || !footArea.contains(accountBtn)) {
           if (accountBtn && accountBtn.parentElement) accountBtn.parentElement.removeChild(accountBtn)
           accountBtn = document.createElement('div')

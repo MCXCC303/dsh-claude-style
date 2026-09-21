@@ -13,6 +13,13 @@
      * `.dsh-claude-segment` classes — the same control the composer's permission
      * picker uses — so the two read as one design instead of two lookalikes.
      */
+    /**
+     * The quick-provider popover (src/overrides/quick-providers.js). The settings
+     * row is React-rendered while that card is imperative, so the row reaches the
+     * popover through this handle.
+     */
+    var quickProviderApi = null
+
     function ClaudeStyleSettingsSection() {
       var state = React.useState(readPrefs())
       var prefs = state[0]
@@ -24,6 +31,7 @@
       var username = usernameState[0]
       var setUsername = usernameState[1]
       var usernameTimer = React.useRef(null)
+      var quickTrigger = React.useRef(null)
 
       // The skin's own apply-side writes land here too (a reload, a conflict
       // re-read), so the page never drifts from what the document says.
@@ -158,6 +166,12 @@
         { value: AUTO_POPOVER_ALL, label: settingsCopy('autoPopoverAll', 'All') },
       ]
 
+      /** What the quick-provider trigger reads: how many, or nothing chosen. */
+      var quickSummary = function (chosen) {
+        if (chosen.length === 0) return settingsCopy('quickNone', 'None')
+        return settingsCopy('quickCount', '{count} providers', { count: chosen.length })
+      }
+
       var rows = [
         row(
           'username',
@@ -219,6 +233,22 @@
           toggle(prefs.modelPicker, function (value) { write({ modelPicker: value }) }),
         ),
         row(
+          'quickProviders',
+          settingsCopy('quickTitle', 'Quick providers'),
+          settingsCopy('quickDesc', 'Providers whose models the picker\'s first level lists, one rule between providers. Nothing picked keeps the default: the official service.'),
+          React.createElement('button', {
+            type: 'button',
+            ref: quickTrigger,
+            className: 'dsh-claude-settings-picker',
+            'aria-haspopup': 'menu',
+            'aria-expanded': 'false',
+            onClick: function () {
+              if (quickProviderApi === null || quickTrigger.current === null) return
+              quickProviderApi.toggle(quickTrigger.current, function (next) { write({ quickProviders: next }) })
+            },
+          }, quickSummary(prefs.quickProviders)),
+        ),
+        row(
           'banLocale',
           settingsCopy('banLocaleTitle', 'Account-hold easter egg language'),
           settingsCopy('banLocaleDesc', 'The language the account-hold page (click the account row in the sidebar footer popover) is written in. It is its own choice, so the page reads the way Claude wrote it whatever the interface language is.'),
@@ -278,6 +308,7 @@
         ui.settings = {
           sync: syncSettingsNav,
         }
+        quickProviderApi = ui.quickProviders || null
       }
       if (typeof ctx.inject !== 'function') return function () {}
       var fiber = ctx.inject(['slots'], function (scope) {
@@ -303,6 +334,7 @@
         if (ui && ui.settings) {
           delete ui.settings
         }
+        quickProviderApi = null
         try {
           if (fiber && typeof fiber.dispose === 'function') fiber.dispose()
         } catch (error) {

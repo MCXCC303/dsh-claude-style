@@ -688,7 +688,8 @@
           syncSegments()
           syncChatTabComposer()
         },
-        closeMenu: closePermMenu
+        closeMenu: closePermMenu,
+        closeStats: hideStatsPopover
       }
 
       return function () {
