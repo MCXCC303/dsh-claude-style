@@ -308,7 +308,11 @@ def compose_lockup(layers, word, boxes, text_boxes):
 def compose(brand, mark_body, mark_box, text_body, text_box, colour_body, word, keep=1.0, skip=0.0):
     """One lockup: the mark, the gap, then the wordmark, on a cap-band viewBox."""
     mark_w, mark_h = mark_box[2], mark_box[3]
-    text_w, text_h = text_box[2], text_box[3]
+    # Both halves are sized by their *ink*, never by their viewBox: Lobe's text
+    # variants carry trailing space inside the box (Gemini's noticeably so), and
+    # counting it made the gap after the lockup twice the intended width.
+    text_ink = ink_box(text_body)
+    text_w, text_h = text_ink[2] - text_ink[0], text_ink[3] - text_ink[1]
     # The gap is measured from the mark's ink, not its box: Lobe's icons carry
     # padding inside the 24-unit square (Gemini's sparkle is far narrower than its
     # box), and measuring the box left a visibly oversized gap before the wordmark.
@@ -346,7 +350,7 @@ def compose(brand, mark_body, mark_box, text_body, text_box, colour_body, word, 
     # drawn from (0,0) — Lobe's files are, so the extra term vanishes there.
     mark_dy = (1 - mark_height) / 2 - mark_box[1] * mark_scale
     text_dy = -cap_top * text_scale
-    text_dx = mark_width + gap - skip * art_width - text_box[0] * text_scale
+    text_dx = mark_width + gap - skip * art_width - text_ink[0] * text_scale
 
     width = mark_width + gap + span
     # The wordmark is shared by both canvases, so it is emitted once; only the mark
