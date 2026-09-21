@@ -164,7 +164,11 @@ body[data-dsh-claude-style] .dsh-claude-model-combine svg {
   width: auto !important;
   overflow: visible !important;
 }
-body[data-dsh-claude-style] .dsh-claude-model-combine .dsh-combine-mark-color {
+/* Dark canvas is the base: hide a *separate* colour layer. The `:not()` matters —
+   a hand-provided lockup is one layer carrying both classes so it shows on either
+   canvas, and a bare `.dsh-combine-mark-color` rule would hide it on the dark one
+   (which is how the ChatGPT knot went missing on warm black). */
+body[data-dsh-claude-style] .dsh-claude-model-combine .dsh-combine-mark-color:not(.dsh-combine-mark-mono) {
   display: none !important;
 }
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) .dsh-claude-model-combine .dsh-combine-mark-color {
