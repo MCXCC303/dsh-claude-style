@@ -633,8 +633,17 @@
       function bindStatsHover(root) {
         if (root.__dshStatsHoverBound) return
         root.__dshStatsHoverBound = true
-        root.addEventListener('mouseenter', function () { showStatsPopover(root) })
-        root.addEventListener('mouseleave', scheduleHideStatsPopover)
+        // Gated like the account, model and permission popovers. The setting promises
+        // "hover opens these; off makes them click-to-open", and the stats popover was
+        // the one that opened on hover no matter what — so it ignored the switch. With
+        // the setting off, a click still reaches the host's own stats dialog, which is
+        // exactly what that button is for.
+        root.addEventListener('mouseenter', function () {
+          if (readPrefs().autoPopover) showStatsPopover(root)
+        })
+        root.addEventListener('mouseleave', function () {
+          if (readPrefs().autoPopover) scheduleHideStatsPopover()
+        })
       }
 
       function syncStatsSummary() {

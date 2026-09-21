@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **会话统计弹层现在跟随「自动弹出弹层」设置**：账户、模型、权限三个弹层都检查了 `readPrefs().autoPopover`，只有会话统计那个漏了——`bindStatsHover` 无条件在 `mouseenter` 打开弹层，于是它无视开关、永远悬停即弹。现在与那三个对齐：关掉开关后悬停不再弹出，点击仍可打开宿主自己的统计对话框。
+- **「更多模型」弹层再收紧**：列间距 6 → 4px、分组间距 6 → 4px、分组标题上边距 6 → 4px（上一轮已把行内边距 4 → 3px）。
 - **锁定标不再回退到供应商，用不到的标一并删掉**：此前「没有规则认领的模型」会退回它所在 provider 的锁定标，于是 OpenCode 转售的 `LongCat-2.0` 戴上 OpenCode 自己的标——那不是缺一个标，而是给了一个错的标。现在没有规则命中就不画标（`modelBrand` 不再回退），`brands.providers` 随之清空，vendoring 的品牌集合只剩规则真正用到的那些：**43 → 25 个锁定标**，产物 **756 KB → 649 KB**（−107 KB）。
 - **新增 `longcat` 品牌与 `mimo` → `xiaomimimo` 规则**：OpenCode 转售的 `MiMo V2.5 Pro` 此前解析不到（没有 `mimo` 规则，于是落到 provider），现在命中；LongCat 用 Lobe 的 `longcat` 图标。
 - **OpenAI 的标在暖黑画布上不可见**：手工提供的 ChatGPT SVG 把颜色写在 `style="fill:#000000"` 里，而内联 style **优先于**呈现属性，所以 `fill="currentColor"` 的包装不生效——标是黑的，暖黑上等于没有。现在 vendoring 会清掉本地资产里带 fill 的内联 style，再补 `currentColor`。

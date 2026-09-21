@@ -38,7 +38,7 @@ body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-model-popover {
 body[data-dsh-claude-style] .dsh-claude-model-popover-body {
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  gap: 4px !important;
   min-width: 0 !important;
 }
 body[data-dsh-claude-style] .dsh-claude-model-status {
@@ -59,7 +59,7 @@ body[data-dsh-claude-style] .dsh-claude-model-group-section {
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  gap: 4px !important;
   min-width: 0 !important;
 }
 
@@ -69,7 +69,7 @@ body[data-dsh-claude-style] .dsh-claude-model-group-row {
   z-index: 6 !important;
   align-self: stretch !important;
   margin: 0 !important;
-  padding: 6px 8px 2px 8px !important;
+  padding: 4px 8px 1px 8px !important;
   background: var(--dsw-alias-bg-overlay, #ffffff) !important;
 }
 
