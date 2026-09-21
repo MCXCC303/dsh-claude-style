@@ -323,7 +323,9 @@ def main():
             skipped.append((brand, 'compose failed: %s' % error))
             continue
 
-        with open(os.path.join(OUT_DIR, '%s.svg' % brand), 'w', encoding='utf8') as fh:
+        # newline='' keeps the file LF on Windows too: git normalises on commit, but
+        # a CRLF working copy makes every later diff look dirty for no reason.
+        with open(os.path.join(OUT_DIR, '%s.svg' % brand), 'w', encoding='utf8', newline='\n') as fh:
             fh.write(svg + '\n')
         written.append(brand)
 
