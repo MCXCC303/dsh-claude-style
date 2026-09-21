@@ -62,6 +62,7 @@ const FRAGMENTS = [
   'overrides/model-picker.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
+  'overrides/theme-flip.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',
@@ -82,6 +83,7 @@ const STYLE_FILES = [
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },
   { file: 'components/settings.css' },
+  { file: 'components/theme-flip.css' },
 ]
 
 const HEADER = (() => {
