@@ -178,6 +178,36 @@ body[data-dsh-claude-style] .dsh-claude-model-name {
 body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='gemini'] .dsh-claude-model-name {
   font-family: var(--dsw-font-brand-gemini) !important;
 }
+/* The Kimi wordmark stands in for the word "Kimi" inside a row's label: the
+   vendor's own lettering, so the label keeps naming the vendor while the row
+   already wears its mark. Its height follows the label's own cap height — `cap`
+   is the font's cap-height unit, and the em value in front of it is the fallback
+   for browsers without that unit (Anthropic Sans measures cap 1440/2000, so the
+   two agree exactly on the shipped face). The 96×32 box scales from that height;
+   both declarations carry !important, or the fallback would win on order. */
+body[data-dsh-claude-style] .dsh-claude-model-wordmark {
+  display: inline-block !important;
+  height: 0.72em !important;
+  height: 1cap !important;
+  margin-right: 0.25em !important;
+  vertical-align: baseline !important;
+}
+body[data-dsh-claude-style] .dsh-claude-model-wordmark svg {
+  display: block !important;
+  height: 100% !important;
+  width: auto !important;
+}
+/* The word the mark stands in for stays in the accessibility tree: the mark is
+   decorative markup, so without this a screen reader would announce "K3" where
+   the row means "Kimi K3". */
+body[data-dsh-claude-style] .dsh-claude-model-wordmark-alt {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
 /* The row carries one description line, in the shell's language: the copy
    document is localized rather than stacked, so there is no second-language
    rule to style. */

@@ -110,3 +110,71 @@
       }
       return el
     }
+
+    /**
+     * Vendors whose label draws a wordmark: brand id → the word the mark stands
+     * in for. The markup itself is the build's WORDMARK_SVGS table, one file per
+     * brand id under src/assets/icons/wordmarks/ (see scripts/build.mjs).
+     */
+    var MODEL_WORDMARKS = { kimi: 'Kimi' }
+
+    /**
+     * The wordmark a label should draw, if any.
+     *
+     * Matched by brand id — the provider route, or the model's own rule, claimed
+     * the vendor — or by the word itself. That second path matters: a reseller
+     * lists a Kimi model under its own provider, so the row's brand resolves
+     * elsewhere while the catalog still spells the vendor in the name.
+     *
+     * @param brand - resolved brand id, or null.
+     * @param name - the catalog's display name.
+     * @returns `{ id, word }`, or null when no wordmark applies.
+     */
+    function modelWordmark(brand, name) {
+      for (var id in MODEL_WORDMARKS) {
+        var word = MODEL_WORDMARKS[id]
+        if (!WORDMARK_SVGS[id]) continue
+        if (brand === id || name.toLowerCase().indexOf(word.toLowerCase()) !== -1) return { id: id, word: word }
+      }
+      return null
+    }
+
+    /**
+     * One row's label.
+     *
+     * A vendor wordmark replaces the word it stands for, so the label keeps
+     * naming the vendor — in the vendor's own hand — while the row already wears
+     * the vendor's mark. A name that never spells the vendor (Kimi's own catalog
+     * calls the model "K3") leads with the mark instead, and the separator the
+     * word carried leaves with it, so the mark lands where the word was.
+     *
+     * The mark is decoration in the DOM, so the word it stands in for stays in
+     * the accessibility tree as hidden text: a screen reader has to hear
+     * "Kimi K3", not "K3", and the label is what names the row.
+     *
+     * @param name - the catalog's display name.
+     * @param brand - resolved brand id, or null.
+     * @returns the label element.
+     */
+    function buildModelName(name, brand) {
+      var el = modelEl('span', 'dsh-claude-model-name')
+      var text = typeof name === 'string' ? name : ''
+      var mark = modelWordmark(brand, text)
+      if (mark === null) {
+        el.textContent = text
+        return el
+      }
+      var at = text.toLowerCase().indexOf(mark.word.toLowerCase())
+      // The word's own separator goes with the word: the mark's margin stands in
+      // for it, so the label does not end up with two gaps.
+      var tail = at === -1 ? text : text.slice(at + mark.word.length).replace(/^[\s\-–—]+/, '')
+      var box = modelEl('span', 'dsh-claude-model-wordmark')
+      // Decorative: the hidden word below carries the name for assistive tech.
+      box.setAttribute('aria-hidden', 'true')
+      box.innerHTML = WORDMARK_SVGS[mark.id]
+      if (at > 0) el.appendChild(document.createTextNode(text.slice(0, at)))
+      el.appendChild(modelEl('span', 'dsh-claude-model-wordmark-alt', tail ? mark.word + ' ' : mark.word))
+      el.appendChild(box)
+      el.appendChild(document.createTextNode(tail))
+      return el
+    }

@@ -9,6 +9,7 @@
  *   src/constants.js             constants & tokens (evaluated to substitute
  *                                %%TOKEN%% placeholders); brand SVGs live in src/assets/
  *   src/assets/icons/lobe/*.svg        model-vendor marks, inlined as a JS markup table
+ *   src/assets/icons/wordmarks/*.svg   vendor wordmarks, inlined the same way
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
@@ -34,6 +35,8 @@ const ASSETS = path.join(SRC, 'assets')
 const BRAND_ASSETS = path.join(ASSETS, 'brand')
 /** Vendored Lobe Icons marks (src/assets/icons/lobe/README.md); one SVG per brand id. */
 const LOBE_ASSETS = path.join(ASSETS, 'icons', 'lobe')
+/** Vendored vendor wordmarks (src/assets/icons/wordmarks); one SVG per brand id. */
+const WORDMARK_ASSETS = path.join(ASSETS, 'icons', 'wordmarks')
 /** Vendored cc-switch provider icons (src/assets/icons/providers); source is its index.ts. */
 const PROVIDER_ASSETS = path.join(ASSETS, 'icons', 'providers')
 /** Host route the browser half uses for raster provider icons. */
@@ -261,6 +264,33 @@ function loadLobeIcons() {
 }
 
 /**
+ * The vendored vendor wordmarks, keyed by brand id.
+ *
+ * Same markup-in-bundle treatment as the Lobe marks (see loadLobeIcons), but a
+ * wordmark stands in for a *word* inside a row's label rather than for the mark
+ * beside it, so it is keyed by the brand id the copy document already binds.
+ * The directory is optional: a vendor without a wordmark simply has no file.
+ *
+ * @returns brand id → normalised single-line SVG markup.
+ */
+function loadWordmarks() {
+  const out = {}
+  if (!fs.existsSync(WORDMARK_ASSETS)) return out
+  for (const name of fs.readdirSync(WORDMARK_ASSETS).sort()) {
+    if (!name.endsWith('.svg')) continue
+    const id = name.slice(0, -4)
+    const svg = fs.readFileSync(path.join(WORDMARK_ASSETS, name), 'utf8').replace(/\r\n/g, '\n').trim()
+    if (!svg.startsWith('<svg') || !svg.includes('viewBox=')) {
+      throw new Error(`build: src/assets/icons/wordmarks/${name} is not a scalable SVG (needs <svg viewBox=…>)`)
+    }
+    if (svg.includes('</') && /<\/script/i.test(svg)) throw new Error(`build: src/assets/icons/wordmarks/${name} carries a script end tag`)
+    if (svg.includes('\n')) throw new Error(`build: src/assets/icons/wordmarks/${name} is multi-line`)
+    out[id] = svg
+  }
+  return out
+}
+
+/**
  * Vendored cc-switch provider icons, mirroring its `index.ts` declaration.
  *
  * cc-switch keeps inline SVG strings in `icons` and imported asset URLs in
@@ -417,6 +447,7 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
 function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
   const lobeIcons = loadLobeIcons()
+  const wordmarks = loadWordmarks()
   const providerIcons = loadProviderIcons()
 
   const cssText = STYLE_FILES
@@ -447,6 +478,18 @@ function main() {
     '    // ============================================================================',
     '    var LOBE_BRAND_SVGS = {',
     ...Object.entries(lobeIcons).map(([id, svg]) => `      ${JSON.stringify(id)}: ${JSON.stringify(svg)},`),
+    '    }',
+  ].join('\n')
+
+  // Vendor wordmarks ride the bundle the same way (see loadWordmarks). Keyed by
+  // brand id, which is also how MODEL_WORDMARKS in model-brand.js names the word
+  // each mark stands in for.
+  const wordmarkDecl = [
+    '    // ============================================================================',
+    '    // 厂商字标（由 src/assets/icons/wordmarks/*.svg 内联生成，勿手改） (Vendor wordmarks)',
+    '    // ============================================================================',
+    '    var WORDMARK_SVGS = {',
+    ...Object.entries(wordmarks).map(([id, svg]) => `      ${JSON.stringify(id)}: ${JSON.stringify(svg)},`),
     '    }',
   ].join('\n')
 
@@ -481,6 +524,7 @@ function main() {
     fragment(FRAGMENTS[0]),
     cssDecl,
     brandDecl,
+    wordmarkDecl,
     providerDecl,
     ...FRAGMENTS.slice(1).map(fragment),
     FOOTER,
@@ -511,7 +555,7 @@ function main() {
   }
 
   const lines = bundle.split('\n').length
-  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(lobeIcons).length} Lobe marks + ${Object.keys(providerIcons.icons).length} provider icons)`)
+  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(lobeIcons).length} Lobe marks + ${Object.keys(wordmarks).length} wordmarks + ${Object.keys(providerIcons.icons).length} provider icons)`)
 
   const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
   const exact = validateModelCopy(copy, lobeIcons, providerIcons.icons)

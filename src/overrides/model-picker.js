@@ -262,7 +262,7 @@
         if (brand) item.setAttribute('data-brand', brand)
         item.appendChild(buildModelBrand(brand))
         var copy = modelEl('span', 'dsh-claude-model-copy')
-        copy.appendChild(modelEl('span', 'dsh-claude-model-name', model.name))
+        copy.appendChild(buildModelName(model.name, brand))
         // One line, in the shell's language: the copy document is localized, so
         // the row never stacks two languages.
         var desc = modelDescription(group.id, model)
