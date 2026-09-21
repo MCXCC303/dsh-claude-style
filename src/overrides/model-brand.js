@@ -3,7 +3,7 @@
     // ============================================================================
     // 从 model-picker.js 抽出（体量停止线：该文件已达 737/750 行）。碎片共享一个
     // 工厂作用域，所以这里能直接看到 context/model-copy.js 的 modelCopy 与构建生成
-    // 的 COMBINE_SVGS / COMBINE_WORDS / PROVIDER_ICON_KEYS / PROVIDER_ICON_METADATA，
+    // 的 COMBINE_SVGS / COMBINE_WORDS，
     // 不需要 import；函数声明会提升，所以本文件在 build.mjs 的 FRAGMENTS 里的位置
     // 不影响调用。
     //
@@ -15,48 +15,6 @@
       if (cls) el.className = cls
       if (text !== void 0 && text !== null) el.textContent = text
       return el
-    }
-
-    /**
-     * The brand mark for a provider route, from the copy document's
-     * `brands.providers`. That table is keyed by the same provider id the
-     * picker receives as a group id, so this is an exact lookup.
-     *
-     * @param groupId - provider route id.
-     * @returns the vendored mark's id, or null when this provider has none.
-     */
-    function normalizeIconKey(value) {
-      return String(value === void 0 || value === null ? '' : value).toLowerCase().replace(/[^a-z0-9]+/g, '')
-    }
-
-    /**
-     * Map one provider/model id to a vendored icon name by exact normalized
-     * match. The copy document's `brands` table carries the curated
-     * provider/model → icon mapping; this is only the fallback for ids the
-     * table does not mention.
-     */
-    function providerIconName(value) {
-      var raw = String(value === void 0 || value === null ? '' : value).toLowerCase()
-      if (raw && PROVIDER_ICON_KEYS[raw]) return raw
-      var key = normalizeIconKey(value)
-      if (!key) return null
-      if (PROVIDER_ICON_KEYS[key]) return key
-      for (var name in PROVIDER_ICON_METADATA) {
-        var meta = PROVIDER_ICON_METADATA[name]
-        var candidates = [meta.name, meta.displayName]
-        if (meta.keywords) candidates = candidates.concat(meta.keywords)
-        for (var i = 0; i < candidates.length; i++) {
-          if (normalizeIconKey(candidates[i]) === key) return name
-        }
-      }
-      return null
-    }
-
-    function providerBrand(groupId) {
-      var id = String(groupId === void 0 || groupId === null ? '' : groupId)
-      var brand = modelCopy === null ? null : (modelCopy.providerBrands[id] || modelCopy.providerBrands[id.toLowerCase()])
-      if (typeof brand === 'string' && brand) return brand
-      return providerIconName(id)
     }
 
     /**

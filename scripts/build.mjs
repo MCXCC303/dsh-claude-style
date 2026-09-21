@@ -10,8 +10,6 @@
  *                                %%TOKEN%% placeholders); brand SVGs live in src/assets/
  *   src/assets/icons/combine/*.svg     vendor lockups (mark + wordmark in one),
  *                                inlined as JS markup tables
- *   src/assets/icons/providers/*       cc-switch provider icons; only the keys
- *                                ride the bundle, the rest is brand data
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
@@ -37,10 +35,6 @@ const ASSETS = path.join(SRC, 'assets')
 const BRAND_ASSETS = path.join(ASSETS, 'brand')
 /** Vendored vendor lockups (src/assets/icons/combine); mark + wordmark per brand id. */
 const COMBINE_ASSETS = path.join(ASSETS, 'icons', 'combine')
-/** Vendored cc-switch provider icons (src/assets/icons/providers); source is its index.ts. */
-const PROVIDER_ASSETS = path.join(ASSETS, 'icons', 'providers')
-/** Host route the browser half uses for raster provider icons. */
-const PROVIDER_ROUTE = '/dsh-claude-style/icons/providers/'
 const LIB = path.join(ROOT, 'lib')
 const OUT = path.join(LIB, 'client.js')
 
@@ -265,70 +259,6 @@ function loadCombines() {
   return out
 }
 
-/**
- * Vendored cc-switch provider icons, mirroring its `index.ts` declaration.
- *
- * cc-switch keeps inline SVG strings in `icons` and imported asset URLs in
- * `iconUrls`; metadata carries display names, categories, keywords and a
- * default colour. We keep the same split: inline SVGs ride the bundle,
- * raster/imported files are served by the host half from lib/icons/providers/.
- *
- * @returns { icons, urlKeys, metadata }.
- */
-function loadProviderIcons() {
-  const indexText = fs.readFileSync(path.join(PROVIDER_ASSETS, 'index.ts'), 'utf8')
-  const metadataText = fs.readFileSync(path.join(PROVIDER_ASSETS, 'metadata.ts'), 'utf8')
-
-  const imports = new Map()
-  const importRe = /import\s+(_\w+)\s+from\s+["']\.\/([^"']+)["'];/g
-  let match
-  while ((match = importRe.exec(indexText))) {
-    const varName = match[1]
-    const file = match[2].replace(/\?url$/, '')
-    imports.set(varName, PROVIDER_ROUTE + file)
-  }
-
-  const importDecls = [...imports.entries()].map(([name, url]) => `var ${name} = ${JSON.stringify(url)};`).join('\n')
-
-  function extractObject(text, marker) {
-    const start = text.indexOf(marker)
-    if (start === -1) throw new Error(`build: provider icon source is missing ${marker}`)
-    const brace = text.indexOf('{', start)
-    let depth = 0
-    let i = brace
-    for (; i < text.length; i += 1) {
-      const ch = text[i]
-      if (ch === '{') depth += 1
-      else if (ch === '}') {
-        depth -= 1
-        if (depth === 0) break
-      } else if (ch === '`') {
-        i += 1
-        while (i < text.length) {
-          if (text[i] === '\\') { i += 2; continue }
-          if (text[i] === '`') break
-          i += 1
-        }
-      } else if (ch === '"' || ch === "'") {
-        const quote = ch
-        i += 1
-        while (i < text.length) {
-          if (text[i] === '\\') { i += 2; continue }
-          if (text[i] === quote) break
-          i += 1
-        }
-      }
-    }
-    return text.slice(brace, i + 1)
-  }
-
-  const icons = new Function(`${importDecls}\nreturn ${extractObject(indexText, 'export const icons')};`)()
-  const iconUrls = new Function(`${importDecls}\nreturn ${extractObject(indexText, 'export const iconUrls')};`)()
-  const metadata = new Function(`return ${extractObject(metadataText, 'export const iconMetadata')};`)()
-
-  return { icons: { ...icons, ...iconUrls }, urlKeys: Object.keys(iconUrls), metadata }
-}
-
 /** Substitute %%TOKEN%% placeholders in one stylesheet; throws on leftovers. */
 function substitute(file, text, tokens) {
   const out = text.replace(/%%([A-Z_]+)%%/g, (match, name) => {
@@ -347,16 +277,15 @@ function substitute(file, text, tokens) {
  * language, or a document with no `exact` table at all.
  *
  * Brand bindings are checked too: every id named by `brands.providers` and
- * `brands.models[].brand` must be a vendored lockup under src/assets/icons/combine/
- * or a known provider icon key, and every
- * model rule must compile — a typo there would otherwise render as a silently
- * missing mark on one row.
+ * `brands.models[].brand` must be a vendored lockup under src/assets/icons/combine/,
+ * and every model rule must compile — a typo there would otherwise render as a
+ * silently missing mark on one row.
  *
  * @param doc - parsed `src/model-descriptions.json`.
  * @param brands - vendored brand ids (loadLobeIcons keys).
  * @returns the number of exact entries, for the build log.
  */
-function validateModelCopy(doc, lobeBrands, providerBrands) {
+function validateModelCopy(doc, lobeBrands) {
   const fail = (message) => {
     throw new Error(`build: ${MODEL_COPY} ${message}`)
   }
@@ -366,7 +295,7 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
 
   const requireBrand = (where, brand) => {
     if (typeof brand !== 'string' || brand === '') fail(`${where} is not a brand id string`)
-    if (!(brand in lobeBrands) && !(brand in providerBrands)) fail(`${where} names brand "${brand}", which has no vendored lockup in src/assets/icons/combine/ and no provider icon in src/assets/icons/providers/`)
+    if (!(brand in lobeBrands)) fail(`${where} names brand "${brand}", which has no vendored lockup in src/assets/icons/combine/`)
   }
 
   const locales = new Set([doc.fallback])
@@ -423,8 +352,6 @@ function validateModelCopy(doc, lobeBrands, providerBrands) {
 function main() {
   const tokens = { ...loadTokens(), ...loadSvgAssets() }
   const combines = loadCombines()
-  const providerIcons = loadProviderIcons()
-  const providerKeys = Object.fromEntries(Object.keys(providerIcons.icons).map((key) => [key, true]))
 
   const cssText = STYLE_FILES
     .map((fileDef) => {
@@ -458,16 +385,6 @@ function main() {
     '    }',
   ].join('\n')
 
-  // cc-switch provider icons: inline SVGs in PROVIDER_ICONS, imported/raster
-  // entries as host-route URLs; metadata mirrors its metadata.ts.
-  const providerDecl = [
-    '    // ============================================================================',
-    '    // 供应商/厂商图标（来自 cc-switch src/icons/extracted，勿手改） (Provider icons)',
-    '    // ============================================================================',
-    '    var PROVIDER_ICON_KEYS = ' + JSON.stringify(providerKeys, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
-    '    var PROVIDER_ICON_METADATA = ' + JSON.stringify(providerIcons.metadata, null, 2).split('\n').map((line) => '    ' + line).join('\n'),
-  ].join('\n')
-
   const fragment = (name) => {
     const text = fs.readFileSync(path.join(SRC, name), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '')
     const lines = text.split('\n')
@@ -488,7 +405,6 @@ function main() {
     fragment(FRAGMENTS[0]),
     cssDecl,
     combineDecl,
-    providerDecl,
     ...FRAGMENTS.slice(1).map(fragment),
     FOOTER,
   ].join('\n\n')
@@ -506,22 +422,11 @@ function main() {
 
   fs.writeFileSync(OUT, bundle)
 
-  // Provider icons are served by the host half from lib/icons/providers/.
-  const providerOut = path.join(LIB, 'icons', 'providers')
-  fs.rmSync(providerOut, { recursive: true, force: true })
-  fs.mkdirSync(providerOut, { recursive: true })
-  let providerFileCount = 0
-  for (const name of fs.readdirSync(PROVIDER_ASSETS)) {
-    if (name.endsWith('.ts')) continue
-    fs.copyFileSync(path.join(PROVIDER_ASSETS, name), path.join(providerOut, name))
-    providerFileCount += 1
-  }
-
   const lines = bundle.split('\n').length
-  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(combines).length} lockups + ${Object.keys(providerIcons.icons).length} provider icons)`)
+  console.log(`built lib/client.js (${lines} lines, ${bundle.length} bytes) from src/ (${STYLE_FILES.length} stylesheets + ${FRAGMENTS.length} fragments + ${Object.keys(combines).length} lockups)`)
 
   const copy = JSON.parse(fs.readFileSync(path.join(SRC, MODEL_COPY), 'utf8'))
-  const exact = validateModelCopy(copy, combines, providerKeys)
+  const exact = validateModelCopy(copy, combines)
   fs.writeFileSync(path.join(LIB, MODEL_COPY), JSON.stringify(copy, null, 2) + '\n')
   console.log(`built lib/${MODEL_COPY} (${exact} exact entries, ${copy.families.length} family rules, ${copy.tiers.length} tier rules)`)
 }
