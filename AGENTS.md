@@ -16,6 +16,7 @@
 ```sh
 npm run build            # 拼接 src/ → lib/client.js，校验 %%TOKEN%%、CSS gate、语法与 model-descriptions.json
 node scripts/probe.cjs --token <launch-token>   # 无头 Chrome 对运行中的 GUI 断言 composer 不变量
+node scripts/probe-timing.cjs --token <launch-token>   # 分项计时：启动长任务与资源、模型目录就绪、打开延迟、行构成、字标 markup 解析、堆
 node scripts/shoot.cjs --token <launch-token>   # 重拍 README 截图（docs/light.png / docs/dark.png）
 ```
 
