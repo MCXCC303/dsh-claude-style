@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **composer 形态判断从 CSS 结构感知的 `:has()` 改为 JS 写属性，降低流式输出期间的样式重算开销**：皮肤原先用约 60 处 `[class*="composerStack"]` 上的 hero/inline 分支（`[class*="composerStack"]:has([class*="heroWorkspaceRow"])` 及其 `:not()` 形式）在 CSS 里判断输入卡处于主屏 hero 形态还是会话内联形态。流式输出时每秒几十次 DOM 变更，每次都要重算这些昂贵的选择器，是渲染压力的主要来源。现在 `syncSegments()` 在每轮 pass 里把同一个 `data-composer-variant="hero|inline"` 属性镜像写到卡片所属的 `composerStack` 祖先上（写前比对旧值避免同值重复写触发无谓的样式失效，同轮去重避免多卡命中同一栈反复写），CSS 改为直接读属性：hero 分支读 `[class*="composerStack"][data-composer-variant="hero"]`，inline 分支读 `[class*="composerStack"]:not([data-composer-variant="hero"])`。属性缺席时按 inline 渲染——inline 是流式高频路径，首帧不闪；hero 屏无流式，属性在首个 pass 补上即可。交互驱动与低频的 `:has()`（`:hover`、`:focus-within`、弹窗、placeholder）按原样保留。
 - **去 AI 化与精简**：清理 `.debug/` 临时调试日志与历史规划文档；移除 `src/overrides/` 拆分残留的旧章节编号与重复注释；精简 README 冗余功能表格并修正更新日志中对内部开发路径的提及。
 
 ### Fixed

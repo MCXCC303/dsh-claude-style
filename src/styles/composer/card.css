@@ -99,22 +99,22 @@ body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card]:focus-withi
 /* New-conversation composer: keep the pure card fill and the real drop
    shadow; remove only the background-colored (--dsw-alias-bg-base) halo
    layers, which are what read as a glow/shadow around the home dialog. */
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card],
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"][data-composer-variant="hero"] [data-composer-card],
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card] {
   box-shadow: 0 4px 12px rgba(20, 20, 19, 0.04), 0 1px 3px rgba(20, 20, 19, 0.02) !important;
 }
 
-body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card],
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"][data-composer-variant="hero"] [data-composer-card],
 body[data-dsh-claude-style][data-ds-dark-theme] :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card] {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card]:focus-within,
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"][data-composer-variant="hero"] [data-composer-card]:focus-within,
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card]:focus-within {
   box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.065), 0 6px 18px rgba(20, 20, 19, 0.03), 0 2px 6px rgba(20, 20, 19, 0.015) !important;
 }
 
-body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card]:focus-within,
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"][data-composer-variant="hero"] [data-composer-card]:focus-within,
 body[data-dsh-claude-style][data-ds-dark-theme] :is([class*="composerHero"], [data-phase="hero"]) [data-composer-card]:focus-within {
   box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 6px 24px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.11) !important;
 }
@@ -178,23 +178,23 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_chevron"] {
    equal-width tray (z-index: 1) attached directly to the bottom of the card,
    with transparent background (inheriting the canvas tone #fcfcfb),
    left/right/bottom border, and 18px rounded bottom corners. */
-body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) {
+body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] {
   --dsh-claude-bar-h: 96px;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) *:has([data-composer-card]) {
+body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] *:has([data-composer-card]) {
   order: 1;
   padding-bottom: 0 !important;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) [data-composer-card] {
+body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] [data-composer-card] {
   gap: 8px !important;
   padding-bottom: 2px !important;
   min-height: 0 !important;
   height: auto !important;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"]:has([class*="heroWorkspaceRow"]) > [class*="heroWorkspaceRow"] {
+body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] > [class*="heroWorkspaceRow"] {
   order: 2;
   position: relative;
   z-index: 1;

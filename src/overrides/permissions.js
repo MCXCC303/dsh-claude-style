@@ -334,9 +334,25 @@
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
       function syncSegments() {
         var isHero = ui.copy.isHeroView()
+        var value = isHero ? 'hero' : 'inline'
         var allCards = document.querySelectorAll('[data-composer-card]')
+        // Mirror the variant onto the card's composerStack ancestor, so
+        // stack-scoped rules read an attribute instead of re-deriving
+        // hero/inline through :has() on every DOM mutation. Write only when
+        // the value differs (re-setting the same value still invalidates
+        // the element's styles), and once per stack even when several cards
+        // share one.
+        var syncedStacks = []
         for (var c = 0; c < allCards.length; c++) {
-          allCards[c].setAttribute('data-composer-variant', isHero ? 'hero' : 'inline')
+          var card = allCards[c]
+          card.setAttribute('data-composer-variant', value)
+          var stack = card.closest('[class*="composerStack"]')
+          if (stack !== null && syncedStacks.indexOf(stack) === -1) {
+            if (stack.getAttribute('data-composer-variant') !== value) {
+              stack.setAttribute('data-composer-variant', value)
+            }
+            syncedStacks.push(stack)
+          }
         }
 
         var composerOn = ui.copy.isComposerActive()
