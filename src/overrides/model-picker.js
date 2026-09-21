@@ -401,11 +401,12 @@
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
           // When the active model is not on the official service, surface it under
           // the official list so the current seat is still visible before the
-          // effort/More rows. It reads `provider/model` in display names rather
-          // than ids — except when the model carries a wordmark: a wordmark *is*
-          // the vendor's name, so a provider prefix would name the vendor twice
-          // and that row drops it. It carries a description like any level-1 row,
-          // because this is the row the seat is read from.
+          // effort/More rows. It reads `model (provider)` in display names, never
+          // ids, and the provider trails the model instead of leading it: a
+          // wordmark may stand at the front of the label, and the seat has to say
+          // both which model it is on and which provider serves it — a wordmark
+          // names the vendor, not the route. It carries a description like any
+          // level-1 row, because this is the row the seat is read from.
           if (current !== null && current.group.id !== MODEL_OFFICIAL_GROUP) {
             var currentRow = modelEl('button', 'dsh-claude-model-option')
             currentRow.type = 'button'
@@ -419,9 +420,10 @@
             currentRow.appendChild(buildModelBrand(currentBrand))
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
             var currentLabel = buildModelName(currentName, currentBrand)
-            if (current.group.name && modelWordmark(currentBrand, currentName) === null) {
-              currentLabel.insertBefore(document.createTextNode(current.group.name + '/'), currentLabel.firstChild)
-            }
+            // The provider's own display name; the route id only stands in when
+            // the catalog gives the group no name.
+            var currentProvider = current.group.name || current.group.id
+            if (currentProvider) currentLabel.appendChild(document.createTextNode(' (' + currentProvider + ')'))
             currentCopy.appendChild(currentLabel)
             var currentDesc = modelDescription(current.group.id, current.model)
             if (currentDesc) currentCopy.appendChild(modelEl('span', 'dsh-claude-model-desc', currentDesc))
