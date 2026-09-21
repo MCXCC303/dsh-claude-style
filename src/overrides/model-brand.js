@@ -113,10 +113,16 @@
 
     /**
      * Vendors whose label draws a wordmark: brand id → the word the mark stands
-     * in for. The markup itself is the build's WORDMARK_SVGS table, one file per
-     * brand id under src/assets/icons/wordmarks/ (see scripts/build.mjs).
+     * in for. One SVG per brand id under src/assets/icons/wordmarks/, inlined by
+     * the build into WORDMARK_SVGS.
+     *
+     * DeepSeek's is vendored even though the harness draws one of its own: the
+     * host's `BrandWordmark` is a lockup rather than a bare wordmark — with
+     * `includeMark: false` it still paints a rounded "HARNESS" badge after the
+     * lettering — so a row that wants the vendor's name alone cannot use it as it
+     * stands.
      */
-    var MODEL_WORDMARKS = { kimi: 'Kimi' }
+    var MODEL_WORDMARKS = { kimi: 'Kimi', deepseek: 'DeepSeek' }
 
     /**
      * The wordmark a label should draw, if any.

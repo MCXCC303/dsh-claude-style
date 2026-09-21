@@ -369,16 +369,24 @@
           }
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-divider'))
           // When the active model is not on the official service, surface it
-          // under the official list as `provider/model` so the current seat is
-          // still visible before the effort/More rows.
+          // under the official list so the current seat is still visible before
+          // the effort/More rows. It is labelled like every other row — the
+          // catalog's own name for the model, never `provider/model`: those ids
+          // are the store's vocabulary, and this row is the one place the seat is
+          // read rather than chosen.
           if (current !== null && current.group.id !== MODEL_OFFICIAL_GROUP) {
             var currentRow = modelEl('button', 'dsh-claude-model-option')
             currentRow.type = 'button'
             currentRow.setAttribute('role', 'menuitemradio')
             currentRow.setAttribute('aria-checked', 'true')
-            currentRow.appendChild(buildModelBrand(modelBrand(current.group.id, current.model.id)))
+            var currentBrand = modelBrand(current.group.id, current.model.id)
+            // The brand id is the row's styling hook here too, so this row wears
+            // the same vendor mark and face as the list entry it stands for.
+            if (currentBrand) currentRow.setAttribute('data-brand', currentBrand)
+            currentRow.appendChild(buildModelBrand(currentBrand))
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
-            currentCopy.appendChild(modelEl('span', 'dsh-claude-model-name', current.group.id + '/' + current.model.id))
+            // The catalog's name; the id only stands in for a nameless entry.
+            currentCopy.appendChild(buildModelName(current.model.name || current.model.id, currentBrand))
             currentRow.appendChild(currentCopy)
             var currentCheck = modelEl('span', 'dsh-claude-model-check')
             currentCheck.innerHTML = MODEL_CHECK_SVG
