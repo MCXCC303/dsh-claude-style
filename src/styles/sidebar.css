@@ -250,21 +250,22 @@ body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-ws-segment[aria-chec
   color: #f5f4ef !important;
   box-shadow: none !important;
 }
+/* The host's view-options menu is opened for real while the skin drives its
+   archived filter (workspace-view.js); hiding it keeps that drive invisible. */
+body[data-dsh-claude-ws-driving] [class*="viewOptionsMenu"] {
+  visibility: hidden !important;
+}
+/* A workspace with nothing archived in it has no business in the archived view:
+   its row carries the host's own delete action, and deleting a workspace takes
+   its live conversations with it. */
+body[data-dsh-claude-style] [data-dsh-claude-ws-empty] {
+  display: none !important;
+}
 /* The host renders the archived list itself (its own 视图选项 filter, driven by
-   workspace-view.js); the skin only adds the delete button, absolutely placed so
-   the host's row layout is untouched, and fades the row's timestamp out on hover
-   to make room for it. */
-body[data-dsh-claude-style] [data-dsh-claude-archive-row] {
-  position: relative !important;
-}
-body[data-dsh-claude-style] [data-dsh-claude-archive-row]:hover [class*="time"] {
-  opacity: 0 !important;
-}
+   workspace-view.js); the skin only adds the delete button, which sits inside
+   the host's own row-actions span — beside its unarchive button rather than over
+   it. */
 body[data-dsh-claude-style] .dsh-claude-archive-delete {
-  position: absolute !important;
-  right: 4px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;

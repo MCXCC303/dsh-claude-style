@@ -20,6 +20,10 @@
       var VIEW_ATTR = 'data-dsh-claude-ws-view'
       var LABEL_ATTR = 'data-dsh-claude-ws-label'
       var ROW_ATTR = 'data-dsh-claude-archive-row'
+      /** Set on a workspace row that holds no archived session. */
+      var EMPTY_ATTR = 'data-dsh-claude-ws-empty'
+      /** Set on <body> while the host's menu is being driven invisibly. */
+      var DRIVING_ATTR = 'data-dsh-claude-ws-driving'
       var SEGMENTS = [
         { id: 'active', key: 'archiveActive', fallback: 'Active' },
         { id: 'archived', key: 'archiveArchived', fallback: 'Archived' }
@@ -141,21 +145,32 @@
        * Drive the host's filter to `target` through its own menu. The items
        * toggle, so the item that is currently on is switched off first and the
        * wanted one switched on — one click each, never a guess.
+       *
+       * The menu is opened for real, so the skin hides it for the duration (a
+       * body flag plus one CSS rule): the drive is an implementation detail and
+       * must not flash a popover in the user's face. Hiding, not removing, keeps
+       * the items clickable.
        */
       function pickFilter(target) {
         var label = findSection()
         if (label === null || label.parentElement === null) return
         var button = optionsButton(label.parentElement)
         if (button === null) return
+        document.body.setAttribute(DRIVING_ATTR, '')
         button.click()
         waitFor(function () { return findItem(ITEM_ONLY) !== null }, 25, 60).then(function (opened) {
-          if (!opened) return
+          if (!opened) {
+            document.body.removeAttribute(DRIVING_ATTR)
+            return
+          }
           var current = menuFilter()
           if (current === 'only') findItem(ITEM_ONLY).click()
           else if (current === 'show') findItem(ITEM_SHOW).click()
           if (target === 'only') findItem(ITEM_ONLY).click()
           button.click()
           archived = null
+          // One more frame for React to unmount the portal, then stop hiding.
+          setTimeout(function () { document.body.removeAttribute(DRIVING_ATTR) }, 120)
         })
       }
 
@@ -199,6 +214,46 @@
         }).catch(function () { /* the row stays; the next read tells the truth */ })
       }
 
+      /**
+       * Which workspaces still hold an archived session. The archived filter
+       * lists every workspace, empty ones included, and a workspace row carries
+       * the host's own delete action — on a workspace whose conversations are
+       * merely archived, that is a loaded gun. Groups we cannot judge (the
+       * ungrouped bucket has no entry in the store) are left alone rather than
+       * hidden on a guess.
+       */
+      function workspacesWithArchived() {
+        var map = {}
+        if (archived === null) return map
+        var workspaces = service('workspaces')
+        var snapshot = null
+        try { snapshot = workspaces !== undefined && workspaces !== null && workspaces.list ? workspaces.list.getSnapshot() : null } catch (error) { snapshot = null }
+        var items = (snapshot && snapshot.items) || []
+        for (var i = 0; i < items.length; i++) {
+          var ids = items[i].sessionIds || []
+          for (var j = 0; j < ids.length; j++) {
+            if (archived[ids[j]] === true) {
+              map[items[i].workspaceId] = true
+              break
+            }
+          }
+        }
+        return map
+      }
+
+      /** Hide the workspace rows that hold nothing archived, in the archived view. */
+      function markGroups() {
+        var rows = document.querySelectorAll('[data-row-key^="workspace:"]')
+        var keep = workspacesWithArchived()
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i]
+          var id = row.getAttribute('data-row-key').slice(10)
+          var empty = id !== '' && view === 'archived' && keep[id] !== true
+          if (empty) row.setAttribute(EMPTY_ATTR, '')
+          else row.removeAttribute(EMPTY_ATTR)
+        }
+      }
+
       /** Stamp the delete button onto every archived session row. */
       function markRows() {
         var rows = document.querySelectorAll('[data-row-key^="session:"]')
@@ -221,11 +276,15 @@
           button.addEventListener('click', function (event) {
             event.stopPropagation()
             event.preventDefault()
-            var owner = event.currentTarget.parentElement
+            var owner = event.currentTarget.closest('[data-row-key^="session:"]')
             var sessionId = owner === null ? null : owner.getAttribute('data-row-key')
             if (sessionId !== null) removeArchived(sessionId.slice(8))
           })
-          row.appendChild(button)
+          // Sit BESIDE the host's own row actions — an archived row carries a
+          // hover unarchive button there — instead of floating over them.
+          var actions = row.querySelector('[class*="_rowActions"]')
+          if (actions !== null) actions.insertBefore(button, actions.firstChild)
+          else row.appendChild(button)
         }
       }
 
@@ -320,6 +379,7 @@
             }
           }
           markRows()
+          markGroups()
         }
       }
 
