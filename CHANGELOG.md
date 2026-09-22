@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2026-09-22
 
 ### Added
 - **插件页有了自己的图标（DSH 0.1.7）**：0.1.7 的插件清单会读 `package.json` 的 `icon`——必须是**相对清单的路径**、SVG/PNG/JPEG/WebP、realpath 后仍留在包目录内、且不超过 256 KiB（绝对路径与 URL 一律拒绝）；宿主把文件读成 base64 data URI 交给插件卡片与详情页上的 `<img>`，失败只在这张卡片上留一条 `meta.error`，不影响插件本身。这里填的是**陶烬橙的 Claude 星芒**：源文件 `src/assets/brand/claude-mark-clay.svg`，构建期复制到 `lib/claude-mark.svg`（与模型文案同一套「源在 `src/`、`lib/` 是产物」的做法，`files` 里的 `lib` 已覆盖它，无需新增条目）。选 clay 版而不是纯黑版是有原因的：图标以 `<img>` 渲染、拿不到 `currentColor`，纯黑星芒在暖黑画布上会消失，陶烬橙两态都读得出。
