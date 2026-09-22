@@ -123,6 +123,10 @@ body[data-dsh-claude-style] button[class*="newSession"]::before {
   margin-right: 0 !important;
   flex: none !important;
   border-radius: 50% !important;
+  /* The page inherits `corner-shape: superellipse(1.5)` from <html>, which turns
+     a 50% radius into a pebble. True circles say so — exactly what the host's
+     own spinner/dot/toggle rules do. */
+  corner-shape: round !important;
   background-color: rgba(0, 0, 0, 0.10) !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141413' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='6' x2='12' y2='18'></line><line x1='6' y1='12' x2='18' y2='12'></line></svg>") !important;
   background-repeat: no-repeat !important;
@@ -363,6 +367,7 @@ body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"]:empty::after {
   width: 5px;
   height: 5px;
   border-radius: 50%;
+  corner-shape: round;
   border: 1.2px solid var(--dsw-alias-label-caption, #a6a094);
   box-sizing: border-box;
 }
@@ -373,6 +378,7 @@ body[data-dsh-claude-style] svg[data-state="ongoing"] {
   height: 10px !important;
   box-sizing: border-box !important;
   border-radius: 50% !important;
+  corner-shape: round !important;
   border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
   border-top-color: #faf9f5 !important;
   animation: 0.85s linear infinite dsh-claude-win11-spin !important;

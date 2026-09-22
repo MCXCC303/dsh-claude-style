@@ -352,6 +352,9 @@ body[data-dsh-claude-style] .dsh-claude-effort-track::before {
   height: 14px !important;
   margin-top: -7px !important;
   border-radius: 999px !important;
+  /* A pill: its caps are meant to be round, and the page inherits superellipse
+     corners from <html>. */
+  corner-shape: round !important;
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.08)) !important;
 }
 body[data-dsh-claude-style] .dsh-claude-effort-knob {
@@ -362,6 +365,7 @@ body[data-dsh-claude-style] .dsh-claude-effort-knob {
   height: 16px !important;
   margin-top: -8px !important;
   border-radius: 50% !important;
+  corner-shape: round !important;
   background: var(--dsw-alias-bg-overlay, #ffffff) !important;
   box-shadow: 0 1px 3px rgba(20, 20, 19, 0.28), 0 0 0 1px rgba(20, 20, 19, 0.06) !important;
   transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
