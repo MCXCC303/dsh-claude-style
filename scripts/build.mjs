@@ -81,6 +81,7 @@ const FRAGMENTS = [
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',
+  'overrides/workspace-view.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',

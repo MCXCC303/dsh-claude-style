@@ -205,6 +205,89 @@ body[data-dsh-claude-style] button[class*="panelRow"]:hover svg {
   transform: rotate(90deg) !important;
 }
 
+/* ---------- workspace section: 进行中 / 已归档 ---------- */
+/* The section label gives way to a two-state segment control (the skin's own
+   markup, built by src/overrides/workspace-view.js); the archived state swaps
+   the host's tree for the skin's list, and the list's rows carry a delete
+   button. */
+body[data-dsh-claude-style] [class*="sectionLabel"][data-dsh-claude-ws-label] {
+  display: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-ws-segments {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 2px !important;
+  border-radius: 7px !important;
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
+  flex: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-ws-segment {
+  appearance: none !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 18px !important;
+  padding: 0 8px !important;
+  height: 20px !important;
+  border-radius: 5px !important;
+  cursor: pointer !important;
+  transition: background-color 0.12s ease, color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-ws-segment:hover {
+  color: var(--dsw-alias-label-primary, #141413) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-ws-segment[aria-checked="true"] {
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.10) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-ws-segment[aria-checked="true"] {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f4ef !important;
+  box-shadow: none !important;
+}
+/* The host renders the archived list itself (its own 视图选项 filter, driven by
+   workspace-view.js); the skin only adds the delete button, absolutely placed so
+   the host's row layout is untouched, and fades the row's timestamp out on hover
+   to make room for it. */
+body[data-dsh-claude-style] [data-dsh-claude-archive-row] {
+  position: relative !important;
+}
+body[data-dsh-claude-style] [data-dsh-claude-archive-row]:hover [class*="time"] {
+  opacity: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-delete {
+  position: absolute !important;
+  right: 4px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+  cursor: pointer !important;
+  opacity: 0 !important;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
+}
+body[data-dsh-claude-style] [data-dsh-claude-archive-row]:hover .dsh-claude-archive-delete,
+body[data-dsh-claude-style] .dsh-claude-archive-delete:focus-visible {
+  opacity: 1 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-delete:hover {
+  background: rgba(192, 57, 43, 0.12) !important;
+  color: var(--dsw-alias-state-error-primary, #c0392b) !important;
+}
+
 /* ---------- Claude Code layout: workspace & session sidebar ---------- */
 /* 1. Typography: Anthropic Sans and compact font sizes */
 body[data-dsh-claude-style] :is([data-pane="sidebar"], [class*="sidebarCol"], [class*="treeBody"], [role="tree"]) :is([class*="title"], [class*="projectText"], [class*="sectionLabel"], [class*="sessionRow"], [class*="projectRow"], [class*="time"]) {
