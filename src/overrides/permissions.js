@@ -33,6 +33,8 @@
 
       var permDocPointerListener = null
       var permResizeListener = null
+      /** The context meter this skin last moved out of the host's dock line. */
+      var dockedMeter = null
 
       /** Every dismiss route (item pick, outside pointer, resize/scroll, Escape) closes the menu through this one path. */
       function closePermMenu() {
@@ -326,6 +328,75 @@
         if (inPlace) return
         if (trailing !== null) row.insertBefore(stats, trailing)
         else row.appendChild(stats)
+      }
+
+      /** The composer's dock line: the stack child that is not the card. The host
+       * parks the stats pills there, and since 0.1.7 the context meter too. */
+      function composerDock(card) {
+        var stack = card.parentElement
+        if (stack === null) return null
+        for (var i = 0; i < stack.children.length; i++) {
+          if (stack.children[i] !== card) return stack.children[i]
+        }
+        return null
+      }
+
+      /** The meter the host parks in that dock, or null when it is not there. */
+      function dockedContextMeter(dock) {
+        if (dock === null) return null
+        var triggers = dock.querySelectorAll('button[aria-haspopup="dialog"]')
+        for (var i = 0; i < triggers.length; i++) {
+          // The meter's trigger IS the occupancy reading ("42%") and no stats
+          // pill ever is, so the label alone identifies it without a class name
+          // (the host hashes those per build).
+          if (!/^\d{1,3}%$/.test((triggers[i].textContent || '').trim())) continue
+          var node = triggers[i]
+          while (node.parentElement !== null && node.parentElement !== dock) node = node.parentElement
+          return node
+        }
+        return null
+      }
+
+      /**
+       * Merge the context-occupancy meter into the toolbar row beside the stats.
+       * DSH 0.1.7 moved the meter out of the input bar's trailing cluster into
+       * the dock line below the card, so a skin that merges only the stats
+       * leaves it alone on a line of its own — a stray marker on a second row.
+       * Older hosts keep it inside the card, where this finds nothing to move.
+       * A host re-render can put it back, so the move is re-applied every pass.
+       */
+      function mergeContextMeterIntoRow() {
+        var card = document.querySelector('[data-composer-card]')
+        if (card === null) return
+        var dock = composerDock(card)
+        var row = card.querySelector('[class*="_row"]')
+        if (row === null) return
+        if (!ui.copy.isComposerActive()) {
+          if (dockedMeter !== null && dock !== null && row.contains(dockedMeter)) dock.appendChild(dockedMeter)
+          return
+        }
+        var meter = dockedContextMeter(dock)
+        if (meter === null) return
+        dockedMeter = meter
+        // The stamp is what the stylesheet hangs the shared composer-line type
+        // on: the host's own class names are hashed per build, and the ring's
+        // trigger has no other stable hook.
+        meter.setAttribute('data-dsh-claude-context-meter', '')
+        var trailing = row.querySelector('[class*="trailing"]')
+        if (trailing === null) { row.appendChild(meter); return }
+        // Right of the model trigger, which lives inside the trailing cluster:
+        // park the ring after whichever trailing child owns that trigger (our
+        // own button when the skin draws the seat, the host's cluster when the
+        // picker preference hands it back).
+        var anchor = trailing.querySelector('[class*="standardControls"]')
+        var modelBtn = trailing.querySelector('.dsh-claude-model-btn')
+        if (modelBtn !== null) {
+          var node = modelBtn
+          while (node.parentElement !== null && node.parentElement !== trailing) node = node.parentElement
+          if (node.parentElement === trailing) anchor = node
+        }
+        if (anchor !== null) trailing.insertBefore(meter, anchor.nextSibling)
+        else trailing.appendChild(meter)
       }
 
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
@@ -684,6 +755,7 @@
         sync: function () {
           syncAttachmentState()
           mergeStatsIntoRow()
+          mergeContextMeterIntoRow()
           syncStatsSummary()
           syncSegments()
           syncChatTabComposer()

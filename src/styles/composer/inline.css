@@ -532,14 +532,15 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   z-index: 3 !important;
   width: auto !important;
   max-width: none !important;
-  margin: 0 8px !important;
+  /* Auto width, centered: the sentence hugs its own text (so the hover plate
+     covers the text and not the whole row) and the auto margins centre it in
+     the air between the left tool cluster and the trailing model group. */
+  margin: 0 auto !important;
   padding: 0 !important;
   height: auto !important;
   line-height: 20px !important;
-  /* Fill the space between the left tool cluster and the trailing model
-     group, then center the sentence in it: equal air on both sides. */
   justify-content: center !important;
-  flex: 1 1 auto !important;
+  flex: 0 1 auto !important;
   min-width: 0 !important;
 }
 /* The stats pills are on-demand: hidden unless the chat window (the composer)
@@ -643,6 +644,26 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-
 body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
   border-radius: 6px !important;
+}
+
+/* ---------- one type for the composer's bottom line ---------- */
+/* The ring, the model trigger and the stats sentence are three host widgets
+   that each brought their own type: the trigger 13px/500 in the secondary
+   tone, the stats 12px/400 tertiary, the ring the host's secondary content
+   size. They share one line now, so they read as one family — same face, same
+   size, same weight, same tone. The stats' inner buttons inherit through the
+   `font: inherit` rule above; the ring's trigger is targeted explicitly because
+   the host sets its own colour and size on that button. */
+body[data-dsh-claude-style] [data-dsh-claude-context-meter],
+body[data-dsh-claude-style] [data-dsh-claude-context-meter] button,
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats],
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] .dsh-claude-model-btn {
+  font-family: var(--dsw-font-family) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  letter-spacing: normal !important;
+  color: var(--dsw-alias-label-secondary) !important;
 }
 
 /* The host renders two separate stat dialogs; hide them and use one custom
