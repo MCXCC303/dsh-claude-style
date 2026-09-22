@@ -137,7 +137,7 @@ body[data-dsh-claude-style] [data-composer-card]:after {
 
 /* Commands and attach: 7px corners instead of the shipped full circle, no
    resting fill, and a warm plate on hover. */
-body[data-dsh-claude-style] :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]) {
+body[data-dsh-claude-style] :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"], button[aria-label*="添加文件"], button[aria-label*="Add files"]) {
   border-radius: 7px;
 }
 
@@ -147,11 +147,11 @@ body[data-dsh-claude-style] :is(button[aria-label="发送消息"], button[aria-l
   border-radius: 7px;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]) {
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"], button[aria-label*="添加文件"], button[aria-label*="Add files"]) {
   background: transparent;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"]):hover:not(:disabled) {
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is(button[aria-label="指令"], button[aria-label="Commands"], button[aria-label="添加附件"], button[aria-label="Add attachment"], button[aria-label*="添加文件"], button[aria-label*="Add files"]):hover:not(:disabled) {
   background: #f6f6f4;
 }
 
