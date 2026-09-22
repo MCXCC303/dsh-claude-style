@@ -24,9 +24,14 @@
     var MODEL_EMPTY_LABEL = 'No models available.'
     var MODEL_EFFORT_LABEL = 'Reasoning effort'
     var MODEL_EFFORT_DEFAULT = 'Default'
+    /** The effort slider's two ends. Kept in English in every locale: they name
+     *  the axis, not a level, and the level's own name rides beside the label. */
+    var MODEL_EFFORT_FASTER = 'Faster'
+    var MODEL_EFFORT_SMARTER = 'Smarter'
+    /** What the slider reads when the model offers no levels at all. */
+    var MODEL_EFFORT_NONE = '—'
     var MODEL_MORE_LABEL = 'More models'
     var MODEL_TRIGGER_LABEL = 'Select model, currently {model}'
-    var MODEL_NO_EFFORT_LABEL = 'This model offers no reasoning levels.'
 
     /** English weekday names, indexed by Date#getDay() (0 = Sunday). */
     var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']

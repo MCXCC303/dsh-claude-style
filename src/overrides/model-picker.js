@@ -18,68 +18,17 @@
       var modelSubPop = null
       var modelBody = null
       var modelFooter = null
+      var effortSlider = null
       var modelSubBody = null
       var modelHoverIntent = createHoverIntent(openModelPopover, closeModelPopovers, 180)
       var modelDir = null
       var modelSub = null
       var modelSessionId = null
       var modelWarmRequested = false
-      var modelSubKind = null
       var modelBodySig = ''
       var modelSubSig = ''
       /** Settings-page listeners waiting on the provider list. */
       var providerListeners = []
-
-      /** Exact entry: `provider/model`, bare id, folded id, then the alias table. */
-      function exactModelCopy(groupId, modelId) {
-        if (modelCopy === null) return null
-        var gid = String(groupId === void 0 || groupId === null ? '' : groupId).toLowerCase()
-        var mid = String(modelId === void 0 || modelId === null ? '' : modelId)
-        var midLower = mid.toLowerCase()
-        var byProvider = modelCopy.exact[groupId + '/' + mid] || modelCopy.exact[gid + '/' + midLower]
-        if (byProvider) return byProvider
-        if (modelCopy.exact[mid]) return modelCopy.exact[mid]
-        if (modelCopy.exact[midLower]) return modelCopy.exact[midLower]
-        var folded = normalizeModelId(mid)
-        if (modelCopy.folded[folded]) return modelCopy.folded[folded]
-        var alias = modelCopy.aliases[mid] || modelCopy.aliases[midLower] || modelCopy.aliases[folded] || (modelCopy.foldedAliases && modelCopy.foldedAliases[folded])
-        if (alias) {
-          if (modelCopy.exact[alias]) return modelCopy.exact[alias]
-          var foldedAlias = normalizeModelId(alias)
-          if (modelCopy.folded[foldedAlias]) return modelCopy.folded[foldedAlias]
-        }
-        return null
-      }
-
-      /**
-       * Family entry. The model id is tried alone first because it is the
-       * stronger signal, then `provider/id` for ids that carry no brand of their
-       * own (`abab6.5s-chat` under a provider called `minimax`).
-       */
-      function familyModelCopy(groupId, modelId) {
-        if (modelCopy === null) return null
-        var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
-        var haystacks = [id, String(groupId === void 0 || groupId === null ? '' : groupId).toLowerCase() + '/' + id]
-        for (var h = 0; h < haystacks.length; h++) {
-          for (var i = 0; i < modelCopy.families.length; i++) {
-            var rule = modelCopy.families[i]
-            if (!rule.re.test(haystacks[h])) continue
-            if (rule.key) return modelCopy.exact[rule.key] || null
-            return rule.text
-          }
-        }
-        return null
-      }
-
-      /** Last-resort tier rule, read out of the id itself. */
-      function tierModelCopy(modelId) {
-        if (modelCopy === null) return null
-        var id = String(modelId === void 0 || modelId === null ? '' : modelId).toLowerCase()
-        for (var i = 0; i < modelCopy.tiers.length; i++) {
-          if (modelCopy.tiers[i].re.test(id)) return modelCopy.tiers[i].text
-        }
-        return null
-      }
 
       function cancelCloseModel() {
         modelHoverIntent.cancel()
@@ -93,7 +42,6 @@
         cancelCloseModel()
         if (modelPop) modelPop.setAttribute('data-open', 'false')
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
-        modelSubKind = null
       }
 
       function openModelPopover() {
@@ -109,16 +57,14 @@
             }
           } catch (error) { /* synchronous failure — the store's error surface covers it */ }
         }
-        modelSubKind = null
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'false')
         renderModelBody()
         positionModelPopovers()
         if (modelPop) modelPop.setAttribute('data-open', 'true')
       }
 
-      function openModelSub(kind) {
+      function openModelSub() {
         cancelCloseModel()
-        modelSubKind = kind
         renderModelSub()
         positionModelPopovers()
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'true')
@@ -284,22 +230,27 @@
       }
 
       /**
-       * The description line for one catalog model, in the shell's language.
-       *
-       * Resolution descends: exact entry (one model resold by several providers
-       * folds to a single key) → family rule → tier rule → the catalog's own
-       * text. Family rules are ordered and anchored (see
-       * src/model-descriptions.json) so another vendor's flash tier never
-       * borrows DeepSeek's copy. A model this table has never seen and the
-       * catalog does not describe resolves to an empty string on purpose: a
-       * name-only row beats an invented line.
+       * The effort slider (src/overrides/model-effort.js). It is handed a reader
+       * rather than the seat itself: the control re-reads the catalog on every
+       * pass, so a selection the host echoes back lands on the knob without the
+       * picker having to push it.
        */
-      function modelDescription(groupId, model) {
-        var id = typeof model.id === 'string' ? model.id : ''
-        var pair = exactModelCopy(groupId, id) || familyModelCopy(groupId, id) || tierModelCopy(id)
-        var text = localized(pair, ctx)
-        if (text) return text
-        return typeof model.description === 'string' ? model.description : ''
+      function effortControlElement() {
+        if (effortSlider === null) {
+          effortSlider = createEffortControl({
+            read: function () { return modelEffort(modelSnapshot()) },
+            onPick: pickEffort,
+            // A drag must not be cut short by the hover-close timer: the pointer
+            // is inside the control the whole time.
+            onDragStart: cancelCloseModel,
+          })
+        }
+        return effortSlider.el
+      }
+
+      /** Re-point the slider at the current seat (every render pass). */
+      function updateEffortControl() {
+        if (effortSlider !== null) effortSlider.update()
       }
 
       var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
@@ -344,7 +295,7 @@
         // while "More models" is every provider's full catalog and reads better
         // as names alone. One line, in the shell's language — the copy document is
         // localized rather than stacked, so a row never carries two languages.
-        var desc = withDescription ? modelDescription(group.id, model) : ''
+        var desc = withDescription ? modelDescription(ctx, group.id, model) : ''
         if (desc) copy.appendChild(modelEl('span', 'dsh-claude-model-desc', desc))
         item.appendChild(copy)
         var check = modelEl('span', 'dsh-claude-model-check')
@@ -359,28 +310,23 @@
         return item
       }
 
-      /** One level-2 row: label + current value + chevron, hover opens its level. */
-      function buildModelCell(label, value, kind) {
+      /** The More-models row: label + chevron, hover opens the second level. */
+      function buildModelCell(label) {
         var cell = modelEl('button', 'dsh-claude-model-cell')
         cell.type = 'button'
         cell.setAttribute('role', 'menuitem')
         cell.appendChild(modelEl('span', 'dsh-claude-model-cell-label', label))
-        if (value) cell.appendChild(modelEl('span', 'dsh-claude-model-cell-value', value))
         var chevron = modelEl('span', 'dsh-claude-model-cell-chevron')
         chevron.innerHTML = MODEL_CHEVRON_SVG
         cell.appendChild(chevron)
-        cell.addEventListener('mouseenter', (function (k) {
-          return function () {
-            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelSub(k)
-          }
-        })(kind))
-        cell.addEventListener('click', (function (k) {
-          return function (e) {
-            e.stopPropagation()
-            if (modelSubKind === k) closeModelPopovers()
-            else openModelSub(k)
-          }
-        })(kind))
+        cell.addEventListener('mouseenter', function () {
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelSub()
+        })
+        cell.addEventListener('click', function (e) {
+          e.stopPropagation()
+          if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') closeModelPopovers()
+          else openModelSub()
+        })
         return cell
       }
 
@@ -396,6 +342,7 @@
         closeModelPopovers()
       }
 
+      /** Commit one reasoning level. The slider stays open for the next nudge. */
       function pickEffort(effort) {
         var dir = modelDirectory()
         var snap = modelSnapshot()
@@ -406,12 +353,15 @@
           var pending = dir.select(selection)
           if (pending && typeof pending.catch === 'function') pending.catch(function () {})
         } catch (error) { /* rejected selections surface on the host's toast */ }
-        closeModelPopovers()
       }
 
-      /** Level 1: the official provider's models, divider, effort + more rows. */
+      /** Level 1: the provider sections, the divider, the effort slider, More models. */
       function renderModelBody() {
         if (!modelBody) return
+        // A drag in flight owns the slider: rebuilding the footer would detach it
+        // and drop its pointer capture mid-gesture. The pass that ends the drag —
+        // settle commits, the host answers, a pass is scheduled — picks it up.
+        if (effortSlider !== null && effortSlider.isDragging()) return
         var snap = modelSnapshot()
         var status = snap ? snap.status : 'idle'
         var groups = (snap && snap.groups) || []
@@ -419,7 +369,13 @@
         var effort = modelEffort(snap)
         var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : '', readPrefs().quickProviders.join(',')].join('|')
         for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
-        if (sig === modelBodySig) return
+        if (sig === modelBodySig) {
+          // The list is unchanged, but the slider still has to follow the seat:
+          // its geometry tracks the card's width, its value a selection the host
+          // echoed back.
+          updateEffortControl()
+          return
+        }
         modelBodySig = sig
         while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
         while (modelFooter && modelFooter.firstChild) modelFooter.removeChild(modelFooter.firstChild)
@@ -493,7 +449,7 @@
             var currentCopy = modelEl('span', 'dsh-claude-model-copy')
             var currentLabel = buildModelLabel(currentName, currentBrand)
             currentCopy.appendChild(currentLabel)
-            var currentDesc = modelDescription(current.group.id, current.model)
+            var currentDesc = modelDescription(ctx, current.group.id, current.model)
             if (currentDesc) currentCopy.appendChild(modelEl('span', 'dsh-claude-model-desc', currentDesc))
             currentRow.appendChild(currentCopy)
             var currentCheck = modelEl('span', 'dsh-claude-model-check')
@@ -510,51 +466,19 @@
           // above scrolls under them while the controls stay reachable.
           if (modelFooter) {
             modelFooter.appendChild(modelEl('div', 'dsh-claude-model-divider'))
-            if (effort) modelFooter.appendChild(buildModelCell(copyLabel('effortLabel', MODEL_EFFORT_LABEL), effort.label, 'effort'))
-            modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL), '', 'more'))
+            // The effort control is a slider, and it is always there: a model that
+            // offers no levels simply has nothing on the track to settle on.
+            modelFooter.appendChild(effortControlElement())
+            modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL)))
           }
         }
+        updateEffortControl()
       }
 
-      /** Level 2: the effort ladder, or every provider group's models. */
+      /** Level 2: every provider group's models, each headed by its provider name. */
       function renderModelSub() {
         if (!modelSubBody) return
         var snap = modelSnapshot()
-        if (modelSubKind === 'effort') {
-          var effort = modelEffort(snap)
-          var sig = 'effort:' + (effort ? String(effort.effective) : 'none')
-          if (sig === modelSubSig) return
-          modelSubSig = sig
-          while (modelSubBody.firstChild) modelSubBody.removeChild(modelSubBody.firstChild)
-          if (effort === null) {
-            modelSubBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('noEffort', MODEL_NO_EFFORT_LABEL)))
-            return
-          }
-          var levels = []
-          if (effort.reasoning.defaultEffort === void 0) levels.push({ effort: void 0, label: MODEL_EFFORT_DEFAULT })
-          for (var i = 0; i < effort.reasoning.efforts.length; i++) {
-            levels.push({ effort: effort.reasoning.efforts[i].id, label: effort.reasoning.efforts[i].name })
-          }
-          for (var l = 0; l < levels.length; l++) {
-            (function (level, active) {
-              var item = modelEl('button', 'dsh-claude-model-option')
-              item.type = 'button'
-              item.setAttribute('role', 'menuitemradio')
-              item.setAttribute('aria-checked', active ? 'true' : 'false')
-              item.appendChild(modelEl('span', 'dsh-claude-model-copy', level.label))
-              var check = modelEl('span', 'dsh-claude-model-check')
-              check.innerHTML = active ? MODEL_CHECK_SVG : ''
-              item.appendChild(check)
-              item.addEventListener('click', function (e) {
-                e.stopPropagation()
-                pickEffort(level.effort)
-              })
-              modelSubBody.appendChild(item)
-            })(levels[l], effort.effective === levels[l].effort)
-          }
-          return
-        }
-        // 'more': every provider group, headed by its name.
         var groups = (snap && snap.groups) || []
         var current = modelCurrent(snap)
         var sig2 = 'more'
@@ -617,7 +541,12 @@
           modelFooter.className = 'dsh-claude-model-footer'
           modelPop.appendChild(modelFooter)
           modelPop.addEventListener('mouseenter', cancelCloseModel)
-          modelPop.addEventListener('mouseleave', scheduleCloseModel)
+          modelPop.addEventListener('mouseleave', function () {
+            // A drag in flight must not be cut short by the hover-close timer: the
+            // pointer is working the slider, not leaving the card.
+            if (effortSlider !== null && effortSlider.isDragging()) return
+            scheduleCloseModel()
+          })
           document.body.appendChild(modelPop)
         }
         if (modelSubPop === null) {
@@ -658,7 +587,6 @@
           modelBody = null
           modelFooter = null
           modelSubBody = null
-          modelSubKind = null
           modelBodySig = ''
           modelSubSig = ''
           cancelCloseModel()
@@ -739,11 +667,12 @@
         modelBtn.disabled = false
 
         renderModelBody()
-        if (modelSubKind !== null) {
+        if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') {
           renderModelSub()
-          if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') positionModelPopovers()
+          positionModelPopovers()
+        } else if (modelPop && modelPop.getAttribute('data-open') === 'true') {
+          positionModelPopovers()
         }
-        if (modelPop && modelPop.getAttribute('data-open') === 'true') positionModelPopovers()
       }
 
 
@@ -780,8 +709,8 @@
           modelSubPop = null
           modelBody = null
           modelFooter = null
+          effortSlider = null
           modelSubBody = null
-          modelSubKind = null
           modelBodySig = ''
           modelSubSig = ''
         }

@@ -57,6 +57,8 @@ const FRAGMENTS = [
   'overrides/copy.js',
   'overrides/permissions.js',
   'overrides/model-brand.js',
+  'overrides/model-copy-lookup.js',
+  'overrides/model-effort.js',
   'overrides/model-picker.js',
   'overrides/hero-menu.js',
   'overrides/quick-providers.js',

@@ -22,13 +22,17 @@
       "zh": "推理等级",
       "en": "Reasoning effort"
     },
+    "effortFaster": {
+      "zh": "Faster",
+      "en": "Faster"
+    },
+    "effortSmarter": {
+      "zh": "Smarter",
+      "en": "Smarter"
+    },
     "moreLabel": {
       "zh": "更多模型",
       "en": "More models"
-    },
-    "noEffort": {
-      "zh": "当前模型未提供推理等级。",
-      "en": "This model offers no reasoning levels."
     }
   },
   "settings": {
