@@ -71,3 +71,12 @@
 - **决定**：把「结构感知」从 CSS 移到 JS：`permissions.js` 的 `syncSegments()` 在 scheduler 每轮 pass 里为 composerStack 祖先写 `data-composer-variant="hero|inline"` 属性（observer 的 attributeFilter 不含 data-*，不会反触发；写前比较旧值防抖动；同轮去重避免多卡命中同一 stack 反复写），CSS 改为读属性。交互敏感的 `:has()`（`:hover`、`:focus-within`）与低频的 dialog `:has()` 保留。
 - **落地**：已执行完毕。仍未消除的结构感知 `:has()` 只剩 placeholder 那条（`card` 上的 `:not(:has([data-composer-placeholder]))`）：`copy.js` 本就管理 placeholder，可在它的 sync 里同步写 `data-has-placeholder` 再改 CSS，属可选的后续优化。
 - **重审条件**：实测证明 :has() 不再是热点，或宿主提供 hero/inline 的稳定属性契约。
+
+## D10. 设置按宿主世代分流：官方 Config 表单 + 旧版命名空间注册
+
+- **背景**：0.1.7 删掉了 `settings.register(ns, schema)`——命名空间不再是插件自取的名字，而是 profile entry id，schema 就是插件导出的 `Config`，只有 `.volatile()` 字段进表单，值写进 profile 的 Cordis patch；客户端服务 `settingsScope` 改名 `configForms`，插件设置席位从 `settings.plugin.item` 变成 `plugins.bundle.config`（键 = 包名）/ `plugins.row.config`。旧宿主（0.1.5-rc.2，桌面端内置）仍是注册制，且其 schemastery 3.18.2 没有 `.volatile()`——两套 API 互斥，`.volatile()` 在旧版上会直接抛错。
+- **决定**：设置层按宿主世代走两条路，探测点各只有一个——宿主半边看 `settings.register` 是否存在，客户端看 `ctx.get('configForms')` 是否可用。
+  - 宿主半边导出 `Config`：八个偏好字段，`volatileField()` 逐字段探测 `.volatile()` 存在才加标记；schemastery 用顶层 await 守卫导入，解析不到就让 `Config` 为 `undefined`，皮肤照常加载。新宿主把命名空间取成 `ctx.fiber.entry.id`（读不到回落 patch 里的常量），只调 `settings.configure({ auto: false }, ctx.fiber)` 声明自带页面；旧宿主仍 `register('claude-style', schema)`。两条路共用同一个可变命名空间，`describePrefs/updatePrefs` 与自建 prefs 路由都读它。
+  - 客户端：`ctx.configForms.get(entryId)` 可用就用官方表单（值 + 写队列 + revision 栅栏），否则回落到自建路由；设置界面在 0.1.7 注册成 `plugins.bundle.config`（键 = 包名，渲染在插件页上），旧宿主注册成 `settings.section` 整页。分流靠 `slots.inject` 的「槽被声明才触发」语义（旧宿主从不声明前者），再用 `configForms` 是否存在否决后者在 0.1.7 上的重复注册。
+- **代价**：设置层有两套传输与两套席位，回归必须覆盖两种宿主形态（`.debug/settings-bridge-check.cjs` 跑宿主半边两代，`.debug/client-settings-check.cjs` 在无头浏览器里跑客户端两代）；`Config` 的顶层 await 让宿主半边模块求值晚一步（loader 本就 await 导入，无实际影响）。
+- **重审条件**：不再支持 0.1.5-rc.2（桌面端内置升级到 0.1.7+）时，删掉旧路径与两处探测，只留 `Config` + `plugins.bundle.config`。

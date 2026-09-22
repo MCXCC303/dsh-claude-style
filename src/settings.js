@@ -1,9 +1,13 @@
     /**
-     * The settings page section, mounted by the host into the `settings.section`
-     * slot. That slot hands a section only `{ close }` plus the standard hooks,
-     * so this component owns no store of its own: it reads and writes the skin
-     * preferences through src/context/prefs.js, which owns the host round trip, and
-     * follows changes the same way the rest of the skin does.
+     * The skin's settings page, mounted by whichever seat this host has.
+     *
+     * 0.1.7 moved a bundle's own configuration onto its plugin page, so there
+     * the rows register as a `plugins.bundle.config` entry keyed by the package
+     * name. Older hosts have no such slot and keep the full-page
+     * `settings.section` entry. Both render the same component, and neither
+     * seat hands it a store: it reads and writes the skin preferences through
+     * src/context/prefs.js, which owns the host round trip, and follows changes
+     * the same way the rest of the skin does.
      *
      * Copy comes from the model copy document's `settings` block, so the page
      * follows the shell language like every other string the skin paints. The
@@ -20,7 +24,7 @@
      */
     var quickProviderApi = null
 
-    function ClaudeStyleSettingsSection() {
+    function ClaudeStyleSettingsSection(props) {
       var state = React.useState(readPrefs())
       var prefs = state[0]
       var setPrefs = state[1]
@@ -260,12 +264,33 @@
         rows.push(React.createElement('div', { className: 'dsh-claude-settings-error', key: 'error' }, error))
       }
 
+      // The plugin page already heads the form with the bundle's own title and
+      // description, so the embedded rendering drops the skin's title rather
+      // than printing it twice.
+      var embedded = !!(props && props.embed)
       return React.createElement(
         'div',
-        { className: 'dsh-claude-settings' },
-        React.createElement('div', { className: 'dsh-claude-settings-title' }, settingsCopy('title', 'Claude Style')),
+        { className: embedded ? 'dsh-claude-settings dsh-claude-settings-embedded' : 'dsh-claude-settings' },
+        embedded ? null : React.createElement('div', { className: 'dsh-claude-settings-title' }, settingsCopy('title', 'Claude Style')),
         rows,
       )
+    }
+
+    /**
+     * The plugin page's configuration entry (0.1.7+).
+     *
+     * A `plugins.bundle.config` entry is asked for two views: `summary` is the
+     * one-liner on the bundle's card, `page` is the form itself. The host does
+     * not hand this seat a form — the entry is keyed to the package, not to a
+     * namespace — so the rows read and write through src/context/prefs.js like
+     * every other surface in the skin, which is where the official form is
+     * bound.
+     */
+    function ClaudeStyleBundleConfig(props) {
+      if (props && props.view === 'summary') {
+        return React.createElement('span', null, settingsCopy('title', 'Claude Style'))
+      }
+      return React.createElement(ClaudeStyleSettingsSection, { embed: true })
     }
 
     /**
@@ -304,6 +329,10 @@
 
     function installSettingsSection(ctx, ui) {
       loadModelCopy()
+      // The settings services are up by now even when they were not at apply
+      // time, so retry the official-form binding before choosing a seat. It is
+      // idempotent: a host without `configForms` keeps the plugin's own route.
+      adoptSettingsForm(ctx)
       if (ui) {
         ui.settings = {
           sync: syncSettingsNav,
@@ -314,11 +343,35 @@
       var fiber = ctx.inject(['slots'], function (scope) {
         var slots = scope.get('slots')
         if (slots === void 0 || slots === null || typeof slots.inject !== 'function') return
+        // 0.1.7 keeps a bundle's own configuration on the plugin's page: the
+        // entry is keyed by the bundle's package name and rendered there —
+        // `view: 'page'` for the form, `view: 'summary'` for the card's
+        // one-liner. The slot is declared by that host's plugin manager, so this
+        // registration is a no-op on an older host.
         scope.effect(function () {
-          return slots.inject('settings.section', function () {
+          return slots.inject(BUNDLE_CONFIG_SLOT, function () {
             return slots.register(
               {
-                name: 'settings.section',
+                name: BUNDLE_CONFIG_SLOT,
+                key: PACKAGE_NAME,
+                label: function () { return settingsCopy('title', 'Claude Style') },
+              },
+              ClaudeStyleBundleConfig,
+            )
+          })
+        }, 'dsh-claude-style: plugin page')
+        // The full-page section is the older host's seat. 0.1.7 still declares
+        // the slot, but there the skin's settings live on its plugin page — and
+        // a host that serves `configForms` is by definition the newer one, so
+        // that check tells the two apart without a version probe. (The settings
+        // shell cannot have declared this slot before `configForms` mounted: it
+        // injects the service itself.)
+        scope.effect(function () {
+          return slots.inject(SETTINGS_SECTION_SLOT, function () {
+            if (hostConfigForms(ctx) !== null) return function () {}
+            return slots.register(
+              {
+                name: SETTINGS_SECTION_SLOT,
                 id: 'claude-style',
                 order: 22,
                 // A function, so the navigation entry localizes once the copy

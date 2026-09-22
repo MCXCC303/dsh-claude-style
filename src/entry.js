@@ -2,6 +2,10 @@
       var body = document.body
       body.setAttribute('data-dsh-claude-style', '')
       setHostContext(ctx)
+      // Bind the official settings form before anything reads a preference:
+      // 0.1.7+ serves namespaces through `ctx.configForms`, and a host without
+      // it keeps the plugin's own route. The choice is made once, here.
+      adoptSettingsForm(ctx)
       loadModelCopy()
       loadUsername()
       // Preferences are read asynchronously from the host settings namespace;

@@ -1,5 +1,24 @@
     var STYLE_ID = 'dsh-claude-style-style'
 
+    /**
+     * Settings identity, for both host generations.
+     *
+     * 0.1.5-rc.2 and earlier let a plugin own a namespace by name
+     * (`claude-style`, registered host-side). 0.1.7 dropped that registry: a
+     * settings namespace IS a profile entry id and its schema IS the entry's
+     * Config, so the id below is what both halves address — read off the
+     * running loader entry where possible, with the id `cordis.patch.yml`
+     * inserts as the fallback.
+     *
+     * PACKAGE_NAME is the other half of the 0.1.7 contract: a bundle's own
+     * configuration is a `plugins.bundle.config` entry keyed by the bundle's
+     * package name, which is what makes it render on this plugin's page.
+     */
+    var SETTINGS_ENTRY_FALLBACK = 'ui-skin-claude-style'
+    var PACKAGE_NAME = 'dsh-claude-style'
+    var BUNDLE_CONFIG_SLOT = 'plugins.bundle.config'
+    var SETTINGS_SECTION_SLOT = 'settings.section'
+
     var COMPOSER_HINT = 'How can I help you today?'
 
     /**

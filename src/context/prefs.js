@@ -1,11 +1,20 @@
     /**
      * Skin preferences.
      *
-     * The authoritative store is the host settings namespace `claude-style`,
-     * reached through this plugin's own route: the configuration client
-     * (`settingsScope`) only reaches namespaces the api-proxy exposes to it, and
-     * a plugin's own namespace is not on that list. `src/../lib/index.js` owns
-     * the namespace and the route; this side only reads and writes it.
+     * The authoritative store is the host settings namespace, reached one of two
+     * ways depending on the host generation:
+     *
+     *   * 0.1.7+ serves every registered namespace to the browser through
+     *     `ctx.configForms`, whose per-entry controller carries the values, the
+     *     write queue and the revision fence. That is the transport used
+     *     whenever the service is present.
+     *   * 0.1.5-rc.2 and earlier expose only the namespaces the api-proxy lists,
+     *     and a plugin's own is not among them, so this side falls back to the
+     *     route its host half registers (`lib/index.js`).
+     *
+     * Both transports carry the same eight fields, so everything below stays
+     * transport-agnostic: `loadPrefs`/`savePrefs` pick one, and the rest of the
+     * skin keeps reading the mirrored `prefs` object.
      *
      * Every value is mirrored onto the document as an attribute, so the
      * stylesheet — not this module — decides what a preference means visually.
@@ -74,6 +83,84 @@
     var prefsListeners = []
 
     /**
+     * The official settings form, when this host has one.
+     *
+     * 0.1.7 replaced the imperative namespace registry with Config-derived
+     * forms: `ctx.configForms.get(entryId)` hands back a controller carrying the
+     * values, a write queue and a revision fence, and the namespace is this
+     * plugin's profile entry id. The older host has no such service, so this
+     * stays null there and the route below is the transport instead.
+     */
+    var prefsForm = null
+
+    /** This plugin's settings namespace: the loader entry id, or the patch's id. */
+    function settingsEntryId(ctx) {
+      try {
+        var entry = ctx && ctx.fiber ? ctx.fiber.entry : null
+        var id = entry ? entry.id : null
+        if (typeof id === 'string' && id !== '') return id
+      } catch (error) { /* no loader entry: fall back to the id the patch declares */ }
+      return SETTINGS_ENTRY_FALLBACK
+    }
+
+    /** Whether this host serves namespaces to the browser (0.1.7+). */
+    function hostConfigForms(ctx) {
+      try {
+        if (!ctx || typeof ctx.get !== 'function') return null
+        var forms = ctx.get('configForms')
+        return forms !== null && forms !== undefined && typeof forms.get === 'function' ? forms : null
+      } catch (error) {
+        return null
+      }
+    }
+
+    /** The form's current field values, or null while it is not ready. */
+    function readFormValue() {
+      if (prefsForm === null) return null
+      try {
+        var snapshot = prefsForm.getSnapshot()
+        if (snapshot === null || snapshot === undefined) return null
+        if (snapshot.status !== 'ready') return null
+        return snapshot.value && typeof snapshot.value === 'object' ? snapshot.value : null
+      } catch (error) {
+        return null
+      }
+    }
+
+    /**
+     * Bind the official form when the host offers one.
+     *
+     * Called once per install, before the first read. A host that serves the
+     * service later (or never) simply keeps the route transport, so this never
+     * blocks or fails the skin.
+     */
+    function adoptSettingsForm(ctx) {
+      if (prefsForm !== null) return true
+      var forms = hostConfigForms(ctx)
+      if (forms === null) return false
+      var form = null
+      try {
+        form = forms.get(settingsEntryId(ctx))
+      } catch (error) {
+        form = null
+      }
+      if (form === null || form === undefined || typeof form.getSnapshot !== 'function') return false
+      prefsForm = form
+      if (typeof form.subscribe === 'function') {
+        try {
+          form.subscribe(function () {
+            var value = readFormValue()
+            if (value === null) return
+            prefsAvailable = true
+            adoptPrefs(normalizePrefs(value))
+            replayPendingBanLocale(value)
+          })
+        } catch (error) { /* no subscribe face: reads stay on demand */ }
+      }
+      return true
+    }
+
+    /**
      * Browser-local fallback for the custom username.
      *
      * The host settings namespace is the authoritative store, but a running
@@ -136,8 +223,23 @@
     /**
      * Read the preferences once. A failure keeps the defaults and leaves the
      * settings page to report that the store is unavailable.
+     *
+     * The official form is read first when it exists: its subscription already
+     * re-reads on every host change, so this call only has to cover the case
+     * where the values are ready before the subscription settles.
      */
     function loadPrefs() {
+      if (prefsForm !== null) {
+        var formValue = readFormValue()
+        if (formValue !== null) {
+          prefsAvailable = true
+          var formName = typeof formValue.username === 'string' ? formValue.username.trim() : ''
+          if (formName) setFallbackUsername('')
+          adoptPrefs(normalizePrefs(formValue))
+          replayPendingBanLocale(formValue)
+        }
+        return
+      }
       if (typeof fetch !== 'function') return
       try {
         fetch(PREFS_ROUTE, {
@@ -227,6 +329,65 @@
     }
 
     /**
+     * Write a partial change through the official form.
+     *
+     * One `set()` per field, chained: the controller owns the write queue and
+     * takes its revision fence from the last settlement, so a burst of toggles
+     * cannot interleave or lose a field. `set()` also validates the field path
+     * against the entry's Config before anything crosses the wire, which is why
+     * an unknown key is dropped here rather than sent.
+     *
+     * @param patch - preference keys to change.
+     * @returns a promise for the resolved preferences, or null when refused.
+     */
+    function savePrefsViaForm(patch) {
+      var keys = []
+      for (var key in patch) {
+        if (Object.prototype.hasOwnProperty.call(patch, key)) keys.push(key)
+      }
+      var step = function (name) {
+        return function (accepted) {
+          if (accepted === false) return false
+          try {
+            var pending = prefsForm.set(name, patch[name])
+            return pending && typeof pending.then === 'function'
+              ? pending.then(function (ok) { return ok === true })
+              : true
+          } catch (error) {
+            return false
+          }
+        }
+      }
+      var run = Promise.resolve(true)
+      for (var i = 0; i < keys.length; i++) run = run.then(step(keys[i]))
+      return run.then(function (accepted) {
+        if (accepted === false) {
+          // Refused (a stale revision, or a field this Config does not carry):
+          // re-read rather than guess, the way the route path does.
+          loadPrefs()
+          return null
+        }
+        var value = readFormValue()
+        if (value !== null) {
+          prefsAvailable = true
+          if (typeof patch.username === 'string') {
+            var hostName = typeof value.username === 'string' ? value.username.trim() : ''
+            setFallbackUsername(hostName ? '' : patch.username)
+          }
+          // The host echoing the value back is the only proof it knows the
+          // field; anything else means the write did not land and the local
+          // fallback has to keep it.
+          if (typeof patch.banLocale === 'string') {
+            var hostLocale = typeof value.banLocale === 'string' ? value.banLocale : ''
+            setFallbackBanLocale(hostLocale === patch.banLocale ? '' : patch.banLocale)
+          }
+          adoptPrefs(normalizePrefs(value))
+        }
+        return prefs
+      })
+    }
+
+    /**
      * Write a partial preference change.
      *
      * The revision travels with the write so a concurrent move of the namespace
@@ -237,6 +398,7 @@
      * @returns a promise for the resolved preferences, or null when unavailable.
      */
     function savePrefs(patch) {
+      if (prefsForm !== null) return savePrefsViaForm(patch)
       if (typeof fetch !== 'function') return Promise.resolve(null)
       var body = { revision: prefsRevision }
       for (var key in patch) body[key] = patch[key]
