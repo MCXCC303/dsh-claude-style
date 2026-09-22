@@ -70,7 +70,10 @@ body[data-dsh-claude-style][%%BRAND_ATTR%%="%%BRAND_ANTHROPIC%%"] [class*="brand
 }
 
 /* ---------- Claude Code layout: new session button ---------- */
-/* Narrow height matching conversation row, persistent hover plate, left-aligned plus icon */
+/* Narrow height matching conversation row, left-aligned plus icon. No plate at
+   rest — Claude's own sidebar keeps every row flat until the pointer is on it —
+   and the leading glyph is a 20px CHIP: a circular fill with the plus drawn
+   inside, which is how Claude marks its primary "New" row. */
 body[data-dsh-claude-style] button[class*="newSession"] {
   display: flex !important;
   align-items: center !important;
@@ -84,45 +87,61 @@ body[data-dsh-claude-style] button[class*="newSession"] {
   margin: 0 0 6px 0 !important;
   border: none !important;
   border-radius: 6px !important;
-  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  background: transparent !important;
   color: var(--dsw-alias-label-primary, #141413) !important;
   font-family: var(--dsw-font-family) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
+  /* Explicit, so the label's x does not depend on the host's gap: both sidebar
+     rows place their text at padding + 20px icon box + 6px. */
+  gap: 6px !important;
   cursor: pointer !important;
   box-shadow: none !important;
   transition: background-color 0.12s ease !important;
 }
 body[data-dsh-claude-style] button[class*="newSession"]:hover {
-  background: rgba(0, 0, 0, 0.12) !important;
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] button[class*="newSession"] {
   color: #f5f4ef !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] button[class*="newSession"]:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 body[data-dsh-claude-style] button[class*="newSession"] svg {
   display: none !important;
 }
+/* The chip: one 20px box that paints BOTH the circular fill and the plus. A mask
+   cannot do that — it clips the element to the glyph, taking the fill with it —
+   so the plus is a background image instead, which costs the currentColor
+   adaptivity and buys a theme pair below. */
 body[data-dsh-claude-style] button[class*="newSession"]::before {
   content: "";
   display: inline-block !important;
-  width: 13px !important;
-  height: 13px !important;
-  margin-right: 6px !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 0 !important;
   flex: none !important;
-  background-color: currentColor !important;
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='5' x2='12' y2='19'></line><line x1='5' y1='12' x2='19' y2='12'></line></svg>") center / contain no-repeat !important;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='5' x2='12' y2='19'></line><line x1='5' y1='12' x2='19' y2='12'></line></svg>") center / contain no-repeat !important;
+  border-radius: 50% !important;
+  background-color: rgba(0, 0, 0, 0.10) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141413' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='6' x2='12' y2='18'></line><line x1='6' y1='12' x2='18' y2='12'></line></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 12px 12px !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] button[class*="newSession"]::before {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23faf9f5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='6' x2='12' y2='18'></line><line x1='6' y1='12' x2='18' y2='12'></line></svg>") !important;
 }
 
 /* ---------- Claude Code layout: the sidebar's panel row (插件) ---------- */
 /* DSH 0.1.7 added a panel entry right under the new-session button, styled by
    the host at 36px tall / 14px / 12px corners while the new-session row is
    28px / 13px / 6px — two rows stacked on top of each other reading as two
-   different lists. One row, one look: the same metrics, the same plate and the
-   same hover as the new-session button, and the same 13px icon box so both
+   different lists. One row, one look: the same metrics, the same flat rest and
+   hover plate as the new-session button, and the same 20px icon box so both
    labels start at the same x. */
 body[data-dsh-claude-style] button[class*="panelRow"] {
   display: flex !important;
@@ -140,7 +159,7 @@ body[data-dsh-claude-style] button[class*="panelRow"] {
   margin: 0 0 6px 0 !important;
   border: none !important;
   border-radius: 6px !important;
-  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  background: transparent !important;
   color: var(--dsw-alias-label-primary, #141413) !important;
   font-family: var(--dsw-font-family) !important;
   font-size: 13px !important;
@@ -151,17 +170,20 @@ body[data-dsh-claude-style] button[class*="panelRow"] {
   transition: background-color 0.12s ease !important;
 }
 body[data-dsh-claude-style] button[class*="panelRow"]:hover {
-  background: rgba(0, 0, 0, 0.12) !important;
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] button[class*="panelRow"] {
   color: #f5f4ef !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] button[class*="panelRow"]:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
+/* A 13px glyph in a 20px box: the same box the new-session chip occupies, so the
+   two labels line up. */
 body[data-dsh-claude-style] button[class*="panelRow"] svg {
   width: 13px !important;
   height: 13px !important;
+  margin: 0 3.5px !important;
   flex: none !important;
 }
 
