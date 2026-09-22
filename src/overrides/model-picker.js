@@ -551,6 +551,18 @@
           modelFooter.className = 'dsh-claude-model-footer'
           modelPop.appendChild(modelFooter)
           modelPop.addEventListener('mouseenter', cancelCloseModel)
+          // The second level belongs to its More-models cell: while it is open,
+          // the pointer landing anywhere else on the first level (the effort
+          // slider, a model row, bare card) folds it — the first level itself
+          // stays open, it is the hover-intent host. Delegated mouseover, not
+          // mouseenter: moving from the cell to the slider never crosses the
+          // popover's boundary, so a boundary event would never fire.
+          modelPop.addEventListener('mouseover', function (e) {
+            if (modelSubPop === null || modelSubPop.getAttribute('data-open') !== 'true') return
+            var target = e.target
+            if (target && typeof target.closest === 'function' && target.closest('.dsh-claude-model-cell')) return
+            modelSubPop.setAttribute('data-open', 'false')
+          })
           modelPop.addEventListener('mouseleave', function () {
             // A drag in flight must not be cut short by the hover-close timer: the
             // pointer is working the slider, not leaving the card.
