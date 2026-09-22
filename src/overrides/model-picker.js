@@ -27,9 +27,9 @@
        * a slow traverse ran it out and both cards folded up mid-journey.
        */
       var MODEL_CLOSE_DELAY = 150
-      var modelHoverIntent = createHoverIntent(openModelPopover, closeModelPopovers, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
+      var modelHoverIntent = createHoverIntent(openModelPopover, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
       /** The More-models cell drills in on the same dwell/grace as the trigger. */
-      var modelSubHoverIntent = createHoverIntent(openModelSub, closeModelPopovers, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
+      var modelSubHoverIntent = createHoverIntent(openModelSub, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
       var modelDir = null
       var modelSub = null
       var modelSessionId = null
@@ -45,6 +45,52 @@
 
       function scheduleCloseModel() {
         modelHoverIntent.scheduleClose()
+      }
+
+      /**
+       * Where the pointer last was, tracked only while a card is up. The two cards
+       * are separate boxes with a sliver of desktop between them, and a pointer
+       * crossing that sliver has not left the picker — without this the grace
+       * simply runs out mid-gap and both cards fold.
+       */
+      var pointer = null
+      var pointerBound = false
+      function trackPointer(event) {
+        pointer = { x: event.clientX, y: event.clientY }
+      }
+      function trackPointerWhileOpen() {
+        var wanted = modelPop !== null && modelPop.getAttribute('data-open') === 'true'
+        if (wanted === pointerBound) return
+        pointerBound = wanted
+        if (wanted) {
+          document.addEventListener('mousemove', trackPointer, true)
+        } else {
+          document.removeEventListener('mousemove', trackPointer, true)
+          pointer = null
+        }
+      }
+
+      /** True while the pointer sits in either card, or in the gap between them. */
+      function pointerInPicker() {
+        if (pointer === null) return false
+        var cards = [modelPop, modelSubPop]
+        for (var i = 0; i < cards.length; i++) {
+          var card = cards[i]
+          if (card === null || card.getAttribute('data-open') !== 'true') continue
+          var box = card.getBoundingClientRect()
+          if (pointer.x >= box.left - 8 && pointer.x <= box.right + 8 &&
+              pointer.y >= box.top - 8 && pointer.y <= box.bottom + 8) return true
+        }
+        return false
+      }
+
+      /** Close on leave, but treat the gap between the two cards as still inside. */
+      function closeModelIfAway() {
+        if (pointerInPicker()) {
+          scheduleCloseModel()
+          return
+        }
+        closeModelPopovers()
       }
 
       function closeModelPopovers() {
@@ -578,6 +624,7 @@
       }
 
       function positionModelPopovers() {
+        trackPointerWhileOpen()
         if (!modelBtn || !modelPop) return
         var pos = positionAnchoredPopover(modelBtn, modelPop, { side: 'above', gap: 6 })
         if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') {
@@ -585,7 +632,7 @@
           var h2 = modelSubPop.offsetHeight
           var h1 = modelPop.offsetHeight
           // Beside the first level; flip to its left when the viewport is tight.
-          var x2 = pos.x + modelPop.offsetWidth + 4
+          var x2 = pos.x + modelPop.offsetWidth + 2
           if (x2 + w2 > window.innerWidth - POPOVER_MARGIN) x2 = Math.max(POPOVER_MARGIN, pos.x - 4 - w2)
           // Bottom-aligned with the first level: a short level 2 used to hang from
           // the top, leaving dead space under it that the pointer had to cross to
