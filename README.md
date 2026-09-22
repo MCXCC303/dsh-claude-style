@@ -24,7 +24,7 @@
 
 ## 字体
 
-> **重要：JetBrains Mono 代码字体随插件库分发，由插件宿主以 webfont 形式直接提供给浏览器，无需安装。Anthropic 字体（Sans/Serif）不随 npm 包分发，仅在仓库 [`fonts/`](fonts/) 供下载**——既可以直接安装到系统，也可以免安装：把两个 `.ttf` 放进插件包的 `fonts/` 目录，宿主会以同样的 webfont 方式提供它们（两种方式的字体文件完全一致，效果相同）。生效均需刷新 / 重启 web。
+> **重要：Anthropic 字体不随 npm 包分发，仅在仓库 [`fonts/`](fonts/) 供下载**——既可以直接安装到系统，也可以免安装：把两个 `.ttf` 放进插件包的 `fonts/` 目录，宿主会以同样的 webfont 方式提供它们（两种方式的字体文件完全一致，效果相同）。生效均需刷新 / 重启 web。
 
 | 字体 | 用途 | 文件 |
 |---|---|---|
@@ -32,13 +32,15 @@
 | Anthropic Serif Web Text | 对话正文 / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | 代码 / 代码块 | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf)、[`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
-Anthropic 字体启用（二选一）：① 安装到系统——Windows 双击 `.ttf` → 「安装」，macOS 用「字体册」导入；② 免安装——把 `.ttf` 复制到插件包的 `fonts/` 目录（与 `JetBrainsMonoVariable.ttf` 同目录）。完成后刷新页面生效。
+Anthropic 字体启用（二选一）：
 
-> JetBrains Mono 以 [SIL Open Font License](fonts/OFL.txt) 分发；Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可（详见 [LICENSE](LICENSE) 字体声明）。
+① 安装到系统——Windows 双击 `.ttf` → 「安装」，macOS 用「字体册」导入；
+
+② 免安装——把 `.ttf` 复制到插件包的 `fonts/` 目录。完成后刷新页面生效。
+
+> Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可。
 
 ## 安装
-
-> 已在 dsh 0.1.5-rc.2 上测试
 
 1. 通过终端安装
 
@@ -51,14 +53,13 @@ dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub 源
 
 同一时刻建议只启用一个主题。安装后**重启 `dsh web`** 并刷新页面即生效。
 
-## 使用
+## 特点
 
-1. **主题** —— 安装即全局生效，无需配置；亮暗跟随系统颜色模式。
-2. **权限分段** —— 输入框以 Read | Edit | Auto 三段式控制器替换原生的访问模式菜单：只读、工作区写入与完全权限（Auto 经宿主的安全确认弹窗切换）。
-3. **模型选择器**（可在设置里关闭，交回系统自己的模型菜单）—— 输入框的模型席位换成 Claude 风格的两级弹层：一级**始终以官方服务打头**，后面跟着设置里勾选的**快捷供应商**的模型——不同供应商之间一条横线，供应商名以小字领在横线前面（同一行、把线挤短；官方来源不标名，也不在设置清单里；从目录消失的供应商带「已移除」标记留在清单里，取消勾选即可清除）——再加分隔线、推理等级推条与「更多模型」；推条无极滑动，松手或指针离开时对齐到最近的档位（模型没有档位时照样显示，只是拖不动值），两端写 `Faster` / `Smarter`；两级弹层高度都随内容自适应（只受视口约束），一级只滚动模型列表，分隔线、推条与操作行**钉在滚动区外**始终可见，二级在右侧展开。模型描述只出现在第一级；当前席位不在上面列出的供应商里时，会在列表末尾（分隔线之上）补一行，同样带一条供应商横线；二级「更多模型」是各 provider 的完整目录，只列名称。每个模型行显示**所属厂商的锁定标**——图标与厂商字标合成的一件图形，直接替换名称里的厂商名（`[DeepSeek 鲸鱼+字标] V4.1-Flash`）；名称里没有厂商词的（Kimi 官方目录只叫 `K3`）则锁定标领在开头。「更多模型」的分组标题只显示 provider 名称，不带图标。图形取自 [Lobe Icons](https://lobehub.com/icons)（MIT），在构建前的 vendoring 阶段按厂商各合成一个 `<svg>`，不含 React 依赖。图标高度与间距是**全局常数**——不逐家采用 Lobe 的 `TEXT_MULTIPLE`/`SPACE_MULTIPLE`，那套比例是相对各家字标盒子的，会让图标大小与间距逐家漂移；品牌色与变体清单取自 `es/toc.js`。亮色画布用彩色原图，其中在象牙白上读不出来的填充换成 `currentColor`（Kimi 的白 K 会消失、而它的蓝点保留）；暖黑画布换成单色、跟随主题文字色。少数厂商在 `brands.lockups` 里覆写：图标与字标可来自不同图标（混元的标 + Tencent 的字标）、匹配词可指定（`step-*` 用 `Step`，另有 `MiMo`、`GLM`）、字标可裁掉多余部分（GLM-V 截掉 `-V`、ChatGPT 只留 `GPT`）；手工提供的资产放 `src/assets/icons/`（与生成的 `combine/` 同级）。字标要和它替换的词对得上：Claude 行画 Claude 的、Grok 行画 Grok 的，而不是各自母公司的；Claude 行的其余文字用 Anthropic Serif 排（那枚锁定标本身就是衬线体）。名称里另有视觉隐藏的厂商名，屏读听到的仍是「Kimi K3」而不是「K3」。
-4. **品牌切换** —— 设置（`Ctrl+,`）→ **Claude Style**（DSH 0.1.7 起位于「设置 → 插件 → dsh-claude-style」页）：侧栏品牌在 Claude（官方星芒 + Claude 字标）与 Anthropic（`A\` + ANTHROPIC 字标）之间切换，新会话页标识随所选品牌保持陶烬橙星芒；选择保存在浏览器本地，默认 Claude。
-5. **账户抽屉** —— 侧栏底栏的账户按钮悬停展开弹层（设置里「自动弹出弹层」可选关闭 / 仅账号区 / 全部），一键打开设置（`Ctrl+,`）与管理插件；弹层顶部那条用户名横条是个彩蛋：点开会看到 Claude 官方的「账户已暂停」页（纯本地复刻，不碰任何真实状态，点页面上任意按钮或按 `Esc` 退出；切走窗口**不会**关，方便你切出去照着它看）。这页的语言在设置里单独选（**封号彩蛋语言**，中文/英文，默认英文）。
-6. **状态细节** —— 思考状态每轮从 Claude Code 的 185 个思考动词随机抽取一个稳定展示；工作区运行中状态使用 Fluent 风格的圆形加载动画。
+1. **主题** —— 安装即全局生效，无需配置。亮色象牙白 `#FCFCFB`、暗色暖黑 `#141413`，两套画布共用同一个操作强调色陶烬橙 `#D97757`；亮暗跟随系统颜色模式切换。
+2. **输入框** —— 输入框整块重做：权限分段控件（完全权限 / 只读 / …）、带品牌锁定标的模型触发器、工具栏与状态统计同一行排版，发送键与停止键统一成 7px 圆角。统计句与模型触发器共用一套字号与颜色。
+3. **模型选择器** —— 全新的两级弹层：一级列官方服务与设置页勾选的快捷供应商，「更多模型」二级按供应商分组；每行带厂商锁定标与说明文案，底部是推理等级推条（无极滑动，松手对齐最近档位）与「更多模型」入口。二级底边与一级对齐，一级已显示的供应商不再重复；模型不支持思考时不画推条。悬停停留 50ms 打开、离开 150ms 关闭，两卡之间的空隙不算离开。
+4. **工作区** —— 侧栏「工作区」标题改成 **进行中 / 已归档** 分段控件：进行中沿用宿主的会话树，已归档是皮肤自己的平铺列表（标题、时间、每行「取消归档」与「删除」两个图标按钮）。行排版与宿主的会话行逐项一致（行 x=12 / 宽 251 / 高 28 / 标题起点 x=36）。宿主没有归档能力时（如 0.1.5 的某些构建）不显示控件、保留原标题。
+5. **侧栏** —— 新会话与插件两行取 Claude 真机形状：默认无底色、hover 才有底色，新会话的「＋」套一枚圆形底，两行图标 hover 顺时针转 90°（四重对称图形，转回原位）；底部账户抽屉、封号彩蛋一并保留。
 
 ## 停用与卸载
 
