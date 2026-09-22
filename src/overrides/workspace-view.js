@@ -20,6 +20,8 @@
     function installWorkspaceView(ctx, ui) {
       /** Trash can for one archived row. */
       var DELETE_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 4.2h10.8"/><path d="M6.4 4.2V3a.8.8 0 0 1 .8-.8h1.6a.8.8 0 0 1 .8.8v1.2"/><path d="M4.2 4.2l.6 8.3a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-8.3"/><path d="M6.7 6.8v4M9.3 6.8v4"/></svg>'
+      /** Tray with an up arrow: put this conversation back among the live ones. */
+      var RESTORE_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.2v3.4a1 1 0 0 0 1 1h8.8a1 1 0 0 0 1-1V9.2"/><path d="M8 10.4V2.6"/><path d="M5.2 5.4L8 2.6l2.8 2.8"/></svg>'
       var VIEW_ATTR = 'data-dsh-claude-ws-view'
       var LABEL_ATTR = 'data-dsh-claude-ws-label'
       var TREE_ATTR = 'data-dsh-claude-ws-tree'
@@ -168,6 +170,20 @@
         }).catch(function () { /* the row stays; the next read tells the truth */ })
       }
 
+      /** Put a conversation back among the live ones; it leaves this list. */
+      function restoreArchived(id) {
+        var registry = service('remote.workspaceRegistry')
+        if (registry === undefined || registry === null || typeof registry.unarchiveSession !== 'function') return
+        registry.unarchiveSession(id).then(function (result) {
+          if (!result || result.ok !== true) return
+          if (items !== null) items = items.filter(function (row) { return row.id !== id })
+          renderList()
+          // The host's own tree has to be told to pick the conversation back up.
+          var sessions = service('sessions')
+          if (sessions !== undefined && sessions !== null && typeof sessions.refresh === 'function') sessions.refresh()
+        }).catch(function () { /* the row stays; the next read tells the truth */ })
+      }
+
       function buildArchivedRow(item) {
         var row = modelEl('div', 'dsh-claude-archive-row')
         row.setAttribute('role', 'button')
@@ -175,6 +191,18 @@
         row.setAttribute('data-session-id', item.id)
         row.appendChild(modelEl('span', 'dsh-claude-archive-title', item.title || copyLabel('archiveUntitled', 'Untitled conversation')))
         row.appendChild(modelEl('span', 'dsh-claude-archive-time', relativeTime(item.at)))
+        // The host's archived rows offer an unarchive action; the skin's list
+        // carries the same pair, so leaving the archived view is not the only way
+        // back to a conversation.
+        var restore = modelEl('button', 'dsh-claude-archive-restore')
+        restore.type = 'button'
+        restore.setAttribute('aria-label', copyLabel('archiveRestore', 'Unarchive conversation'))
+        restore.innerHTML = RESTORE_SVG
+        restore.addEventListener('click', function (event) {
+          event.stopPropagation()
+          restoreArchived(item.id)
+        })
+        row.appendChild(restore)
         var remove = modelEl('button', 'dsh-claude-archive-delete')
         remove.type = 'button'
         remove.setAttribute('aria-label', copyLabel('archiveDelete', 'Delete conversation'))

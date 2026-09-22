@@ -264,22 +264,41 @@ body[data-dsh-claude-style] .dsh-claude-archive-list {
   display: flex !important;
   flex-direction: column !important;
   gap: 1px !important;
-  padding: 0 12px !important;
+  /* No inset of its own: the region already indents its content by 12px, which is
+     where the host's tree rows start (measured: row x=12, title x=36). The 5px on
+     the right is the tree's own inset — matching it keeps the two rows the same
+     width (251px) instead of letting this one run 5px wider. */
+  padding: 0 5px 0 0 !important;
   min-width: 0 !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-row {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 4px !important;
   height: 28px !important;
-  padding: 0 6px 0 8px !important;
+  /* The host's own session row: 6px inside the list's 12px, so the row's box and
+     the title's x land where the tree's rows put them (measured 12 / 36). */
+  padding: 0 6px !important;
   border-radius: 6px !important;
   cursor: pointer !important;
-  color: var(--dsw-alias-label-secondary, #6e6a60) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
   font-family: var(--dsw-font-family) !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   transition: background-color 0.12s ease !important;
+}
+/* The leading slot the host's rows carry (a 5px circle centred in 14px), so the
+   two lists start their titles at the same x. */
+body[data-dsh-claude-style] .dsh-claude-archive-row::before {
+  content: "" !important;
+  flex: none !important;
+  width: 5px !important;
+  height: 5px !important;
+  margin: 0 4.5px !important;
+  border-radius: 50% !important;
+  corner-shape: round !important;
+  border: 1.2px solid var(--dsw-alias-label-caption, #a6a094) !important;
+  box-sizing: border-box !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-row:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
@@ -296,9 +315,10 @@ body[data-dsh-claude-style] .dsh-claude-archive-time {
   color: var(--dsw-alias-label-caption, #a6a094) !important;
   font-size: 11px !important;
 }
-/* The delete button stays out of the way until the row is hovered: the list is
-   for reading, and a column of trash cans reads as a toolbar. */
-body[data-dsh-claude-style] .dsh-claude-archive-delete {
+/* The two row actions stay out of the way until the row is hovered: the list is
+   for reading, and a column of buttons reads as a toolbar. */
+body[data-dsh-claude-style] .dsh-claude-archive-delete,
+body[data-dsh-claude-style] .dsh-claude-archive-restore {
   flex: none !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -315,8 +335,14 @@ body[data-dsh-claude-style] .dsh-claude-archive-delete {
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-delete,
-body[data-dsh-claude-style] .dsh-claude-archive-delete:focus-visible {
+body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-restore,
+body[data-dsh-claude-style] .dsh-claude-archive-delete:focus-visible,
+body[data-dsh-claude-style] .dsh-claude-archive-restore:focus-visible {
   opacity: 1 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-restore:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-delete:hover {
   background: rgba(192, 57, 43, 0.12) !important;

@@ -46,6 +46,10 @@
       "zh": "删除会话",
       "en": "Delete conversation"
     },
+    "archiveRestore": {
+      "zh": "取消归档",
+      "en": "Unarchive conversation"
+    },
     "archiveEmpty": {
       "zh": "没有已归档的会话",
       "en": "No archived conversations"
