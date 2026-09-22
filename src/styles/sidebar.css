@@ -250,22 +250,56 @@ body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-ws-segment[aria-chec
   color: #f5f4ef !important;
   box-shadow: none !important;
 }
-/* The host's view-options menu is opened for real while the skin drives its
-   archived filter (workspace-view.js); hiding it keeps that drive invisible. */
-body[data-dsh-claude-ws-driving] [class*="viewOptionsMenu"] {
-  visibility: hidden !important;
-}
-/* A workspace with nothing archived in it has no business in the archived view:
-   its row carries the host's own delete action, and deleting a workspace takes
-   its live conversations with it. */
-body[data-dsh-claude-style] [data-dsh-claude-ws-empty] {
+/* ---------- workspace view: the skin's own archived list ---------- */
+/* 已归档 is the skin's list (src/overrides/workspace-view.js), flat on purpose:
+   the host's own filter buries archived rows inside collapsed workspace groups
+   and its state is not reachable without clicking its menu. */
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="archived"] [data-dsh-claude-ws-tree] {
   display: none !important;
 }
-/* The host renders the archived list itself (its own 视图选项 filter, driven by
-   workspace-view.js); the skin only adds the delete button, which sits inside
-   the host's own row-actions span — beside its unarchive button rather than over
-   it. */
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="active"] .dsh-claude-archive-list {
+  display: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+  padding: 0 12px !important;
+  min-width: 0 !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 28px !important;
+  padding: 0 6px 0 8px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  color: var(--dsw-alias-label-secondary, #6e6a60) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-row:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-title {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-time {
+  flex: none !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+  font-size: 11px !important;
+}
+/* The delete button stays out of the way until the row is hovered: the list is
+   for reading, and a column of trash cans reads as a toolbar. */
 body[data-dsh-claude-style] .dsh-claude-archive-delete {
+  flex: none !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -280,13 +314,19 @@ body[data-dsh-claude-style] .dsh-claude-archive-delete {
   opacity: 0 !important;
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
 }
-body[data-dsh-claude-style] [data-dsh-claude-archive-row]:hover .dsh-claude-archive-delete,
+body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-delete,
 body[data-dsh-claude-style] .dsh-claude-archive-delete:focus-visible {
   opacity: 1 !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-delete:hover {
   background: rgba(192, 57, 43, 0.12) !important;
   color: var(--dsw-alias-state-error-primary, #c0392b) !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-status {
+  padding: 8px !important;
+  color: var(--dsw-alias-label-caption, #a6a094) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 12px !important;
 }
 
 /* ---------- Claude Code layout: workspace & session sidebar ---------- */

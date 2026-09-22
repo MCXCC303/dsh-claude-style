@@ -54,6 +54,10 @@
       "zh": "正在加载…",
       "en": "Loading…"
     },
+    "archiveUntitled": {
+      "zh": "未命名会话",
+      "en": "Untitled conversation"
+    },
     "archiveJustNow": {
       "zh": "刚刚",
       "en": "Just now"
