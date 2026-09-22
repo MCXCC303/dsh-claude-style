@@ -380,7 +380,16 @@
         while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
         while (modelFooter && modelFooter.firstChild) modelFooter.removeChild(modelFooter.firstChild)
 
-        if (status === 'idle' || status === 'loading' || status === 'selecting') {
+        // A seat whose data is still in flight must not blank a picker that
+        // already has a list. The host marks the directory `selecting` for the
+        // WHOLE selectModel round-trip, and that round-trip runs for seconds on
+        // providers whose adapters resolve over the network — the effort slider
+        // commits through the very same RPC, so nudging it used to empty the
+        // card (list, slider and More-models row all gone) for exactly as long
+        // as the host took to answer. Only a directory with nothing to show
+        // yet falls back to the loading line.
+        var seated = groups.length > 0 && current !== null
+        if (!seated && (status === 'idle' || status === 'loading' || status === 'selecting')) {
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('loading', MODEL_LOADING_LABEL)))
         } else {
           // Level 1 always leads with the official service: it is the default
@@ -672,6 +681,7 @@
         var snap = modelSnapshot()
         var current = modelCurrent(snap)
         var effort = modelEffort(snap)
+        var groupsNow = (snap && snap.groups) || []
         var label = current ? current.model.name : copyLabel('fallbackLabel', MODEL_FALLBACK_LABEL)
         var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
         if (labelEl) {
@@ -682,7 +692,13 @@
           // pass feeds the observer that schedules the next pass, keeping one
           // full pass running every frame even at idle.
           if (labelEl.textContent !== label) labelEl.textContent = label
-          labelEl.classList.toggle('dsh-claude-model-btn-loading', !!(snap && (snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting')))
+          // The dimmed tone means "no seat to name yet". A selection in flight
+          // still names the model in force, so it keeps the normal tone — the
+          // host can hold `selecting` for seconds (the effort slider commits
+          // through that same RPC), and a greyed-out trigger for that long
+          // reads as broken rather than busy.
+          var unsettled = !!(snap && (snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting')) && !(groupsNow.length > 0 && current !== null)
+          labelEl.classList.toggle('dsh-claude-model-btn-loading', unsettled)
         }
         var effortEl = modelBtn.querySelector('.dsh-claude-model-btn-effort')
         if (effort) {
