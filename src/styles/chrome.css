@@ -144,9 +144,17 @@ body[data-dsh-claude-style] [data-slot="conversation.input.dock"] > * {
   z-index: 100 !important;
 }
 
+/* The header actions are NOT inside the composer seat, so unlike the three
+   overlays above they escape every stacking context and their value is read
+   against the page: the right Sidebar's panel covers through ui-dockkit's dock
+   layer (`--dsh-dockkit-dock-layer`, 10 normal and 40 fullscreen), and a
+   header action above those paints through the fullscreen panel. 9 keeps the
+   actions over the message layer (pinned headers 7, back-to-bottom 8) while
+   staying under both panel layers. The composer overlays keep 100 because the
+   seat's own stacking context caps them. */
 body[data-dsh-claude-style] [data-slot="conversation.session.header.actions"] > * {
   position: relative;
-  z-index: 100 !important;
+  z-index: 9 !important;
 }
 
 /* The shipped queue dock cancels the stack gap AND pulls 3px further, so the
