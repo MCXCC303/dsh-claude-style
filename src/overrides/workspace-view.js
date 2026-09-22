@@ -22,6 +22,22 @@
       var DELETE_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 4.2h10.8"/><path d="M6.4 4.2V3a.8.8 0 0 1 .8-.8h1.6a.8.8 0 0 1 .8.8v1.2"/><path d="M4.2 4.2l.6 8.3a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-8.3"/><path d="M6.7 6.8v4M9.3 6.8v4"/></svg>'
       /** Tray with an up arrow: put this conversation back among the live ones. */
       var RESTORE_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.2v3.4a1 1 0 0 0 1 1h8.8a1 1 0 0 0 1-1V9.2"/><path d="M8 10.4V2.6"/><path d="M5.2 5.4L8 2.6l2.8 2.8"/></svg>'
+      /**
+       * The host's own Tooltip and icons, reached through the plugin loader's
+       * `require` — the same packages its UI uses, so these row actions look and
+       * behave like the host's. `@deepseek-ai/dsh-client-ui-primitives` exports
+       * `Tooltip`, `IconUnarchiveOutlineRegular` and `IconTrashOutlineRegular`.
+       * Guarded: a loader that hands over nothing leaves the skin's own SVG and a
+       * native title in place.
+       */
+      var primitives = null
+      var react = null
+      var reactDom = null
+      try { primitives = require('@deepseek-ai/dsh-client-ui-primitives') } catch (error) { primitives = null }
+      try { react = require('react') } catch (error) { react = null }
+      try { reactDom = require('react-dom/client') } catch (error) { reactDom = null }
+      /** React roots holding the row actions, unmounted when the list is rebuilt. */
+      var actionRoots = []
       var VIEW_ATTR = 'data-dsh-claude-ws-view'
       var LABEL_ATTR = 'data-dsh-claude-ws-label'
       var TREE_ATTR = 'data-dsh-claude-ws-tree'
@@ -203,6 +219,32 @@
         }).catch(function () { /* the row stays; the next read tells the truth */ })
       }
 
+      /**
+       * One row action: the host's icon inside the host's tooltip when the loader
+       * gives us both, and the skin's own SVG plus a native title when it does not.
+       */
+      function actionButton(kind, label, fallbackSvg, onClick) {
+        var wrapper = modelEl('span', 'dsh-claude-archive-action')
+        var className = kind === 'restore' ? 'dsh-claude-archive-restore' : 'dsh-claude-archive-delete'
+        var Icon = primitives === null ? null : (kind === 'restore' ? primitives.IconUnarchiveOutlineRegular : primitives.IconTrashOutlineRegular)
+        if (react !== null && reactDom !== null && primitives !== null && primitives.Tooltip && Icon) {
+          var root = reactDom.createRoot(wrapper)
+          actionRoots.push(root)
+          root.render(react.createElement(primitives.Tooltip, { label: label, side: 'top', delayMs: 500 },
+            react.createElement('button', { type: 'button', className: className, 'aria-label': label, title: label, onClick: onClick },
+              react.createElement(Icon, { size: 14 }))))
+          return wrapper
+        }
+        var button = modelEl('button', className)
+        button.type = 'button'
+        button.setAttribute('aria-label', label)
+        button.setAttribute('title', label)
+        button.innerHTML = fallbackSvg
+        button.addEventListener('click', onClick)
+        wrapper.appendChild(button)
+        return wrapper
+      }
+
       function buildArchivedRow(item) {
         var row = modelEl('div', 'dsh-claude-archive-row')
         row.setAttribute('role', 'button')
@@ -213,34 +255,26 @@
         // The host's archived rows offer an unarchive action; the skin's list
         // carries the same pair, so leaving the archived view is not the only way
         // back to a conversation.
-        var restore = modelEl('button', 'dsh-claude-archive-restore')
-        restore.type = 'button'
-        restore.setAttribute('aria-label', copyLabel('archiveRestore', 'Unarchive conversation'))
-        // A native tooltip as well as the label: the buttons are icon-only, and a
-        // trash can that deletes a conversation should say so before it is used.
-        restore.setAttribute('title', copyLabel('archiveRestore', 'Unarchive conversation'))
-        restore.innerHTML = RESTORE_SVG
-        restore.addEventListener('click', function (event) {
+        row.appendChild(actionButton('restore', copyLabel('archiveRestore', 'Unarchive conversation'), RESTORE_SVG, function (event) {
           event.stopPropagation()
           restoreArchived(item.id)
-        })
-        row.appendChild(restore)
-        var remove = modelEl('button', 'dsh-claude-archive-delete')
-        remove.type = 'button'
-        remove.setAttribute('aria-label', copyLabel('archiveDelete', 'Delete conversation'))
-        remove.setAttribute('title', copyLabel('archiveDelete', 'Delete conversation'))
-        remove.innerHTML = DELETE_SVG
-        remove.addEventListener('click', function (event) {
+        }))
+        row.appendChild(actionButton('delete', copyLabel('archiveDelete', 'Delete conversation'), DELETE_SVG, function (event) {
           event.stopPropagation()
           removeArchived(item.id)
-        })
-        row.appendChild(remove)
+        }))
         row.addEventListener('click', function () { openArchived(item.id) })
         return row
       }
 
       function renderList() {
         if (listHost === null) return
+        // The actions live in React roots; drop them before the rows go, or every
+        // rebuild would leave a tree behind.
+        for (var r = 0; r < actionRoots.length; r++) {
+          try { actionRoots[r].unmount() } catch (error) { /* already gone */ }
+        }
+        actionRoots = []
         while (listHost.firstChild) listHost.removeChild(listHost.firstChild)
         if (loading) {
           listHost.appendChild(modelEl('div', 'dsh-claude-archive-status', copyLabel('archiveLoading', 'Loading…')))
@@ -357,6 +391,10 @@
 
       return function () {
         disposed = true
+        for (var r = 0; r < actionRoots.length; r++) {
+          try { actionRoots[r].unmount() } catch (error) { /* already gone */ }
+        }
+        actionRoots = []
         if (retryTimer !== null) {
           clearTimeout(retryTimer)
           retryTimer = null

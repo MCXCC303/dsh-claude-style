@@ -316,7 +316,12 @@ body[data-dsh-claude-style] .dsh-claude-archive-time {
   font-size: 11px !important;
 }
 /* The two row actions stay out of the way until the row is hovered: the list is
-   for reading, and a column of buttons reads as a toolbar. */
+   for reading, and a column of buttons reads as a toolbar. Each button lives in
+   the span its React root renders into. */
+body[data-dsh-claude-style] .dsh-claude-archive-action {
+  display: inline-flex !important;
+  flex: none !important;
+}
 body[data-dsh-claude-style] .dsh-claude-archive-delete,
 body[data-dsh-claude-style] .dsh-claude-archive-restore {
   flex: none !important;
