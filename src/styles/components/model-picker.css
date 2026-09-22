@@ -346,8 +346,11 @@ body[data-dsh-claude-style] .dsh-claude-effort-track::before {
   left: 0 !important;
   right: 0 !important;
   top: 50% !important;
-  height: 6px !important;
-  margin-top: -3px !important;
+  /* Nearly as tall as the 16px knob (Claude's real Effort slider reads as one
+     chunky pill, not a bead on a wire): 6px read as a thin rail the knob sat
+     ON, 14px reads as a groove the knob rides IN. */
+  height: 14px !important;
+  margin-top: -7px !important;
   border-radius: 999px !important;
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.08)) !important;
 }

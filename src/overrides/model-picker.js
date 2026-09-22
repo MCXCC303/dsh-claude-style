@@ -663,7 +663,13 @@
         var label = current ? current.model.name : copyLabel('fallbackLabel', MODEL_FALLBACK_LABEL)
         var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
         if (labelEl) {
-          labelEl.textContent = label
+          // Same-value guards: syncModelControl runs on every scheduler pass,
+          // and an identical write still mutates the DOM (textContent replaces
+          // the text node; setAttribute queues an attribute record — and
+          // aria-label is in the observer's attributeFilter). Unguarded, each
+          // pass feeds the observer that schedules the next pass, keeping one
+          // full pass running every frame even at idle.
+          if (labelEl.textContent !== label) labelEl.textContent = label
           labelEl.classList.toggle('dsh-claude-model-btn-loading', !!(snap && (snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting')))
         }
         var effortEl = modelBtn.querySelector('.dsh-claude-model-btn-effort')
@@ -672,11 +678,13 @@
             effortEl = modelEl('span', 'dsh-claude-model-btn-effort')
             modelBtn.insertBefore(effortEl, modelBtn.firstChild ? labelEl.nextSibling : null)
           }
-          effortEl.textContent = '· ' + effort.label
+          var effortText = '· ' + effort.label
+          if (effortEl.textContent !== effortText) effortEl.textContent = effortText
         } else if (effortEl !== null && effortEl.parentElement) {
           effortEl.parentElement.removeChild(effortEl)
         }
-        modelBtn.setAttribute('aria-label', copyLabel('triggerLabel', MODEL_TRIGGER_LABEL, { model: label }))
+        var triggerAria = copyLabel('triggerLabel', MODEL_TRIGGER_LABEL, { model: label })
+        if (modelBtn.getAttribute('aria-label') !== triggerAria) modelBtn.setAttribute('aria-label', triggerAria)
         modelBtn.disabled = false
 
         renderModelBody()

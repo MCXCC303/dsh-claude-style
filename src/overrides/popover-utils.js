@@ -33,12 +33,18 @@
         y = rect.top - (opts.gap || 0) - height
         if (y < margin) y = Math.min(rect.bottom + (opts.gap || 0), Math.max(margin, window.innerHeight - height - margin))
       }
+      // Same-value guard: this runs on every scheduler pass while a popover is
+      // open, and an identical write still dirties layout — the next geometry
+      // read (the drag paths read rect/offset every frame) would then force a
+      // synchronous recalc. Skip the write when the anchor did not move.
+      var leftValue = Math.round(x) + 'px'
+      var topValue = Math.round(y) + 'px'
       if (opts.important) {
-        pop.style.setProperty('left', Math.round(x) + 'px', 'important')
-        pop.style.setProperty('top', Math.round(y) + 'px', 'important')
+        if (pop.style.left !== leftValue) pop.style.setProperty('left', leftValue, 'important')
+        if (pop.style.top !== topValue) pop.style.setProperty('top', topValue, 'important')
       } else {
-        pop.style.left = x + 'px'
-        pop.style.top = y + 'px'
+        if (pop.style.left !== leftValue) pop.style.left = leftValue
+        if (pop.style.top !== topValue) pop.style.top = topValue
       }
       return { x: x, y: y }
     }

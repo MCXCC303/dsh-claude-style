@@ -107,13 +107,17 @@
       }
 
       /**
-       * Move the knob. A non-animated write hands the property back to the
-       * stylesheet after forcing one read, so the snap at the end of a gesture is
-       * the only movement the transition ever animates.
+       * Move the knob. While the gesture runs this is ONE compositor write:
+       * the stylesheet already forces `transition: none` for `data-dragging`,
+       * so an inline transition dance (and the forced reflow it needs to take
+       * effect) would be pure overhead on every pointermove. The inline dance
+       * survives only for the rare non-drag instant move (a ladder swap on
+       * first paint), where the stylesheet's transition would otherwise
+       * animate the jump.
        */
       function place(x, animate) {
         var value = 'translateX(' + Math.round(x) + 'px)'
-        if (animate) {
+        if (animate || dragging) {
           knob.style.transform = value
           return
         }
@@ -139,18 +143,29 @@
         return Math.max(0, Math.min(steps.length - 1, Math.round(ratio * (steps.length - 1))))
       }
 
-      /** The level's name while the gesture runs, the committed one otherwise. */
+      /**
+       * The level's name while the gesture runs, the committed one otherwise.
+       * Same-value guard: the write runs per frame while dragging, and an
+       * identical textContent assignment still replaces the text node — the
+       * resulting mutation would feed the scheduler's observer and keep a full
+       * pass running every frame.
+       */
       function paintValue() {
         var at = dragging ? live : selected
-        valueEl.textContent = at >= 0 && steps[at] ? steps[at].name : noneLabel
+        var text = at >= 0 && steps[at] ? steps[at].name : noneLabel
+        if (valueEl.textContent !== text) valueEl.textContent = text
       }
 
       function paintAria(labels) {
         noneLabel = labels.none
-        labelEl.textContent = labels.label
-        fasterEl.textContent = labels.faster
-        smarterEl.textContent = labels.smarter
-        track.setAttribute('aria-label', labels.label)
+        // Same-value guards throughout: update() runs on every scheduler pass,
+        // and an identical write here (in particular the aria-label, which is
+        // in the observer's attributeFilter) re-schedules the next pass — a
+        // self-sustaining one-pass-per-frame loop.
+        if (labelEl.textContent !== labels.label) labelEl.textContent = labels.label
+        if (fasterEl.textContent !== labels.faster) fasterEl.textContent = labels.faster
+        if (smarterEl.textContent !== labels.smarter) smarterEl.textContent = labels.smarter
+        if (track.getAttribute('aria-label') !== labels.label) track.setAttribute('aria-label', labels.label)
         if (steps.length === 0) {
           root.setAttribute('data-empty', '')
           track.setAttribute('aria-disabled', 'true')
@@ -188,6 +203,15 @@
       /** The gesture ends: the knob lands on the nearest level and commits it. */
       function settle() {
         if (!dragging) return
+        if (moveQueued) {
+          // Land the still-pending position first, so the release settles on
+          // where the pointer actually is rather than one event behind.
+          cancelAnimationFrame(pendingFrame)
+          moveQueued = false
+          pendingFrame = 0
+          applyPending()
+          if (!dragging) return
+        }
         dragging = false
         root.removeAttribute('data-dragging')
         releaseCapture()
@@ -214,19 +238,44 @@
         paintValue()
       }
 
-      function onPointerMove(e) {
+      /**
+       * The gesture's latest pointer position. pointermove fires faster than
+       * frames render; the event stores the position and ONE animation-frame
+       * callback applies it — reads first (boundary box, travel geometry),
+       * writes after (one transform + the level name) — so the drag costs one
+       * layout flush per frame instead of one forced reflow per event.
+       */
+      var pendingFrame = 0
+      var moveQueued = false
+      var pendingX = 0
+      var pendingY = 0
+
+      function applyPending() {
         if (!dragging) return
-        // Leaving the control ends the gesture where it stands — the knob settles
-        // on the nearest level instead of trailing the pointer away.
         var box = root.getBoundingClientRect()
-        if (e.clientX < box.left - 6 || e.clientX > box.right + 6 || e.clientY < box.top - 6 || e.clientY > box.bottom + 6) {
+        // Leaving the control ends the gesture where it stands — the knob
+        // settles on the nearest level instead of trailing the pointer away.
+        if (pendingX < box.left - 6 || pendingX > box.right + 6 || pendingY < box.top - 6 || pendingY > box.bottom + 6) {
           settle()
           return
         }
-        var x = pointerTravel(e.clientX)
+        var x = pointerTravel(pendingX)
         place(x, false)
         live = nearest(x)
         paintValue()
+      }
+
+      function onPointerMove(e) {
+        if (!dragging) return
+        pendingX = e.clientX
+        pendingY = e.clientY
+        if (moveQueued) return
+        moveQueued = true
+        pendingFrame = requestAnimationFrame(function () {
+          moveQueued = false
+          pendingFrame = 0
+          applyPending()
+        })
       }
 
       track.addEventListener('pointerdown', onPointerDown)
