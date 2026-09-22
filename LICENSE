@@ -39,12 +39,4 @@ owners.
   are JetBrains Mono, distributed under the SIL Open Font License
   (`fonts/OFL.txt`). They may be redistributed with this plugin.
 
-- `fonts/GoogleSansFlexPicker.woff2` is a Latin-only subset of Google Sans Flex
-  (standard weight, upright), built by `scripts/slim-google-sans.py` and renamed
-  to `Google Sans Flex Picker`. Google Sans Flex is distributed under the SIL
-  Open Font License (`fonts/OFL-GoogleSansFlex.txt`, Copyright 2022 The Google
-  Sans Flex Project Authors); upstream declares no Reserved Font Name, and this
-  subset is renamed so it cannot shadow a full system-installed copy. It ships
-  with the npm package and may be redistributed with this plugin, under no other
-  licence.
 

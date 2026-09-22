@@ -152,16 +152,6 @@ body[data-dsh-claude-style] .dsh-claude-model-name {
   font-weight: 500 !important;
   line-height: 16px !important;
 }
-/* A Gemini row wears Gemini's own face for its name. The row already carries the
-   vendor's mark, and the name is the one string in the picker that names a model
-   rather than the shell — so the vendor's typeface is the same signal in a second
-   material. `data-brand` is the mark id the picker stamps on the row
-   (src/overrides/model-picker.js); only Gemini resolves to a face today, and a
-   brand without one simply keeps the UI face. The stack is additive: a name with
-   a character outside the Latin subset falls through character by character. */
-body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='gemini'] .dsh-claude-model-name {
-  font-family: var(--dsw-font-brand-gemini) !important;
-}
 /* Claude's wordmark is set in Anthropic's serif, so the rest of the label follows
    it — the row reads as one piece of lettering rather than serif art beside sans. */
 body[data-dsh-claude-style] .dsh-claude-model-option[data-brand='claude'] .dsh-claude-model-name {

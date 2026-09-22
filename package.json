@@ -38,9 +38,7 @@
     "fonts/JetBrainsMonoVariable.ttf",
     "fonts/JetBrainsMonoItalicVariable.ttf",
     "fonts/OFL.txt",
-    "fonts/AUTHORS.txt",
-    "fonts/GoogleSansFlexPicker.woff2",
-    "fonts/OFL-GoogleSansFlex.txt"
+    "fonts/AUTHORS.txt"
   ],
   "keywords": [
     "dsh",

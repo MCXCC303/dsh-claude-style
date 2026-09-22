@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Removed
+- **模型行的厂商字体（Google Sans Flex）整块移除**：此前只有 Gemini 行会把名称换成 Google Sans Flex（一枚自子集化的拉丁字体），其余行都是界面字体——一个厂商有字体、别的厂商没有，这不是「厂商标记」而是一个特例，何况模型行已经在用厂商锁定标表达同一件事。现在模型行一律用界面字体：字体资产（`fonts/GoogleSansFlexPicker.woff2` 与它的 OFL 文本）、子集化脚本 `scripts/slim-google-sans.py`、`--dsw-font-brand-gemini` 令牌与对应的 `@font-face`、宿主字体白名单里的那一条，以及 package.json 的 `files` 条目一并删除，npm 包小约 9 KB。
+
 ## [0.4.0] - 2026-09-21
 
 ### Added

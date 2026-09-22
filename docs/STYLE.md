@@ -26,12 +26,7 @@ Rules:
 - **Serif display** — headings / editorial statements (`--dsw-font-serif`).
 - **Sans UI** — chrome, body (`--dsw-font-family`).
 - **Mono** — code, technical labels (`--dsw-font-code`).
-- **Vendor face** — one model name in the picker, where the row already wears the
-  vendor's mark (`--dsw-font-brand-gemini`: a Latin-only Google Sans Flex subset,
-  standard weight, SIL OFL 1.1). A vendor face is a *material*, not a new UI role:
-  it never replaces the sans stack, it sits in front of it, so text the subset does
-  not cover falls through instead of turning to tofu. Rebuilt with
-  `scripts/slim-google-sans.py`; licence in `fonts/OFL-GoogleSansFlex.txt`.
+
 
 ## Shapes
 
