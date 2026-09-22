@@ -27,6 +27,8 @@
        * a slow traverse ran it out and both cards folded up mid-journey.
        */
       var MODEL_CLOSE_DELAY = 150
+      /** Pending fold of level 2 while the pointer is still crossing level 1. */
+      var subFoldTimer = null
       var modelHoverIntent = createHoverIntent(openModelPopover, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
       /** The More-models cell drills in on the same dwell/grace as the trigger. */
       var modelSubHoverIntent = createHoverIntent(openModelSub, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
@@ -41,6 +43,10 @@
 
       function cancelCloseModel() {
         modelHoverIntent.cancel()
+        if (subFoldTimer !== null) {
+          clearTimeout(subFoldTimer)
+          subFoldTimer = null
+        }
       }
 
       function scheduleCloseModel() {
@@ -678,7 +684,17 @@
             if (modelSubPop === null || modelSubPop.getAttribute('data-open') !== 'true') return
             var target = e.target
             if (target && typeof target.closest === 'function' && target.closest('.dsh-claude-model-cell')) return
-            modelSubPop.setAttribute('data-open', 'false')
+            // Delayed, not immediate: the sub card sits BESIDE level 1, so a
+            // pointer on its way from the cell to the sub crosses level 1's own
+            // rows — folding on the spot made that journey impossible at any
+            // speed. Folding now waits out the same grace, and stands down if the
+            // pointer has meanwhile reached either card.
+            if (subFoldTimer !== null) clearTimeout(subFoldTimer)
+            subFoldTimer = setTimeout(function () {
+              subFoldTimer = null
+              if (pointerInPicker()) return
+              if (modelSubPop !== null) modelSubPop.setAttribute('data-open', 'false')
+            }, MODEL_CLOSE_DELAY)
           })
           modelPop.addEventListener('mouseleave', function () {
             // A drag in flight must not be cut short by the hover-close timer: the
