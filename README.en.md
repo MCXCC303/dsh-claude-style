@@ -1,7 +1,8 @@
-<div align="center">
 # DSH Claude Style
 
-**A Claude Code Desktop theme for the DeepSeek Harness (DSH) web client — the warm ivory editorial canvas, the clay ember accent, and the Claude Code interaction model rebuilt on DSH.**
+**A theme plugin that recreates the look and feel of Claude Code Desktop for the DeepSeek Harness Web GUI.**
+
+<div align="center">
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
@@ -19,71 +20,72 @@
   </tr>
 </table>
 
-> Light: ivory canvas `#FCFCFB` with a muted sidebar `#FBFBF9`. Dark: warm black `#141413`. The theme follows the system color scheme; clay ember `#D97757` is the single accent on both canvases.
+> Light: ivory canvas `#FCFCFB` with a pale sidebar `#FBFBF9`; dark: warm black `#141413`. The theme follows the system light/dark mode, and ember orange `#D97757` is the single action accent on both canvases.
 
 ## Fonts
 
-> **Important: the JetBrains Mono code font ships with the plugin and is served to the browser as a webfont by the plugin host — no installation needed. The Anthropic Sans/Serif fonts are NOT shipped with the npm package**; they remain in the repository [`fonts/`](fonts/) for download. You can either install them on the system, or skip installation entirely: drop the two `.ttf` files into the plugin package's `fonts/` directory and the host serves them as webfonts the same way (identical files, identical result). Either way, refresh / restart web afterwards.
+> **Important: the Anthropic fonts are not distributed with the npm package — they live in this repository under [`fonts/`](fonts/).** You can install them system-wide, or skip the install entirely: drop the two `.ttf` files into the plugin package's `fonts/` directory and the host serves them as webfonts the same way (identical files, identical result). Either way, refresh / restart the web UI.
 
 | Font | Used for | File |
 |---|---|---|
-| Anthropic Sans Web Text | UI chrome | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
-| Anthropic Serif Web Text | Conversation body / markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
+| Anthropic Sans Web Text | Interface / UI | [`fonts/AnthropicSansWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSansWebText.ttf) |
+| Anthropic Serif Web Text | Conversation body / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | Code / code blocks | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf), [`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
-Enabling the Anthropic faces (pick one): ① install on the system — double-click the `.ttf` on Windows → *Install*, or import via *Font Book* on macOS; ② no-install — copy the `.ttf` files into the plugin package's `fonts/` directory (next to `JetBrainsMonoVariable.ttf`). Refresh the page afterwards.
+Enabling the Anthropic fonts (pick one):
 
-> JetBrains Mono is distributed under the [SIL Open Font License](fonts/OFL.txt). The Anthropic Sans/Serif typefaces are Anthropic's property, provided for personal use only and not covered by the MIT license above. See [LICENSE](LICENSE) for the font notice.
+① Install system-wide — on Windows, double-click the `.ttf` → "Install"; on macOS, import it with Font Book.
 
-## Install
+② No install — copy the `.ttf` files into the plugin package's `fonts/` directory. Refresh the page afterwards.
 
-> Tested on dsh 0.1.5-rc.2
+> The Anthropic Sans/Serif fonts are copyright Anthropic, licensed for personal use only, and are not covered by the MIT license.
 
-1. Install via terminal
+## Installation
+
+1. From a terminal
 
 ```bash
 dsh plugin --profile web add dsh-claude-style                  # npm package (recommended)
 dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub source
 ```
 
-2. Install via [Plugin Marketplace](https://github.com/dsh-market/dsh-market)
+2. From the [plugin market](https://github.com/dsh-market/dsh-market)
 
-Only one theme should be active at a time. After installing, **restart `dsh web`** and refresh the page.
+Keep only one theme enabled at a time. After installing, **restart `dsh web`** and refresh the page.
 
-## Usage
+## Features
 
-1. **Theme** — applies the whole canvas automatically after install; no configuration needed. Light and dark follow the system color scheme.
-2. **Permission segments** — the composer gets a Read | Edit | Auto segmented control replacing the shipped access-mode menu: read-only, workspace write, and full access (Auto is switched through the shipped risk-confirmation dialog).
-3. **Model picker** (can be switched off in Settings to hand the menu back to the host) — the composer's model seat becomes a two-level Claude-style menu: the first level **always leads with the official service**, followed by the models of the **quick providers** picked in Settings — one rule between providers, the provider's name leading it in small text on the same row so the rule is shortened by it (the official source is not named and is never listed in Settings; a provider removed from the catalog stays in the list marked "Removed" and can be unchecked to clear it) — then a divider, the reasoning-effort slider and "More models"; the slider travels continuously and settles on the nearest level once the gesture ends (a model with no levels still shows it — the knob moves, the value does not), with `Faster` / `Smarter` at its ends; both levels are sized by their content and capped by the viewport, the first level scrolls its model list only while the divider, the slider and the More-models row stay pinned below the scroll area, and the second opens beside it. Model descriptions appear on the first level only; a current seat that none of the listed providers carries gets a row of its own at the end of the list, above the divider, under a provider rule of its own; the "More models" level is every provider's full catalog and lists names alone. Every model row carries its **vendor's lockup** — the mark and the vendor's wordmark composed into one piece of art, drawn in place of the vendor's name inside the label (`[DeepSeek whale + wordmark] V4.1-Flash`); a name that never spells the vendor (Kimi's own catalog calls the model `K3`) leads with the lockup instead. The "More models" group headers carry the provider's name alone, no mark. The artwork is [Lobe Icons](https://lobehub.com/icons) (MIT), composed before the build into one `<svg>` per vendor (no React dependency). The mark's size and the gap after it are **global constants**, not Lobe's per-icon `TEXT_MULTIPLE`/`SPACE_MULTIPLE` — those ratios are relative to each wordmark's own box, which made every vendor's mark a different size and every gap a different width; the brand colours and variant list come from `es/toc.js`. The colour artwork draws on the ivory canvas, with any fill that cannot be read there swapped to `currentColor` (Kimi's white K would vanish, its blue dot stays); the warm black canvas gets the mono layer in the theme's text colour. A few vendors override the lockup in `brands.lockups`: the two halves may come from different icons (Hunyuan's mark with Tencent's wordmark), the word it stands in for may be spelled differently (`Step` for `step-*`, also `MiMo` and `GLM`), and a wordmark may be cropped (GLM-V drops its `-V`, ChatGPT keeps only `GPT`); hand-provided artwork lives in `src/assets/icons/`, beside the generated `combine/` directory. A wordmark has to match the word it stands in for: Claude rows draw Claude's and Grok rows draw Grok's, not their parent companies' — and Claude's remaining text is set in Anthropic Serif, because that lockup is serif lettering. Hidden text keeps the full vendor name in the accessibility tree, so a screen reader still hears "Kimi K3" rather than "K3".
-4. **Brand switch** — Settings (`Ctrl+,`) → **Claude Style** (on DSH 0.1.7 it lives under Settings → Plugins → dsh-claude-style): the sidebar brand flips between the Claude starburst + the official Claude wordmark and Anthropic (`A\` + ANTHROPIC wordmark); the hero mark follows the choice with the clay fill. The choice persists in the browser; `claude` is the default.
-5. **Account drawer** — the sidebar footer button opens a hover popover (the **Open popovers on hover** setting picks Off / Account only / All) with quick access to Settings (`Ctrl+,`) and plugin management; the username row at its top is an easter egg: it opens Claude's own "Your account is on hold" page (a purely local reproduction that touches no real state — click any control on it, or press `Esc`, to leave; it deliberately stays put when the window loses focus, so you can switch away and read it). That page's language is its own setting (**Account-hold easter egg language**, Chinese/English, English by default).
-6. **Status polish** — thinking turns pick one of Claude Code's 185 spinner verbs per turn; the workspace loading state uses a Fluent-style circular indicator.
+1. **Theme** — global the moment it is installed, nothing to configure. Ivory `#FCFCFB` in light mode, warm black `#141413` in dark mode, with the same ember orange `#D97757` action accent on both; light/dark follows the system colour mode.
+2. **Composer** — the input box is rebuilt end to end: a permission segment control (Full access / Read only / …), a model trigger carrying the vendor lockup, and the tool row and the stats sharing one line, with the send and stop keys unified into a 7px rounded rectangle. The stats sentence and the model trigger share one type size and colour.
+3. **Model picker** — a new two-level popover: level one lists the official service plus the quick providers picked in settings, and the "More models" second level groups the rest by provider. Every row carries its vendor lockup and description; the foot holds the reasoning-effort slider (stepless — it settles on the nearest level when you let go) and the "More models" entry. Level two is bottom-aligned with level one, providers already shown in level one are not repeated, and a model without thinking support draws no slider at all. Hover opens after a 50ms dwell and closes after 150ms, and the sliver between the two cards does not count as leaving.
+4. **Workspace** — the sidebar's "Workspace" heading becomes an **Active / Archived** segment control: Active keeps the host's own session tree, while Archived is the skin's own flat list (title, time, and an unarchive plus a delete button on every row). The rows line up with the host's own session rows item by item (row x=12 / width 251 / height 28 / title x=36). On a host without archiving support the control is not drawn and the plain heading stays.
+5. **Sidebar** — the New session and Plugins rows take Claude's own shape: no plate at rest, a plate on hover, the "＋" of New session set in a circular chip, and both icons turning 90° clockwise on hover (four-fold symmetric glyphs, so they land back on themselves); the account drawer and the ban-screen easter egg stay as they were.
 
-## Disable & Uninstall
+## Disabling and uninstalling
 
-Pause the theme without uninstalling — add the following to the profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
+To pause the theme without uninstalling it, add this to the profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
 
 ```yaml
 - id: ui-skin-claude-style
   disabled: true
 ```
 
-It hot-reloads within about a second; refresh to return to the stock look.
+It takes effect within about a second; refresh the page to get the stock look back.
 
 ```bash
 dsh plugin --profile web remove dsh-claude-style   # uninstall
 ```
 
-Then restart `dsh web`; remove hand-added rows for this theme from `cordis.patch.yml` as well.
+Then restart `dsh web`; if you added this theme's entry to `cordis.patch.yml` by hand, remove that too.
 
-## Docs
+## Documentation
 
-| Document | Description |
+| Document | What it covers |
 | --- | --- |
-| [Design Tokens](docs/STYLE.md) | Palette, typography, shapes, plus the bundle source layout and host-selector discipline |
+| [Design tokens](docs/STYLE.md) | Palette, fonts, shapes, source layout and the host-selector discipline (in English) |
 | [Changelog](CHANGELOG.md) | Version history |
-| [Contributing](CONTRIBUTING.md) | How to build from `src/`, commit rules, and the screenshot/regression tooling |
+| [Contributing](CONTRIBUTING.md) | Building from `src/`, commit conventions, screenshot and regression tooling (in English) |
 
-## Related Links
+## Friends
 
-> Running several themes side by side? Recommended: [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) — switch all installed themes from its Settings page.
+> Running several themes at once? Try [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) — it switches between every installed theme from one settings page.
