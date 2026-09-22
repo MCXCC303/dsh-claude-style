@@ -71,7 +71,12 @@
         if (ui.permissions) ui.permissions.closeMenu()
         if (ui.permissions && ui.permissions.closeStats) ui.permissions.closeStats()
         if (ui.footer) ui.footer.close()
-        if (ui.heroMenu) ui.heroMenu.close()
+        // The hero menu has no close of its own — it lives and dies with the
+        // host's hover state, and syncHeroMenu notices when it is gone — so the
+        // call is guarded like closeStats above. Unguarded it threw a TypeError
+        // on every composer focus-in, which also aborted the rest of this
+        // handler for that event.
+        if (ui.heroMenu && ui.heroMenu.close) ui.heroMenu.close()
         if (ui.quickProviders) ui.quickProviders.close()
       }
 
