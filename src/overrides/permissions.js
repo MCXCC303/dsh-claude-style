@@ -35,6 +35,8 @@
       var permResizeListener = null
       /** The context meter this skin last moved out of the host's dock line. */
       var dockedMeter = null
+      /** Identity of the stats bindings THIS generation installed (see bindStatsHover). */
+      var statsBindingToken = {}
 
       /** Every dismiss route (item pick, outside pointer, resize/scroll, Escape) closes the menu through this one path. */
       function closePermMenu() {
@@ -649,6 +651,24 @@
         if (statsPopover !== null) statsPopover.setAttribute('data-open', 'false')
       }
 
+      /**
+       * Drop stats cards left behind by a previous client generation.
+       *
+       * Client HMR drops the old fiber's disposals, so the teardown never runs:
+       * the previous generation's card stays in <body> holding its last content
+       * and `data-open="true"` — a second, frozen popover sitting beside the
+       * live one (which is why the two read differently: the stale card shows
+       * whatever sections it was last rendered with). The model picker and the
+       * account footer sweep their own strays the same way; the stats card was
+       * the one that did not.
+       */
+      function sweepStrayStatsPopovers() {
+        var strays = document.querySelectorAll('body > .dsh-claude-stats-popover')
+        for (var i = 0; i < strays.length; i++) {
+          if (strays[i] !== statsPopover) strays[i].parentElement.removeChild(strays[i])
+        }
+      }
+
       function scheduleHideStatsPopover() {
         if (statsHideTimer) clearTimeout(statsHideTimer)
         statsHideTimer = setTimeout(function () {
@@ -699,20 +719,55 @@
       }
 
       function bindStatsHover(root) {
-        if (root.__dshStatsHoverBound) return
-        root.__dshStatsHoverBound = true
-        // Gated like the account, model and permission popovers — and on the
-        // strictest scope: the stats card is not a picker, so it only auto-opens
-        // under "All". The setting promises "hover opens these; off makes them
-        // click-to-open", and the stats popover was the one that opened on hover
-        // no matter what — so it ignored the switch. With the setting off, a
-        // click still reaches the host's own stats dialog, which is exactly what
-        // that button is for.
+        // Generation-scoped, not a plain boolean: the host owns the stats node
+        // and reuses it across a client HMR reload, so a boolean left by the
+        // previous generation made this one skip binding entirely — the OLD
+        // closure kept serving the card (its content, its stale node) while this
+        // generation's listeners never existed.
+        if (root.__dshStatsHoverToken === statsBindingToken) return
+        root.__dshStatsHoverToken = statsBindingToken
+        var openTimer = null
+        function cancelOpen() {
+          if (openTimer) {
+            clearTimeout(openTimer)
+            openTimer = null
+          }
+        }
+        // Hover still opens the card under "All" — the setting promises exactly
+        // that — but only after a deliberate dwell: the stats sentence sits in
+        // the MIDDLE of the composer row, so a pointer on its way from the
+        // permission selector to the model trigger used to unfold the card on
+        // the way past. A passing pointer never stays the dwell out; a pointer
+        // the user actually parked there does.
         root.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) showStatsPopover(root)
+          cancelOpen()
+          if (readPrefs().autoPopover !== AUTO_POPOVER_ALL) return
+          openTimer = setTimeout(function () {
+            openTimer = null
+            showStatsPopover(root)
+          }, 300)
         })
         root.addEventListener('mouseleave', function () {
-          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) scheduleHideStatsPopover()
+          cancelOpen()
+          // Unconditional, unlike the open side: a card opened by CLICK has to
+          // close when the pointer leaves, whatever the hover switch says.
+          scheduleHideStatsPopover()
+        })
+        // The host's own stats dialogs are hidden by the stylesheet, so a click
+        // has to land somewhere: it opens this card — the only stats surface
+        // left when the hover switch is off or scoped to the account rail.
+        //
+        // Only a REAL click counts. Collecting the card's content means clicking
+        // the host's two pills to open their dialogs, and those synthetic clicks
+        // bubble back up to this listener: re-entering the collection from
+        // inside itself made two reads race, which is why sections went missing
+        // (the card kept flipping between "会话统计 + Token 用量" and "Token 用量"
+        // alone) and why the card stopped closing — every re-entry cancelled the
+        // pending hide.
+        root.addEventListener('click', function (event) {
+          if (event && event.isTrusted === false) return
+          cancelOpen()
+          showStatsPopover(root)
         })
       }
 
@@ -756,6 +811,7 @@
           syncAttachmentState()
           mergeStatsIntoRow()
           mergeContextMeterIntoRow()
+          sweepStrayStatsPopovers()
           syncStatsSummary()
           syncSegments()
           syncChatTabComposer()
