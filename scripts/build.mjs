@@ -46,6 +46,22 @@ const OUT = path.join(LIB, 'client.js')
  */
 const MODEL_COPY = 'model-descriptions.json'
 
+/**
+ * The plugin icon the 0.1.7 plugin manifest reads.
+ *
+ * `package.json` declares it as `icon`, a path relative to the manifest
+ * (SVG/PNG/JPEG/WebP, at most 256 KiB, inside the package directory); the host
+ * reads the bytes and hands the client a base64 data URI for an `<img>`. It is
+ * copied like the copy document so the source of truth stays in `src/` and
+ * `lib/` remains generated output.
+ *
+ * The clay mark is the one that reads on both canvases: an `<img>` cannot
+ * inherit `currentColor` the way the inlined brand art does, and the plain
+ * mark is black — invisible on the warm-black canvas.
+ */
+const ICON_SOURCE = 'claude-mark-clay.svg'
+const ICON_FILE = 'claude-mark.svg'
+
 const FRAGMENTS = [
   'constants.js',
   'context/host.js',
@@ -434,6 +450,11 @@ function main() {
   const exact = validateModelCopy(copy, combines)
   fs.writeFileSync(path.join(LIB, MODEL_COPY), JSON.stringify(copy, null, 2) + '\n')
   console.log(`built lib/${MODEL_COPY} (${exact} exact entries, ${copy.families.length} family rules, ${copy.tiers.length} tier rules)`)
+
+  const iconSource = path.join(BRAND_ASSETS, ICON_SOURCE)
+  const iconTarget = path.join(LIB, ICON_FILE)
+  fs.copyFileSync(iconSource, iconTarget)
+  console.log(`built lib/${ICON_FILE} (${fs.statSync(iconTarget).size} bytes) from src/assets/brand/${ICON_SOURCE}`)
 }
 
 main()

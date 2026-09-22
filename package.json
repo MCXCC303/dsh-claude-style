@@ -4,6 +4,7 @@
   "version": "0.4.0",
   "type": "module",
   "main": "lib/index.js",
+  "icon": "lib/claude-mark.svg",
   "scripts": {
     "build": "node scripts/build.mjs",
     "probe": "node scripts/probe.cjs",
@@ -12,7 +13,8 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*": "./locale/*"
   },
   "dsh": {
     "engines": {
@@ -28,6 +30,7 @@
   },
   "files": [
     "lib",
+    "locale",
     "skin.json",
     "cordis.patch.yml",
     "docs",

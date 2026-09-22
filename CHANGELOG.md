@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- **插件页有了自己的图标（DSH 0.1.7）**：0.1.7 的插件清单会读 `package.json` 的 `icon`——必须是**相对清单的路径**、SVG/PNG/JPEG/WebP、realpath 后仍留在包目录内、且不超过 256 KiB（绝对路径与 URL 一律拒绝）；宿主把文件读成 base64 data URI 交给插件卡片与详情页上的 `<img>`，失败只在这张卡片上留一条 `meta.error`，不影响插件本身。这里填的是**陶烬橙的 Claude 星芒**：源文件 `src/assets/brand/claude-mark-clay.svg`，构建期复制到 `lib/claude-mark.svg`（与模型文案同一套「源在 `src/`、`lib/` 是产物」的做法，`files` 里的 `lib` 已覆盖它，无需新增条目）。选 clay 版而不是纯黑版是有原因的：图标以 `<img>` 渲染、拿不到 `currentColor`，纯黑星芒在暖黑画布上会消失，陶烬橙两态都读得出。
+- **插件卡片有了本地化的标题与描述（DSH 0.1.7）**：同一套元数据读取还会解析 `<包>/locale/en.json`，并以它所在目录为锚点枚举其余 `<语言>.json`，每个文件取 `meta.title` / `meta.description`（必须是非空字符串，文件名必须是语言 id），最后交给客户端一个 `{ en, zh, … }` 记录——`en` 永远兜底到 `package.json` 的 name/description，其余语言按 shell 语言取。此前卡片上显示的是包名 `dsh-claude-style`，现在 `locale/en.json` 给 `Claude Code Style`、`locale/zh.json` 给 `Claude Code 风格`，描述也一并本地化，`locale` 加进 `files`。**这里有个必须避开的陷阱**：宿主是逐个文件走包 `exports` 解析的，任何一个 locale 文件没被导出都会在枚举目录时抛错，而这个错会被外层捕获、把**整份元数据（含图标与两段文案）一起降级成 `meta.error`**——所以 `exports` 加的是通配 `"./locale/*": "./locale/*"` 而不是逐文件列举，以后新增语言文件不会漏。
+
 ### Removed
 - **模型行的厂商字体（Google Sans Flex）整块移除**：此前只有 Gemini 行会把名称换成 Google Sans Flex（一枚自子集化的拉丁字体），其余行都是界面字体——一个厂商有字体、别的厂商没有，这不是「厂商标记」而是一个特例，何况模型行已经在用厂商锁定标表达同一件事。现在模型行一律用界面字体：字体资产（`fonts/GoogleSansFlexPicker.woff2` 与它的 OFL 文本）、子集化脚本 `scripts/slim-google-sans.py`、`--dsw-font-brand-gemini` 令牌与对应的 `@font-face`、宿主字体白名单里的那一条，以及 package.json 的 `files` 条目一并删除，npm 包小约 9 KB。
 
