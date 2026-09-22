@@ -38,6 +38,13 @@
       /** `null` until the registry answers; then `[{ id, title, at }]`. */
       var items = null
       var loading = false
+      /**
+       * Whether this host archives conversations at all. DSH 0.1.5 has no archive
+       * feature and no `workspaceRegistry` remote, so the section keeps its plain
+       * label there instead of growing a control that can only ever show an empty
+       * list. `null` = not known yet.
+       */
+      var supported = null
       var disposed = false
       var retryTimer = null
 
@@ -96,6 +103,9 @@
       function loadArchived(attempt) {
         function retry() {
           if (disposed || attempt >= 4) {
+            // No archive service answered: this host does not have one (0.1.5), so
+            // the section goes back to being a plain label.
+            supported = false
             items = []
             loading = false
             renderList()
@@ -118,6 +128,7 @@
         registry.archivedSessionMetadata().then(function (result) {
           if (!result || result.ok !== true) throw new Error('archived metadata unavailable')
           var rows = (result.value && result.value.items) || []
+          supported = true
           items = rows.map(function (row) { return { id: row.sessionId, title: null, at: row.createdAt } })
           items.sort(function (a, b) { return (b.at || 0) - (a.at || 0) })
           loading = false
@@ -197,6 +208,9 @@
         var restore = modelEl('button', 'dsh-claude-archive-restore')
         restore.type = 'button'
         restore.setAttribute('aria-label', copyLabel('archiveRestore', 'Unarchive conversation'))
+        // A native tooltip as well as the label: the buttons are icon-only, and a
+        // trash can that deletes a conversation should say so before it is used.
+        restore.setAttribute('title', copyLabel('archiveRestore', 'Unarchive conversation'))
         restore.innerHTML = RESTORE_SVG
         restore.addEventListener('click', function (event) {
           event.stopPropagation()
@@ -206,6 +220,7 @@
         var remove = modelEl('button', 'dsh-claude-archive-delete')
         remove.type = 'button'
         remove.setAttribute('aria-label', copyLabel('archiveDelete', 'Delete conversation'))
+        remove.setAttribute('title', copyLabel('archiveDelete', 'Delete conversation'))
         remove.innerHTML = DELETE_SVG
         remove.addEventListener('click', function (event) {
           event.stopPropagation()
@@ -264,6 +279,24 @@
         var label = findSection()
         if (label === null || label.parentElement === null) return
         var header = label.parentElement
+        // Find out whether this host archives at all, once, on the first pass —
+        // the answer decides whether the section keeps its label.
+        if (supported === null && !loading) loadArchived(0)
+        if (supported !== true) {
+          if (control !== null) {
+            if (control.parentElement !== null) control.parentElement.removeChild(control)
+            control = null
+          }
+          if (listHost !== null) {
+            if (listHost.parentElement !== null) listHost.parentElement.removeChild(listHost)
+            listHost = null
+          }
+          if (markedLabel !== null) {
+            markedLabel.removeAttribute(LABEL_ATTR)
+            markedLabel = null
+          }
+          return
+        }
         if (markedLabel !== label) {
           if (markedLabel !== null) markedLabel.removeAttribute(LABEL_ATTR)
           markedLabel = label
