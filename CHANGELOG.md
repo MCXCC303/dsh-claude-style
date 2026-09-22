@@ -10,6 +10,7 @@
 - **`model-picker.js` 拆出两块，回到仓库的 750 行停止线内**：推条控件进新碎片 `src/overrides/model-effort.js`（它只吃一个 `read()` 回调，自己把目录的档位表映射成推条的刻度），模型文案解析（精确条目 → 家族规则 → 档位规则 → 目录自带文本）进新碎片 `src/overrides/model-copy-lookup.js`（纯查表，不碰 picker 闭包）。拆完 `model-picker.js` 791 → 720 行；随二级档位列表一起消失的还有 `modelSubKind` 那套「二级弹层当前是哪一种」的状态与 `noEffort` 文案。
 
 ### Fixed
+- **热重载后模型选择器会失去点击效果**：HMR（及任何「清扫上一代而不销毁本代」的路径）会把上一代留下的弹层节点从 DOM 里拿掉，而新一代闭包里的 `modelPop` / `modelSubPop` 引用还指着那个已被摘除的节点——重建条件只写了 `=== null`，引用非空就不会重建，于是点触发器时 `data-open` 被写在一个不在文档里的节点上，弹层永远不出现，也就是「点击没效果」。本次把 `ensureModelChrome()` 的判空改成「为空**或已脱离文档**」（与账户区同款幂等护栏），重建时同时重置渲染签名让下一轮 pass 把内容画进新节点；触发器本就有同样的护栏，两级弹层补齐后选择器在双代并存期间也能自我修复。
 - **宿主半边的资产路由在热重链后整代失联，选择器整代渲染成「无锁定标、英文标签」的降级态**：`lib/index.js` 原本在 `ctx.get('webServer')` 已就绪时直接 `registerRoutes(ctx)`，而 `ctx.webServer` 属性访问受 fiber 的 inject 声明门控——启动时 webServer 往往尚未挂载，走 inject 分支一直正常；但客户端 bundle 重建触发 generation 重链后，宿主半边会在 webServer 已运行时重挂，`ctx.get('webServer')` 宽松读到服务、`else` 分支被选中，三处注册全部抛 `cannot get property "webServer" without inject`（宿主日志可见成串告警），模型文案/偏好/用户名三条路由整代没有注册。浏览器半边每代只拉一次文案、失败不重试，于是那一代的选择器没有厂商锁定标、标签回退英文常量、简介降级到目录自带的英文文本，直到下一次重挂/HMR 重新拉到文档才恢复。现在无条件经 `ctx.inject(['webServer'], registerRoutes)` 注册：注入作用域带声明，启动与热重链两条时序都落在能工作的路径上；没有 webServer 的宿主只是等待，防御性契约（无 webServer 也照常激活）不变。
 ## [0.4.0] - 2026-09-21
 

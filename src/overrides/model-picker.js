@@ -529,7 +529,17 @@
       }
 
       function ensureModelChrome() {
-        if (modelPop === null) {
+        // Idempotence guard, not just a null check: the picker's own teardown
+        // sweep, or a hot-reload generation's stray sweep, can REMOVE the
+        // popover node while the closure still references it. With a null-only
+        // check the reference stays non-null-but-detached and is never rebuilt
+        // — the trigger then toggles a popover that is not in the document and
+        // the picker silently loses its click effect. The account footer's
+        // equivalent guard (footArea.contains) is the established pattern.
+        // Rebuilding also re-points the body/footer children and resets the
+        // render signatures so the next pass repaints into the fresh nodes.
+        if (modelPop === null || modelPop.parentElement === null) {
+          if (modelPop !== null && modelPop.parentElement !== null) modelPop.parentElement.removeChild(modelPop)
           modelPop = document.createElement('div')
           modelPop.className = 'dsh-claude-model-popover'
           modelPop.setAttribute('role', 'menu')
@@ -548,8 +558,10 @@
             scheduleCloseModel()
           })
           document.body.appendChild(modelPop)
+          modelBodySig = ''
         }
-        if (modelSubPop === null) {
+        if (modelSubPop === null || modelSubPop.parentElement === null) {
+          if (modelSubPop !== null && modelSubPop.parentElement !== null) modelSubPop.parentElement.removeChild(modelSubPop)
           modelSubPop = document.createElement('div')
           modelSubPop.className = 'dsh-claude-model-popover dsh-claude-model-popover-sub'
           modelSubPop.setAttribute('role', 'menu')
@@ -560,6 +572,7 @@
           modelSubPop.addEventListener('mouseenter', cancelCloseModel)
           modelSubPop.addEventListener('mouseleave', scheduleCloseModel)
           document.body.appendChild(modelSubPop)
+          modelSubSig = ''
         }
       }
 
