@@ -50,25 +50,58 @@
     }
 
     /**
-     * Hover-intent helper shared by the model picker and account popover.
+     * Hover dwell before a popover unfolds, and grace before it closes.
      *
-     * The `open` callback is part of the shared signature but the original
-     * hover behaviour only schedules the close side (mouseenter calls the
-     * feature's open function directly); keeping the parameter makes the two
-     * call sites symmetrical.
+     * The dwell is deliberately tiny: it exists to swallow a pointer that merely
+     * CROSSES a trigger on its way somewhere else, not to make the user wait for
+     * the card. The grace is what lets the pointer travel the gap between a
+     * trigger and its card without the card vanishing underneath it.
      */
-    function createHoverIntent(open, close, delay) {
-      var timer = null
+    var POPOVER_OPEN_DELAY = 50
+    var POPOVER_CLOSE_DELAY = 100
+
+    /**
+     * Hover-intent helper shared by the model picker, permission popover and
+     * account popover.
+     *
+     * BOTH sides are scheduled: `scheduleOpen` waits out the dwell (so a pointer
+     * crossing the trigger never unfolds anything) and `scheduleClose` waits out
+     * the grace. `cancel` clears whichever side is pending — entering the card
+     * cancels a close, and leaving the trigger before the dwell cancels the open
+     * (`scheduleClose` drops a pending open as well, so a leave needs only the
+     * one call).
+     */
+    function createHoverIntent(open, close, openDelay, closeDelay) {
+      var openTimer = null
+      var closeTimer = null
       return {
         cancel: function () {
-          if (timer) {
-            clearTimeout(timer)
-            timer = null
+          if (openTimer) {
+            clearTimeout(openTimer)
+            openTimer = null
+          }
+          if (closeTimer) {
+            clearTimeout(closeTimer)
+            closeTimer = null
           }
         },
+        scheduleOpen: function () {
+          if (openTimer) clearTimeout(openTimer)
+          openTimer = setTimeout(function () {
+            openTimer = null
+            open()
+          }, openDelay)
+        },
         scheduleClose: function () {
-          if (timer) clearTimeout(timer)
-          timer = setTimeout(close, delay)
+          if (openTimer) {
+            clearTimeout(openTimer)
+            openTimer = null
+          }
+          if (closeTimer) clearTimeout(closeTimer)
+          closeTimer = setTimeout(function () {
+            closeTimer = null
+            close()
+          }, closeDelay)
         },
       }
     }

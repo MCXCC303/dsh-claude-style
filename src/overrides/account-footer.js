@@ -2,7 +2,7 @@
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
-      var popoverHoverIntent = createHoverIntent(openPopover, closePopover, 150)
+      var popoverHoverIntent = createHoverIntent(openPopover, closePopover, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
       // Whether the popover is up because it was CLICKED (rather than hovered).
       // Clicking the account row opens the ban-screen easter egg and leaves the
       // pointer inside the popover, so without this the row's own mouseleave
@@ -622,7 +622,7 @@
           // vanish when the pointer leaves). The account row is the one popover
           // the `account` scope keeps on hover.
           accountBtn.addEventListener('mouseenter', function () {
-            if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) openPopover()
+            if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) popoverHoverIntent.scheduleOpen()
           })
           accountBtn.addEventListener('mouseleave', function () {
             if (readPrefs().autoPopover !== AUTO_POPOVER_OFF && !popoverOpenedByClick) scheduleClosePopover()

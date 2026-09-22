@@ -121,10 +121,10 @@
           popover.setAttribute('data-open', 'true')
         }
 
-        permHoverIntent = createHoverIntent(openPerm, closePermMenu, 150)
+        permHoverIntent = createHoverIntent(openPerm, closePermMenu, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
 
         btn.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openPerm()
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) permHoverIntent.scheduleOpen()
         })
         btn.addEventListener('mouseleave', function () {
           if (readPrefs().autoPopover === AUTO_POPOVER_ALL) permHoverIntent.scheduleClose()
@@ -674,7 +674,7 @@
         statsHideTimer = setTimeout(function () {
           statsHideTimer = null
           hideStatsPopover()
-        }, 160)
+        }, POPOVER_CLOSE_DELAY)
       }
 
       function renderStatsPopover(sections) {

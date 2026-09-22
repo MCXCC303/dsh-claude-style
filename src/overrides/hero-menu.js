@@ -36,19 +36,45 @@
       var GAP = 6
       var MARGIN = 12
       /** Long enough to cross the gap above, short enough to still read as hover. */
-      var CLOSE_DELAY = 160
+      var CLOSE_DELAY = POPOVER_CLOSE_DELAY
       /** The two triggers, and the card once it is stamped. */
       var TRIGGER_SELECTOR = '[class*="heroWorkspaceRow"] [aria-haspopup="menu"]'
       var CARD_SELECTOR = '[' + HERO_MENU_ATTR + ']'
       var stamped = null
       var stampedTrigger = null
       var closeTimer = null
+      var openTimer = null
       var openedByHover = false
 
       function cancelHoverClose() {
         if (closeTimer === null) return
         clearTimeout(closeTimer)
         closeTimer = null
+      }
+
+      function cancelHoverOpen() {
+        if (openTimer === null) return
+        clearTimeout(openTimer)
+        openTimer = null
+      }
+
+      /**
+       * Open what hover asked for, once the pointer has stayed the dwell out.
+       * The host's menu has no hover of its own — this clicks its trigger — so
+       * the dwell is what keeps a pointer merely crossing the hero row from
+       * unfolding the card.
+       */
+      function openFromHover(trigger) {
+        openTimer = null
+        if (!hoverEnabled()) return
+        if (trigger.getAttribute('aria-expanded') === 'true') return
+        trigger.click()
+        openedByHover = true
+      }
+
+      function scheduleHoverOpen(trigger) {
+        cancelHoverOpen()
+        openTimer = setTimeout(function () { openFromHover(trigger) }, POPOVER_OPEN_DELAY)
       }
 
       /** Close what hover opened; a click-opened menu is left alone. */
@@ -86,10 +112,7 @@
         var trigger = closestWithin(target, TRIGGER_SELECTOR)
         if (trigger === null) return
         cancelHoverClose()
-        if (trigger.getAttribute('aria-expanded') !== 'true') {
-          trigger.click()
-          openedByHover = true
-        }
+        if (trigger.getAttribute('aria-expanded') !== 'true') scheduleHoverOpen(trigger)
       }
 
       function onHeroPointerOut(e) {
@@ -99,6 +122,7 @@
         // Moving onto the other half — the card, or the trigger — is not a leave.
         var next = e.relatedTarget
         if (closestWithin(next, CARD_SELECTOR) !== null || closestWithin(next, TRIGGER_SELECTOR) !== null) return
+        cancelHoverOpen()
         scheduleHoverClose()
       }
 
@@ -173,6 +197,7 @@
       ui.heroMenu = { sync: syncHeroMenu, reposition: repositionHeroMenu }
       return function () {
         cancelHoverClose()
+        cancelHoverOpen()
         openedByHover = false
         clearStamp()
         document.removeEventListener('mouseover', onHeroPointerOver, true)

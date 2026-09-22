@@ -20,7 +20,9 @@
       var modelFooter = null
       var effortSlider = null
       var modelSubBody = null
-      var modelHoverIntent = createHoverIntent(openModelPopover, closeModelPopovers, 180)
+      var modelHoverIntent = createHoverIntent(openModelPopover, closeModelPopovers, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
+      /** The More-models cell drills in on the same dwell/grace as the trigger. */
+      var modelSubHoverIntent = createHoverIntent(openModelSub, closeModelPopovers, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
       var modelDir = null
       var modelSub = null
       var modelSessionId = null
@@ -320,7 +322,11 @@
         chevron.innerHTML = MODEL_CHEVRON_SVG
         cell.appendChild(chevron)
         cell.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelSub()
+          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) modelSubHoverIntent.scheduleOpen()
+        })
+        cell.addEventListener('mouseleave', function () {
+          // A pointer that only crossed the cell must not drill in behind it.
+          modelSubHoverIntent.cancel()
         })
         cell.addEventListener('click', function (e) {
           e.stopPropagation()
@@ -664,7 +670,7 @@
           // Same contract as the account trigger: hover under the "All" scope,
           // click-only otherwise.
           modelBtn.addEventListener('mouseenter', function () {
-            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) openModelPopover()
+            if (readPrefs().autoPopover === AUTO_POPOVER_ALL) modelHoverIntent.scheduleOpen()
           })
           modelBtn.addEventListener('mouseleave', function () {
             if (readPrefs().autoPopover === AUTO_POPOVER_ALL) scheduleCloseModel()
