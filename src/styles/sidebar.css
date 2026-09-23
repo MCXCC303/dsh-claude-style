@@ -606,9 +606,16 @@ body[data-dsh-claude-style] svg[data-state="ongoing"] * {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+/* The ring spins in EVERY motion setting, deliberately. It used to stand down
+   under `prefers-reduced-motion: reduce`, which is what made it look broken:
+   with "show animations in Windows" off — a common default on Windows 11 — the
+   ring was drawn and then frozen, so it read as "sometimes it spins, sometimes
+   it does not". A 0.85s rotation is the whole signal that background work is
+   alive; standing it still removes the meaning rather than the motion. */
 @media (prefers-reduced-motion: reduce) {
   body[data-dsh-claude-style] svg[data-state="ongoing"] {
-    animation: none !important;
+    animation: 0.85s linear infinite dsh-claude-win11-spin !important;
+    animation-play-state: running !important;
   }
 }
 
