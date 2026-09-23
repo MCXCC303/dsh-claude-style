@@ -291,9 +291,10 @@
     function normalizeQuickProviders(value) {
       if (!Array.isArray(value)) return []
       var out = []
-      for (var i = 0; i < value.length; i++) {
+      for (var i = 0; i < value.length && out.length < QUICK_PROVIDERS_MAX; i++) {
         var id = value[i]
-        if (typeof id !== 'string' || id === '' || id === MODEL_OFFICIAL_GROUP || out.indexOf(id) !== -1) continue
+        if (typeof id !== 'string' || id === '' || id.length > PROVIDER_ID_MAX) continue
+        if (id === MODEL_OFFICIAL_GROUP || out.indexOf(id) !== -1) continue
         out.push(id)
       }
       return out

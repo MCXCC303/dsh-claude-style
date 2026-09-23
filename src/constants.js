@@ -224,6 +224,9 @@
     var USERNAME_ROUTE = '/dsh-claude-style/username'
     /** Longest accepted custom username; mirrored by lib/index.js. */
     var USERNAME_MAX = 64
+    /** Most quick-provider ids kept, and the longest id accepted; mirrored by lib/index.js. */
+    var QUICK_PROVIDERS_MAX = 64
+    var PROVIDER_ID_MAX = 128
 
     /** Wordmark aspect ratio; scripts/build.mjs sizes the sidebar word height from it (geometry lives in src/assets/claude-word.svg). */
     var CLAUDE_WORD_ASPECT = 512.22 / 121.54
