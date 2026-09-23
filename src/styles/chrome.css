@@ -217,6 +217,14 @@ body[data-dsh-claude-style] [class*="header"]:has([class*="tabs"])::after {
    header that owns the strip, so the settings page's own tabs keep their look. */
 body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] {
   display: inline-flex !important;
+  /* Hug the tabs. The host's strip is a full-width flex row, so without this the
+     pill shell stretches across the whole header: the "groove" reads as one long
+     empty bar and clicks to the right of the last tab land on nothing — which is
+     what made switching feel unresponsive. */
+  width: fit-content !important;
+  max-width: 100% !important;
+  flex: none !important;
+  align-self: flex-start !important;
   align-items: center !important;
   gap: 2px !important;
   padding: 2px !important;
