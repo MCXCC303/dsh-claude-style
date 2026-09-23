@@ -263,6 +263,11 @@ body[data-dsh-claude-style] [class*="sectionHeader"]:hover .dsh-claude-ws-segmen
   pointer-events: auto !important;
 }
 body[data-dsh-claude-style] [class*="sectionLabel"][data-dsh-claude-ws-label] {
+  /* The heading is a label, not a target: it must not swallow clicks aimed at the
+     control laid over it, nor start a selection drag. */
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
   opacity: 0 !important;
   transition: opacity 0.16s ease !important;
 }
@@ -274,6 +279,9 @@ body[data-dsh-claude-style] [class*="sectionHeader"]:hover [class*="sectionLabel
   opacity: 0 !important;
 }
 body[data-dsh-claude-style] .dsh-claude-ws-segment {
+  /* A click must never start a text selection in the heading behind the control. */
+  user-select: none !important;
+  -webkit-user-select: none !important;
   appearance: none !important;
   border: none !important;
   background: transparent !important;
