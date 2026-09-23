@@ -230,6 +230,29 @@ body[data-dsh-claude-style] .dsh-claude-ws-segments {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
   flex: none !important;
 }
+body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-ws-segments {
+  /* The skin's light plate token resolves too faintly on the warm black canvas;
+     pin the dark pair so the control matches the sidebar's own rows. */
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+/* The control is a mode switch, not furniture: while 进行中 is the state it steps
+   aside for the plain 工作区 heading and comes back as soon as the pointer is in
+   the section — the header itself or the tree below it. In 已归档 it stays put,
+   because it is the way back. */
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="active"] .dsh-claude-ws-segments {
+  display: none !important;
+}
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="active"] [class*="sectionLabel"][data-dsh-claude-ws-label] {
+  display: inline !important;
+}
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="active"]:hover .dsh-claude-ws-segments,
+body[data-dsh-claude-style] [class*="sectionHeader"]:hover .dsh-claude-ws-segments {
+  display: inline-flex !important;
+}
+body[data-dsh-claude-style] [data-dsh-claude-ws-view="active"]:hover [class*="sectionLabel"][data-dsh-claude-ws-label],
+body[data-dsh-claude-style] [class*="sectionHeader"]:hover [class*="sectionLabel"][data-dsh-claude-ws-label] {
+  display: none !important;
+}
 body[data-dsh-claude-style] .dsh-claude-ws-segment {
   appearance: none !important;
   border: none !important;
