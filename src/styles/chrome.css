@@ -193,7 +193,16 @@ body[data-dsh-claude-style] [class*="header"]:has([class*="tabs"])::after {
   right: 0 !important;
   top: 100% !important;
   height: var(--dsh-transcript-fade-h, 28px) !important;
-  background: linear-gradient(to bottom, var(--dsw-alias-bg-base, #FCFCFB), transparent) !important;
+  /* Four stops, not two: a straight 100% -> 0% ramp reads as a haze band (the eye
+     catches its midpoint). Holding near-opaque just under the header and easing
+     out low makes the dissolve read as depth. color-mix keeps it theme-aware. */
+  background: linear-gradient(
+    to bottom,
+    var(--dsw-alias-bg-base, #FCFCFB) 0%,
+    color-mix(in srgb, var(--dsw-alias-bg-base, #FCFCFB) 82%, transparent) 32%,
+    color-mix(in srgb, var(--dsw-alias-bg-base, #FCFCFB) 40%, transparent) 68%,
+    transparent 100%
+  ) !important;
   pointer-events: none !important;
   z-index: 1 !important;
 }
