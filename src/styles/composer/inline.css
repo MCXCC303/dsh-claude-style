@@ -9,14 +9,14 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within {
   background: transparent !important;
   border: none !important;
-  /* The canvas wash lives HERE, on the card — the same place the hero card
-     carries it — so there is one wash behind every child and nothing can paint
-     over anything else. It used to sit on the rail and on the field separately,
-     and since the rail is z-index 4 while the field is z-index 2, the rail's
-     wash (three layers of the canvas colour) painted across the TOP of the
-     field: over the field's own background, which made the two boxes read as
-     different colours, and over the draft's first line. */
-  box-shadow: 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  /* No canvas wash here any more: the seat behind the composer paints the
+     opaque bar and its fade band (see the seat rules below), so the card needs
+     no background-coloured shadow to hide the transcript scrolling past. It
+     used to carry three such layers; before that the rail did, and being
+     z-index 4 over the field's 2 it painted the canvas colour across the TOP of
+     the field — over the field's own background, which made the two boxes read
+     as different colours, and over the draft's first line. */
+  box-shadow: none !important;
   outline: none !important;
   padding: 0 !important;
   gap: 0 !important;
@@ -43,11 +43,43 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   height: auto !important;
   max-height: none !important;
 }
-/* Message body clearance: 40px placeholder space at the end of the
-   conversation view so the composer's upward shadow does not obscure
-   the action buttons (copy, retry, etc.) on the last turn. */
+/* ---------- the transcript's bottom edge ---------- */
+/* The chat fades into the canvas where the composer begins. The seat paints an
+   opaque canvas-coloured BAR across its own box — so the bar's height IS the
+   composer's height (card, toolbar row, stats, dock), nothing to keep in sync —
+   and one GRADIENT band sits directly above it, running from the bar's colour
+   up to transparent.
+   This replaces the background-coloured (--dsw-alias-bg-base) halo the skin
+   used to smear around the card: that was three shadow layers repeated in every
+   light / dark / focus / attachment rule, and every rule that reset the card's
+   box-shadow had to re-state it (hence the shadowless rail). One paint, one
+   token, and it is the host's own idiom — its seat already carries a 36px
+   version of this gradient in the active phase; the bar simply covers the rest
+   of the seat, which the host leaves transparent.
+   `--dsh-composer-fade-h` is the single knob: it is the band's height AND the
+   transcript's bottom clearance below, so the last turn always comes to rest
+   exactly at the band's top edge. */
+body[data-dsh-claude-style] {
+  --dsh-composer-fade-h: 40px;
+}
+body[data-dsh-claude-style] :is([data-phase="active"], [data-content-phase="active"]) [data-composer-seat] {
+  background: var(--dsw-alias-bg-base) !important;
+}
+body[data-dsh-claude-style] :is([data-phase="active"], [data-content-phase="active"]) [data-composer-seat]::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 100% !important;
+  height: var(--dsh-composer-fade-h, 40px) !important;
+  background: linear-gradient(to top, var(--dsw-alias-bg-base), transparent) !important;
+  pointer-events: none !important;
+}
+/* Message body clearance: the transcript ends where the fade band begins (same
+   token as the band's height), so the last turn's action buttons (copy, retry,
+   …) rest clear of the fade instead of being washed by it. */
 body[data-dsh-claude-style] [class*="viewArea"] {
-  padding-bottom: 40px !important;
+  padding-bottom: var(--dsh-composer-fade-h, 40px) !important;
 }
 /* The composer is a chat-view affordance. The host keeps the seat mounted on
    every conversation tab (轨迹 / 上下文 even reserve room for it), but it
@@ -75,8 +107,8 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   min-height: 162px !important;
   height: auto !important;
   overflow: visible !important;
-  /* No wash of its own: the card behind it carries the one wash (see the card
-     rule above), so the rail cannot paint the canvas colour over the field. */
+  /* Flat: the seat's bar is what hides the transcript behind the composer, so
+     the rail needs no canvas-coloured shadow of its own to add to it. */
   box-shadow: none !important;
   position: relative !important;
   z-index: 4 !important;
@@ -168,7 +200,7 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   position: relative !important;
   z-index: 2 !important;
   cursor: text !important;
-  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03) !important;
   transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"] [data-input-scroll],
@@ -184,32 +216,32 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] [data-input-scroll] {
   background: #ffffff !important;
   border-color: #e8e6dc !important;
-  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.03) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"] [data-input-scroll],
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] [data-input-scroll] {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 }
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"]:focus-within [data-input-scroll],
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within [data-input-scroll] {
   border-color: rgba(20, 20, 19, 0.18) !important;
-  box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.065), 0 4px 12px rgba(20, 20, 19, 0.025), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.065), 0 4px 12px rgba(20, 20, 19, 0.025) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"]:focus-within [data-input-scroll],
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card]:focus-within [data-input-scroll] {
   border-color: rgba(250, 249, 245, 0.22) !important;
-  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 4px 16px rgba(0, 0, 0, 0.20), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 0 0 1px rgba(250, 249, 245, 0.09), 0 4px 16px rgba(0, 0, 0, 0.20) !important;
 }
 /* With attachments the rail already carries the card's focus ring, so the
    input keeps only the deepened drop — its own 1px ring would paint a second
    line across the seam between the thumbnails and the text. */
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"]:focus-within [data-input-scroll],
 body[data-dsh-claude-style]:not([data-ds-dark-theme]) [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card][data-has-attachments="true"]:focus-within [data-input-scroll] {
-  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.025), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 4px 12px rgba(20, 20, 19, 0.025) !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [data-composer-card][data-composer-variant="inline"][data-has-attachments="true"]:focus-within [data-input-scroll],
 body[data-dsh-claude-style][data-ds-dark-theme] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card][data-has-attachments="true"]:focus-within [data-input-scroll] {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.20), 0 0 0 6px var(--dsw-alias-bg-base), 0 0 16px 10px var(--dsw-alias-bg-base), 0 0 48px 16px var(--dsw-alias-bg-base) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.20) !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] [data-input-scroll] [class*="grow"],
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] [data-input-scroll] [class*="grow"] {
@@ -320,15 +352,39 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   align-items: center !important;
   justify-content: center !important;
   z-index: 10 !important;
-  background: var(--dsw-alias-interactive-bg-hover) !important;
-  color: var(--dsw-alias-brand-primary, #d97757) !important;
+  /* Claude's stop control is a bare ink circle with a filled square inside; the
+     plate is hover only, and the glyph is the interface ink — not the accent. */
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  border-radius: 50% !important;
   border: none !important;
+}
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]):hover:not(:disabled),
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"]):hover:not(:disabled) {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+/* The ring the host's square sits in: drawn here, since the shipped glyph is the
+   square alone. */
+body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::before,
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  box-sizing: border-box !important;
+  border: 1.6px solid currentColor !important;
+  border-radius: 50% !important;
+  corner-shape: round !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg,
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg {
   display: block !important;
-  width: 12px !important;
-  height: 12px !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 1.5px !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::after,
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::after {
