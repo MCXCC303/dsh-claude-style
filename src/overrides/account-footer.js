@@ -55,13 +55,13 @@
       /**
        * Keep it live without a page refresh. The host exposes a real account stream
        * (`remote.account.watch`), but it is an async iterable and this half is ES5;
-       * a slow poll costs one cheap RPC every five seconds and covers sign-in,
+       * a slow poll costs one cheap RPC a minute and covers sign-in,
        * sign-out and avatar changes alike.
        */
       var accountTimer = setInterval(function () {
     if (accountBtn === null || accountBtn.parentElement === null) return
     loadAccount()
-      }, 5000)
+      }, 60000)
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
@@ -435,7 +435,8 @@
             // contains one, and anything that reads as sign-out.
             if (entry.getAttribute('aria-haspopup') === 'menu') return
             if (entry.querySelector('[aria-haspopup="menu"]') !== null) return
-            if (/退出|登出|注销|sign ?out|log ?out/i.test(entry.textContent || '')) return            var trigger = findFooterTrigger(entry)
+            if (/退出|登出|注销|sign ?out|log ?out/i.test(entry.textContent || '')) return
+            var trigger = findFooterTrigger(entry)
             var hasContent = (entry.textContent || '').trim() !== '' ||
                              entry.querySelector('svg, img, canvas') !== null
 
