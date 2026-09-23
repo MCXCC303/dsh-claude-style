@@ -642,7 +642,7 @@
           accountBtn.setAttribute('aria-haspopup', 'menu')
           accountBtn.setAttribute('aria-expanded', 'false')
           accountBtn.innerHTML =
-            '<span class="dsh-claude-account-avatar"' + (accountAvatar ? ' style="background-image:url(' + JSON.stringify(accountAvatar) + ');background-size:cover;background-position:center"' : '') + '></span>' +
+            '<span class="dsh-claude-account-avatar"' + (accountAvatar ? ' data-dsh-claude-photo style="--dsh-claude-account-photo:url(' + JSON.stringify(accountAvatar) + ')"' : '') + '></span>' +
             '<span class="dsh-claude-account-label">' +
               '<span class="dsh-claude-account-user">' + username + '</span>' +
             '</span>' +

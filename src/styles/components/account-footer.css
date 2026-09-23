@@ -147,3 +147,24 @@ body[data-dsh-claude-style] .dsh-claude-account-popover-header .dsh-claude-accou
   margin: 0 -6px !important;
 }
 
+
+/* The account mark is a background image on the span itself (see the rule above).
+   When the desktop has a real avatar, that mark has to go — otherwise both paint
+   and the star shows through. The picture rides a ::after layer with its URL in
+   a custom property, so the mark is removed in one place and the photo is drawn
+   in another, with no fight over `background-image`. */
+body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo] {
+  position: relative !important;
+  background-image: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::before {
+  display: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: var(--dsh-claude-account-photo) center / cover no-repeat !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+}
