@@ -33,6 +33,15 @@ Rules:
 - Radius: 4 / 8 / 16 px; pills for CTAs (`9999px`).
 - Borders: 1px warm hairline.
 - Spacing: 4 px rhythm.
+- Bottom edge: the transcript never fades behind the composer by shadow. The
+  composer seat paints an opaque `var(--dsw-alias-bg-base)` bar across its own
+  box (so the bar's height *is* the composer's height) and one
+  `--dsh-composer-fade-h` (40px) gradient band above it, running to transparent.
+  The same token is the transcript's bottom clearance, so the last turn rests
+  exactly at the band's top edge. Never re-add background-coloured halo shadows
+  to the card to hide the transcript: they have to be restated in every
+  light / dark / focus / attachment rule, and every rule that resets the card's
+  `box-shadow` inherits the job.
 - Focus: the composer field lights up — its hairline takes the input box's own
   shadow colour (espresso `#141413` in light) with a 1px halo in the same tone
   and a deeper drop shadow. Dark inverts the face: on the near-black canvas a
