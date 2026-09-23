@@ -1,3 +1,13 @@
+    /**
+     * Say once, loudly, that a feature was switched off. The skin keeps running
+     * without it, so the console line is the only trace — it names the feature.
+     */
+    function reportFeatureFailure(name, error) {
+      try {
+        console.error('[dsh-claude-style] "' + name + '" failed and was switched off:', error)
+      } catch (ignored) { /* no console */ }
+    }
+
     function installScheduler(ctx, ui) {
       function onGlobalPointerDown(e) {
         var target = e.target
@@ -11,7 +21,7 @@
         if (target && ui.effort && !ui.effort.owns(target)) {
           ui.effort.close()
         }
-        if (ui.settings) ui.settings.sync()
+        if (ui.settingsNav) ui.settingsNav.sync()
         if (!ui.footer || !ui.footer.isOpen()) return
         if (target && ui.footer.owns(target)) return
         ui.footer.close()
@@ -160,31 +170,55 @@
         })
       }
 
+      /** The features a pass syncs (their `ui` handle names), in pass order. */
+      var PASS_FEATURES = ['copy', 'permissions', 'model', 'effort', 'heroMenu', 'footer', 'workspace', 'viewTabs', 'settingsNav']
+      /** Failed passes in a row after which a feature's sync is switched off. */
+      var SYNC_FAILURE_LIMIT = 3
+      var syncFailures = {}
+
+      /**
+       * Run one feature's sync in isolation. A sync that throws is retried on the
+       * next pass; after SYNC_FAILURE_LIMIT failures in a row the feature is
+       * reported once and retired (src/entry.js: its teardown runs and the host
+       * gets back what it had taken over), and the rest of the pass carries on
+       * without it. (Unguarded, one throwing sync aborted every sync after it,
+       * on every pass.)
+       */
+      function runSync(name) {
+        var feature = ui[name]
+        if (!feature || typeof feature.sync !== 'function') return
+        var failures = syncFailures[name] || 0
+        if (failures >= SYNC_FAILURE_LIMIT) return
+        try {
+          feature.sync()
+          syncFailures[name] = 0
+        } catch (error) {
+          syncFailures[name] = failures + 1
+          if (failures + 1 < SYNC_FAILURE_LIMIT) return
+          reportFeatureFailure(name, error)
+          if (typeof ui.retire === 'function') ui.retire(name)
+        }
+      }
+
       function schedule() {
         if (scheduled) return
         scheduled = true
         requestAnimationFrame(function () {
           scheduled = false
-          if (ui.copy) ui.copy.sync()
-          if (ui.permissions) ui.permissions.sync()
-          if (ui.model) ui.model.sync()
-        if (ui.effort) ui.effort.sync()
-          if (ui.heroMenu) ui.heroMenu.sync()
-          if (ui.footer) ui.footer.sync()
-          if (ui.workspace) ui.workspace.sync()
-          if (ui.viewTabs) ui.viewTabs.sync()
-          if (ui.settings) ui.settings.sync()
-          // Covers the rail toggle (and any reflow) while the popover is open:
-          // its anchor moved without a window resize or a page scroll.
-          if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
-          if (composerCardObserver) {
-            var currentCard = document.querySelector('[data-composer-card]')
-            if (currentCard !== observedCard) {
-              if (observedCard) composerCardObserver.unobserve(observedCard)
-              observedCard = currentCard
-              if (observedCard) composerCardObserver.observe(observedCard)
+          for (var i = 0; i < PASS_FEATURES.length; i++) runSync(PASS_FEATURES[i])
+          try {
+            // Covers the rail toggle (and any reflow) while the popover is open:
+            // its anchor moved without a window resize or a page scroll.
+            if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
+            if (composerCardObserver) {
+              var currentCard = document.querySelector('[data-composer-card]')
+              if (currentCard !== observedCard) {
+                if (observedCard) composerCardObserver.unobserve(observedCard)
+                observedCard = currentCard
+                if (observedCard) composerCardObserver.observe(observedCard)
+              }
             }
-          }
+          } catch (error) { /* the next pass tries again */ }
         })
       }
       ui.schedule = schedule

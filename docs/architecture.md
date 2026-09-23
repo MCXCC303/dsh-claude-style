@@ -87,3 +87,13 @@
 - **决定**：两层各守一道。宿主半边：`/prefs` 与 `/username` 处理前先调 `ctx.get('connection').requestRejection(req)`（0.1.5-rc.2 起即有），拒绝即回 401/403；`/prefs` 另要求 `Content-Type: application/json`（跨站页面发不出不经预检的 JSON）、请求体上限 16 KiB、快捷供应商至多 64 个短 id。宿主没有该服务时，插件自带的替身只服务回环（回环 Host、无跨站标记、Origin 与 Host 一致）。模型文案与字体等静态资产保持公开。客户端：一切来自设置、账号服务、系统或第三方插件的字符串只用 `textContent` / 元素属性写入，图标复制节点而非重新解析 markup。
 - **代价**：路由依赖宿主的 connection 服务。已核对两种壳都能通过：浏览器同源请求带会话 cookie；0.1.7 桌面壳经 `forwardWebRequest` 转发到回环 Host、剥掉页面 Origin 并自带 cookie（宿主真实的 `isTrustedApiRequest` 对这两种请求放行，对跨站与 DNS 重绑定请求拒绝）。0.1.5-rc.2 桌面端根本不把插件路径路由到 webServer（非 `/api` 一律走静态资产），不受影响。
 - **重审条件**：宿主为插件提供自带鉴权的路由注册（如 `connection.fetch.register`）时，迁移过去并删掉本地替身。
+
+## D12. 特性级失败隔离：一个特性出错只关掉它自己
+
+- **背景**：`apply()` 依次装 14 个特性，teardown 却在最后才交给 `ctx.effect`；每轮 pass 里各 `sync()` 也没有逐个兜底——一个抛错，排在它后面的全部跳过，而且每轮如此。实测：宿主 `remote.account.getProfile()` 返回非 Promise 时 `apply()` 中途抛错，样式表与 body 属性留在页面上、调度器没装上、teardown 没注册（关掉插件也清不掉），前面装好的特性的监听器一并泄漏。effort-picker 那次「Loading plugins…」卡死是同一类问题。
+- **决定**：
+  - teardown 最先经 `ctx.effect` 注册且幂等；每个特性单独 try/catch 安装，装不上的报一次 `console.error` 并退役。调度器本身装不上时整体回滚到宿主原样——没有调度器，其余特性都不会同步，留着只是一张半套的皮。
+  - 每轮 pass 里每个特性的 `sync()` 单独 try/catch，连续失败 3 轮即报一次并退役（`ui.retire`）。
+  - 退役 = 跑该特性自己的 teardown，并把它接管的宿主界面还回去。页脚接管（`FOOTER_ATTR`，由偏好写）与 composer 重绘（`COMPOSER_ATTR`，由 permissions 的 pass 写）都会隐藏宿主控件，所以退役 `footer` / `permissions` 时对应的闸门强制关闭、不再随偏好打开。特性的 teardown 因此必须撤干净自己的 DOM 与标记（模型选择器此前只清变量，已补上）；只做装饰的 pass 用自己的句柄名（`ui.settingsNav`），退役它不会卸掉设置页。
+- **代价**：特性失效时界面上没有提示，只有控制台一行；依赖它的特性（例如都读 `ui.copy.isComposerActive()`）会各自连续失败、依次退役——降级而非崩溃。
+- **重审条件**：宿主提供插件级的错误上报 / 健康面板时，把报告接过去。

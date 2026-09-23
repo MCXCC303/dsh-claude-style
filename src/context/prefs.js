@@ -187,6 +187,28 @@
       } catch (error) { /* storage may be unavailable */ }
     }
 
+    /**
+     * Runtime overrides that outrank the stored preferences. A feature that is
+     * switched off after failing (src/entry.js) hands its surface back to the
+     * host whatever the preference says: the footer takeover and the composer
+     * restyle both HIDE host controls, and a takeover whose replacement is gone
+     * would leave nothing in their place.
+     */
+    var footerTakeoverRetired = false
+    var composerRestyleRetired = false
+
+    /** Give the sidebar footer back to the host for the rest of this generation. */
+    function retireFooterTakeover() {
+      footerTakeoverRetired = true
+      document.body.removeAttribute(FOOTER_ATTR)
+    }
+
+    /** Give the composer back to the host for the rest of this generation. */
+    function retireComposerRestyle() {
+      composerRestyleRetired = true
+      document.body.removeAttribute(COMPOSER_ATTR)
+    }
+
     /** The current preferences (live object; treat as read-only). */
     function readPrefs() {
       return prefs
@@ -210,7 +232,7 @@
       // The brand is one attribute write; the other preferences gate rules the
       // stylesheet and the scheduler read directly.
       document.body.setAttribute(BRAND_ATTR, next.brand)
-      if (next.collapseFooter) document.body.setAttribute(FOOTER_ATTR, '')
+      if (next.collapseFooter && !footerTakeoverRetired) document.body.setAttribute(FOOTER_ATTR, '')
       else document.body.removeAttribute(FOOTER_ATTR)
       var listeners = prefsListeners.slice()
       for (var i = 0; i < listeners.length; i++) {

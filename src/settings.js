@@ -334,7 +334,7 @@
       // idempotent: a host without `configForms` keeps the plugin's own route.
       adoptSettingsForm(ctx)
       if (ui) {
-        ui.settings = {
+        ui.settingsNav = {
           sync: syncSettingsNav,
         }
         quickProviderApi = ui.quickProviders || null
@@ -384,8 +384,8 @@
         }, 'dsh-claude-style: settings section')
       })
       return function () {
-        if (ui && ui.settings) {
-          delete ui.settings
+        if (ui && ui.settingsNav) {
+          delete ui.settingsNav
         }
         quickProviderApi = null
         try {

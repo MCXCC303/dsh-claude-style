@@ -30,6 +30,7 @@
       }
 
       function isComposerActive() {
+        if (composerRestyleRetired) return false
         var isHero = isHeroView()
         var scope = readPrefs().composerScope
         return scope === 'all' || (isHero ? scope === 'hero' : scope === 'conversation')

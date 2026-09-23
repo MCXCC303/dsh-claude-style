@@ -708,36 +708,44 @@
         }
       }
 
+      /**
+       * Hand the host's own model seat and menu back: unmark the seat, remove the
+       * skin's trigger and popovers, drop the catalog subscription.
+       */
+      function dropModelControl() {
+        var allHosts = document.querySelectorAll('[data-dsh-claude-model-host]')
+        for (var h = 0; h < allHosts.length; h++) {
+          allHosts[h].removeAttribute('data-dsh-claude-model-host')
+        }
+        var allModelBtns = document.querySelectorAll('.dsh-claude-model-btn')
+        for (var mb = 0; mb < allModelBtns.length; mb++) {
+          allModelBtns[mb].remove()
+        }
+        modelBtn = null
+        var allModelPops = document.querySelectorAll('.dsh-claude-model-popover')
+        for (var mp = 0; mp < allModelPops.length; mp++) {
+          allModelPops[mp].remove()
+        }
+        modelPop = null
+        modelSubPop = null
+        modelBody = null
+        modelFooter = null
+        modelSubBody = null
+        modelBodySig = ''
+        modelSubSig = ''
+        cancelCloseModel()
+        dropModelSubscription()
+        modelDir = null
+        modelSessionId = null
+      }
+
       /** Build/refresh the trigger, its label and the popover rows. */
       function syncModelControl() {
         // Two ways to be off: the composer restyle does not apply to this page, or
         // the picker preference is off. Both hand the host's own model seat and
         // menu back, so both run the same sweep.
         if (!ui.copy.isComposerActive() || !readPrefs().modelPicker) {
-          var allHosts = document.querySelectorAll('[data-dsh-claude-model-host]')
-          for (var h = 0; h < allHosts.length; h++) {
-            allHosts[h].removeAttribute('data-dsh-claude-model-host')
-          }
-          var allModelBtns = document.querySelectorAll('.dsh-claude-model-btn')
-          for (var mb = 0; mb < allModelBtns.length; mb++) {
-            allModelBtns[mb].remove()
-          }
-          modelBtn = null
-          var allModelPops = document.querySelectorAll('.dsh-claude-model-popover')
-          for (var mp = 0; mp < allModelPops.length; mp++) {
-            allModelPops[mp].remove()
-          }
-          modelPop = null
-          modelSubPop = null
-          modelBody = null
-          modelFooter = null
-          modelSubBody = null
-          modelBodySig = ''
-          modelSubSig = ''
-          cancelCloseModel()
-          dropModelSubscription()
-          modelDir = null
-          modelSessionId = null
+          dropModelControl()
           return
         }
 
@@ -878,21 +886,13 @@
           modelBodySig = ''
           modelSubSig = ''
         },
+        // Removes the skin's DOM too: a feature switched off mid-session (see
+        // src/entry.js) keeps the stylesheet around it, so the seat has to be
+        // handed back here rather than by the stylesheet going away.
         teardown: function () {
-          cancelCloseModel()
-          dropModelSubscription()
-          modelDir = null
-          modelSessionId = null
+          dropModelControl()
           modelWarmRequested = false
-          modelBtn = null
-          modelPop = null
-          modelSubPop = null
-          modelBody = null
-          modelFooter = null
-          modelSubBody = null
           modelSlot = null
-          modelBodySig = ''
-          modelSubSig = ''
         }
       }
 
