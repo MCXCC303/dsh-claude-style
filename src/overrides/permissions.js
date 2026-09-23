@@ -648,8 +648,6 @@
       }
 
       function hideStatsPopover() {
-
-        statsSections = null
         if (statsPopover !== null) statsPopover.setAttribute('data-open', 'false')
       }
 
@@ -703,6 +701,8 @@
 
       var statsSections = null
 
+      var statsSectionsAt = 0
+
 
       function showStatsPopover(anchor) {
         if (statsHideTimer) {
@@ -714,8 +714,13 @@
           // A click re-collects, and the host's two pills can be mid-flight then: a read
           // that comes back with fewer sections than the card already shows must not
           // shrink it — that is the 'click and it drops to Token usage only' bug.
-          if (statsSections !== null && sections.length < statsSections.length) sections = statsSections
-          else statsSections = sections
+          var fresh = Date.now() - statsSectionsAt < 180000
+          if (statsSections !== null && fresh && sections.length < statsSections.length) {
+            sections = statsSections
+          } else {
+            statsSections = sections
+            statsSectionsAt = Date.now()
+          }
           renderStatsPopover(sections)
           var pop = ensureStatsPopover()
           pop.setAttribute('data-open', 'true')
