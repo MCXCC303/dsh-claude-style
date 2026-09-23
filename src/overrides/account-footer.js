@@ -168,6 +168,13 @@
       var DRIVING_ATTR = 'data-dsh-claude-account-driving'
       var accountItems = []
       var accountMenuError = false
+      /**
+       * True once the host's own account menu has been read. When it is, the
+       * drawer mirrors ITS items (which include 设置 on the desktop) and the
+       * skin's own settings row steps aside; on a host without the desktop
+       * account UI the drawer keeps that row, because there is nothing to mirror.
+       */
+      var hostMenuAvailable = false
       var accountReading = false
       var accountSignature = ''
 
@@ -313,13 +320,45 @@
             row.addEventListener('click', function (event) {
               event.stopPropagation()
               closePopover()
-              // Forward to the host's own item, so the host owns what it does.
-              withHostAccountMenu(function (menu, items) {
-                for (var k = 0; k < items.length; k++) {
-                  if ((items[k].textContent || '').trim() === entry.text) {
-                    realClick(items[k])
-                    return
-                  }
+              // 直连官方行为（与归档同一条思路：不再驱动宿主菜单）。
+              if (entry.text === (settingsItem && settingsItem.querySelector('.dsh-claude-popover-item-text') ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent : '') || /设置|settings/i.test(entry.text)) {
+                var settingsButtons = footArea ? footArea.querySelectorAll('[class*="settingsArea"] button') : []
+                for (var sb = 0; sb < settingsButtons.length; sb++) {
+                  if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { realClick(settingsButtons[sb]); return }
+                }
+              }
+              if (/反馈|contact|意见/i.test(entry.text)) {
+                var url = 'https://trtgsjkv6r.feishu.cn/share/base/form/shrcnlCoGElW7MQznGy9r3YYXcg'
+                try { window.open(url, '_blank', 'noopener,noreferrer') } catch (error) { /* popup blocked */ }
+                return
+              }
+              if (/退出|登出|sign ?out|log ?out|logout/i.test(entry.text)) {
+                var account = null
+                try { account = ctx.get('remote.account') } catch (error) { account = null }
+                if (account !== undefined && account !== null && typeof account.signOut === 'function') {
+                  account.signOut().then(function () {
+                    if (items !== null) items = items.filter(function (row) { return row.id !== id })
+                  }).catch(function () { /* stay signed in on failure */ })
+                }
+                return
+              }
+              if (/登录|sign ?in|login/i.test(entry.text)) {
+                var account = null
+                try { account = ctx.get('remote.account') } catch (error) { account = null }
+                if (account !== undefined && account !== null && typeof account.startSignIn === 'function') {
+                  var origin = window.location.origin
+                  try { var t = window.__DSH_TRANSPORT__; if (t && t.streamBaseUrl) origin = new URL(t.streamBaseUrl).origin } catch (error) { /* keep the default */ }
+                  var locale = 'en'
+                  try { locale = ctx.locale.getSnapshot().active === 'zh' ? 'zh' : 'en' } catch (error) { /* default */ }
+                  account.startSignIn(locale, origin, 'desktop')
+                }
+                return
+              }
+              // An option the skin does not know: fall back to driving the host's
+              // own menu for that one item.
+              withHostAccountMenu(function (menu, menuItems) {
+                for (var k = 0; k < menuItems.length; k++) {
+                  if ((menuItems[k].textContent || '').trim() === entry.text) { realClick(menuItems[k]); return }
                 }
               })
             })
