@@ -286,7 +286,10 @@
             var icon = items[i].querySelector('svg')
             next.push({
               text: text,
-              disabled: items[i].getAttribute('aria-disabled') === 'true',
+              // The host disables its own sign-out row while its flow is busy;
+              // the skin's row stays enabled, or the drawer would dead-end the
+              // very action the user is reaching for.
+              disabled: false,
               icon: icon !== null ? icon.outerHTML : ''
             })
           }
