@@ -356,7 +356,7 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
      plate is hover only, and the glyph is the interface ink — not the accent. */
   background: transparent !important;
   color: var(--dsw-alias-label-primary, #141413) !important;
-  border-radius: 50% !important;
+  border-radius: 6px !important;
   border: none !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]):hover:not(:disabled),
@@ -372,8 +372,8 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   position: absolute !important;
   inset: 0 !important;
   margin: auto !important;
-  width: 18px !important;
-  height: 18px !important;
+  width: 16px !important;
+  height:  16px !important;
   box-sizing: border-box !important;
   border: 1.6px solid currentColor !important;
   border-radius: 50% !important;
@@ -382,8 +382,8 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg,
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] :is(button[aria-label*="停止"], button[aria-label*="Stop"]) svg {
   display: block !important;
-  width: 8px !important;
-  height: 8px !important;
+  width: 7px !important;
+  height:  7px !important;
   border-radius: 1.5px !important;
 }
 body[data-dsh-claude-style] [data-composer-card][data-composer-variant="inline"] :is(button[aria-label*="停止"], button[aria-label*="Stop"])::after,
