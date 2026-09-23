@@ -1,4 +1,26 @@
     function installAccountFooter(ctx, ui) {
+  /**
+   * The signed-in account, when the desktop has one: `remote.account.getProfile()`
+   * resolves to a profile whose `status` is 'ready' and whose value carries the
+   * nickname and the avatar URL. Read leniently by NAME (the same way the archive
+   * registry is read), so a host without the account plugin simply keeps the
+   * hand-drawn mark and the stored username.
+   */
+  var accountName = null
+  var accountAvatar = null
+  function loadAccount() {
+    var account = null
+    try { account = ctx.get('remote.account') } catch (error) { account = null }
+    if (account === undefined || account === null || typeof account.getProfile !== 'function') return
+    account.getProfile().then(function (result) {
+      if (!result || result.ok !== true || !result.value) return
+      var profile = result.value.profile || result.value
+      if (!profile || profile.status !== 'ready' || !profile.value) return
+      accountName = profile.value.name || profile.value.contact || null
+      accountAvatar = profile.value.avatarUrl || profile.avatarUrl || null
+    }).catch(function () { /* stay on the fallback */ })
+  }
+  loadAccount()
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
@@ -585,7 +607,7 @@
           dropAccountFooter(footArea)
           return
         }
-        var username = getUsername(ctx)
+        var username = accountName || getUsername(ctx)
 
         // Idempotent against a torn-down-less reload: client HMR drops the old
         // fiber's disposals instead of running them, so a previous generation's
@@ -610,7 +632,7 @@
           accountBtn.setAttribute('aria-haspopup', 'menu')
           accountBtn.setAttribute('aria-expanded', 'false')
           accountBtn.innerHTML =
-            '<span class="dsh-claude-account-avatar"></span>' +
+            '<span class="dsh-claude-account-avatar"' + (accountAvatar ? ' style="background-image:url(' + JSON.stringify(accountAvatar) + ');background-size:cover;background-position:center"' : '') + '></span>' +
             '<span class="dsh-claude-account-label">' +
               '<span class="dsh-claude-account-user">' + username + '</span>' +
             '</span>' +
