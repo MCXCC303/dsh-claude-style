@@ -76,7 +76,8 @@ const FRAGMENTS = [
   'overrides/model-copy-lookup.js',
   'overrides/model-effort.js',
   'overrides/model-picker.js',
-  'overrides/effort-picker.js',
+  // TEMP(exclusion): effort-picker breaks plugin load on the desktop (slot entry crashed in 'conversation.input.dock'); restored once it loads cleanly.
+  // 'overrides/effort-picker.js',
   'overrides/hero-menu.js',
   'overrides/quick-providers.js',
   'overrides/account-footer.js',
