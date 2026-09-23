@@ -206,3 +206,56 @@ body[data-dsh-claude-style] [class*="header"]:has([class*="tabs"])::after {
   pointer-events: none !important;
   z-index: 1 !important;
 }
+
+/* ---------- conversation view tabs: the skin's own segment control ---------- */
+/* The host's tab strip (ConversationRoot's .tabs / .tab / .tabActive) gets
+   the same shape as the sidebar's 进行中 / 已归档 control: a 7px pill shell with a
+   raised pill for the active tab, instead of the shipped underline. Scoped to the
+   header that owns the strip, so the settings page's own tabs keep their look. */
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 2px !important;
+  border-radius: 7px !important;
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"] {
+  appearance: none !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-tertiary, #8f8d84) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 18px !important;
+  height: 22px !important;
+  padding: 0 10px !important;
+  border-radius: 5px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transition: background-color 0.12s ease, color 0.12s ease !important;
+}
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"]:hover {
+  color: var(--dsw-alias-label-primary, #141413) !important;
+}
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"][aria-selected="true"],
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"][class*="Active"] {
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.10) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"][aria-selected="true"],
+body[data-dsh-claude-style][data-ds-dark-theme] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"][class*="Active"] {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f4ef !important;
+  box-shadow: none !important;
+}
+/* The shipped active-tab underline has no place in a pill. */
+body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"]::after {
+  display: none !important;
+}
