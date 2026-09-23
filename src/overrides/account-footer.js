@@ -38,6 +38,10 @@
         accountAvatarChecked = url
         accountAvatarOk = false
         var probe = new Image()
+        // The host's own avatar <img> carries referrerPolicy="no-referrer", which
+        // is what the picture host expects; without it the probe request is
+        // refused and a perfectly good URL looks broken.
+        probe.referrerPolicy = 'no-referrer'
         probe.onload = function () { accountAvatarOk = true }
         probe.onerror = function () { accountAvatarOk = false }
         probe.src = url
