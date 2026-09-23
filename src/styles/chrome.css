@@ -163,3 +163,12 @@ body[data-dsh-claude-style] [data-slot="conversation.session.header.actions"] > 
 body[data-dsh-claude-style] [data-queue-dock] {
   margin-bottom: calc(0px - var(--dsh-composer-stack-gap, 6px)) !important;
 }
+
+/* The conversation header (title + view tabs) carries the host's own
+   order-bottom: 0.5px solid var(--dsw-alias-border-l3)
+   (ConversationRoot.module.css) — the line under the tabs. The transcript's own
+   top fade below takes over that job, so the rule goes. Scoped with :has() to
+   the header that owns the tab strip, so no other header loses its edge. */
+body[data-dsh-claude-style] [class*="_header_"]:has([class*="_tabs_"]) {
+  border-bottom-color: transparent !important;
+}
