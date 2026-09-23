@@ -1,14 +1,14 @@
     function installAccountFooter(ctx, ui) {
-  /**
-   * The signed-in account, when the desktop has one: `remote.account.getProfile()`
-   * resolves to a profile whose `status` is 'ready' and whose value carries the
-   * nickname and the avatar URL. Read leniently by NAME (the same way the archive
-   * registry is read), so a host without the account plugin simply keeps the
-   * hand-drawn mark and the stored username.
-   */
-  var accountName = null
-  var accountAvatar = null
-  function loadAccount() {
+      /**
+       * The signed-in account, when the desktop has one: `remote.account.getProfile()`
+       * resolves to a profile whose `status` is 'ready' and whose value carries the
+       * nickname and the avatar URL. Read leniently by NAME (the same way the archive
+       * registry is read), so a host without the account plugin simply keeps the
+       * hand-drawn mark and the stored username.
+       */
+      var accountName = null
+      var accountAvatar = null
+      function loadAccount() {
     var account = null
     try { account = ctx.get('remote.account') } catch (error) { account = null }
     if (account === undefined || account === null || typeof account.getProfile !== 'function') return
@@ -19,18 +19,18 @@
       accountName = profile.value.name || profile.value.contact || null
       accountAvatar = profile.value.avatarUrl || profile.avatarUrl || null
     }).catch(function () { /* stay on the fallback */ })
-  }
-  loadAccount()
-  /**
-   * Keep it live without a page refresh. The host exposes a real account stream
-   * (`remote.account.watch`), but it is an async iterable and this half is ES5;
-   * a slow poll costs one cheap RPC every five seconds and covers sign-in,
-   * sign-out and avatar changes alike.
-   */
-  var accountTimer = setInterval(function () {
+      }
+      loadAccount()
+      /**
+       * Keep it live without a page refresh. The host exposes a real account stream
+       * (`remote.account.watch`), but it is an async iterable and this half is ES5;
+       * a slow poll costs one cheap RPC every five seconds and covers sign-in,
+       * sign-out and avatar changes alike.
+       */
+      var accountTimer = setInterval(function () {
     if (accountBtn === null || accountBtn.parentElement === null) return
     loadAccount()
-  }, 5000)
+      }, 5000)
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
