@@ -48,6 +48,15 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
   --dsw-alias-interactive-bg-active: rgba(217, 119, 87, 0.30);
   --dsh-claude-hover-bg: rgba(255, 255, 255, 0.08);
   --dsh-claude-inline-code-bg: rgba(255, 255, 255, 0.05);
+  /* The reasoning slider's top rung is the one place the clay accent does not
+     rule: Claude's own "Ultracode" rung is violet, and the user asked for that
+     violet rather than a clay translation of it. Values measured off Claude's
+     recorded slider (block ≈ rgb(150,127,200), name ink darker still); the
+     matrix block colours are computed in model-effort.js against the same
+     ramp, so this token and those constants move together. */
+  --dsh-claude-apex: #9d8ce0;
+  --dsh-claude-apex-flash: #e6e0fb;
+  --dsh-claude-apex-ink: #b9adf0;
   --dsh-claude-inline-code-fg: #e8a08a;
   --dsh-claude-link: #8ab4f8;
   --dsh-claude-link-underline: rgba(138, 180, 248, 0.6);
@@ -104,6 +113,10 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-specific-sidebar-fill: #fbfbf9;
   --dsh-claude-hover-bg: rgba(0, 0, 0, 0.08);
   --dsh-claude-inline-code-bg: rgba(0, 0, 0, 0.05);
+  /* See the dark block: the top rung keeps Claude's violet, not the clay accent. */
+  --dsh-claude-apex: #8b7ad0;
+  --dsh-claude-apex-flash: #d9d2f5;
+  --dsh-claude-apex-ink: #5f51b5;
   --dsw-alias-interactive-bg-hover: var(--dsh-claude-hover-bg);
   --dsw-shadow-lv2: 0 4px 18px rgba(20, 20, 19, 0.10), 0 1px 3px rgba(20, 20, 19, 0.05);
   --dsw-alias-brand-primary-new-colorprimary-new-color: #d97757;
