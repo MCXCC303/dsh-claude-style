@@ -42,8 +42,13 @@
         // is what the picture host expects; without it the probe request is
         // refused and a perfectly good URL looks broken.
         probe.referrerPolicy = 'no-referrer'
-        probe.onload = function () { accountAvatarOk = true }
-        probe.onerror = function () { accountAvatarOk = false }
+        // A pass only re-renders when something mutates: without this nudge the
+        // picture stays unshown until an unrelated DOM change comes along.
+        var nudge = function () {
+          document.body.setAttribute('data-dsh-claude-avatar-tick', String(Date.now()))
+        }
+        probe.onload = function () { accountAvatarOk = true; nudge() }
+        probe.onerror = function () { accountAvatarOk = false; nudge() }
         probe.src = url
       }
       loadAccount()
@@ -191,16 +196,28 @@
        * so it keeps a box and stays reachable here.
        */
       function hostAccountTrigger() {
-        var scopes = [document.querySelector('[class*="footArea"]'), document]
+        var foot = document.querySelector('[class*="footArea"]')
+        var scopes = [foot, document]
+        // The account menu names itself ("账号菜单" / "Account menu"): the shell
+        // has several menu anchors (open-in-app, workspace picker) and "the first
+        // one that is not ours" picked the wrong one on hosts whose account row is
+        // not in the footer. Match the label first, and only then fall back to
+        // "the first non-ours anchor in the footer".
         for (var s = 0; s < scopes.length; s++) {
           if (scopes[s] === null || scopes[s] === undefined) continue
           var anchors = scopes[s].querySelectorAll('[aria-haspopup="menu"]')
           for (var i = 0; i < anchors.length; i++) {
             var el = anchors[i]
             if (String(el.className || '').indexOf('dsh-claude-') !== -1) continue
-            if ((el.getAttribute('aria-label') || '') === '') continue
-            return el
+            if (/账号|account/i.test(el.getAttribute('aria-label') || '')) return el
           }
+        }
+        if (foot === null) return null
+        var fallback = foot.querySelectorAll('[aria-haspopup="menu"]')
+        for (var k = 0; k < fallback.length; k++) {
+          if (String(fallback[k].className || '').indexOf('dsh-claude-') !== -1) continue
+          if ((fallback[k].getAttribute('aria-label') || '') === '') continue
+          return fallback[k]
         }
         return null
       }
