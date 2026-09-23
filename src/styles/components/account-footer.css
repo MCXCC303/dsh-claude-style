@@ -38,6 +38,12 @@ body[data-dsh-claude-style] .dsh-claude-account-avatar {
   background: %%ANTHROPIC_MARK%% center / contain no-repeat;
   flex: none;
   margin-right: 8px;
+  /* The host's own avatar is a circle (32px with a 16px radius). Ours is 18px to
+     fit this compact row, but the shape has to match, or the picture reads as a
+     square chip: half the size, and clip so `cover` crops inside the circle. */
+  border-radius: 50%;
+  corner-shape: round;
+  overflow: hidden;
 }
 body[data-dsh-claude-style] .dsh-claude-account-label {
   flex: 1;
