@@ -231,13 +231,13 @@ body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_ta
   border-radius: 7px !important;
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.06)) !important;
   /* Horizontally centred in the header (the strip already spans grid-column 1/-1,
-     so justify-self alone does it), and lifted 10px from its natural y=50.
-     It stays on its own row on purpose: the title's row also carries the header
-     actions — the background-task chip, the workspace/preset picker, the overflow
-     menu and the panel toggle — so centring the strip with the title put it on
-     top of them. */
+     so justify-self alone does it). The vertical shift is MEASURED, not fixed: the
+     title's row also carries the header actions, so whether the strip can rise onto
+     it depends on the window — src/overrides/view-tabs.js writes
+     --dsh-view-tabs-shift when the room is there, and this fallback (its own row,
+     10px up from y=50) holds the rest of the time. */
   justify-self: center !important;
-  transform: translateY(-10px) !important;
+  transform: translateY(var(--dsh-view-tabs-shift, -10px)) !important;
   /* A view switcher, not furniture: it fades in when the pointer is in the
      conversation pane and out when it leaves, the same idiom as the sidebar's
      进行中 / 已归档 control. Opacity, not display, so the header keeps its height

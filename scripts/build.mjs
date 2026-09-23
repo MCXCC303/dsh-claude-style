@@ -83,6 +83,7 @@ const FRAGMENTS = [
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',
   'overrides/workspace-view.js',
+  'overrides/view-tabs.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',

@@ -36,6 +36,7 @@
       teardowns.push(installBanScreen(ctx, ui)) // 账户横条的封号彩蛋（账户弹层把点击交给 ui.ban）
       teardowns.push(installThemeFlip()) // 主题翻转瞬间抑制过渡，修掉「先色后样」
       teardowns.push(installWorkspaceView(ctx, ui)) // 侧栏工作区：进行中 / 已归档 分段 + 归档行删除
+      teardowns.push(installViewTabs(ctx, ui)) // 对话区视图标签条：按实测把标签条放到标题那一行（放得下才放）
       var stopSettings = installSettingsSection(ctx, ui)
       teardowns.push(installScheduler(ctx, ui)) // 最后装，回调中惰性读 ui 句柄
 

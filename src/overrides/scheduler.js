@@ -182,6 +182,7 @@
           if (ui.heroMenu) ui.heroMenu.sync()
           if (ui.footer) ui.footer.sync()
           if (ui.workspace) ui.workspace.sync()
+          if (ui.viewTabs) ui.viewTabs.sync()
           if (ui.settings) ui.settings.sync()
           // Covers the rail toggle (and any reflow) while the popover is open:
           // its anchor moved without a window resize or a page scroll.
