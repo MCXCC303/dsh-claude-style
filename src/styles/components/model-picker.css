@@ -739,3 +739,29 @@ body[data-dsh-claude-style] [class*="footArea"] > .dsh-claude-popover-item {
   display: none !important;
 }
 
+
+/* ---------- reasoning-effort trigger ---------- */
+/* Body-mounted (the seat slot is React-managed and crashed on a foreign node),
+   pinned beside the model trigger by view-tabs-style measurement on every pass. */
+body[data-dsh-claude-style] .dsh-claude-effort-btn {
+  position: fixed !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-secondary, #6e6a60) !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  transition: background-color 0.12s ease, color 0.12s ease !important;
+}
+body[data-dsh-claude-style] .dsh-claude-effort-btn:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+}

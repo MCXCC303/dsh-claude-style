@@ -95,6 +95,21 @@
         positionAnchoredPopover(effortBtn, effortPop, { side: 'above', gap: 6 })
       }
 
+      /** Pin the body-mounted trigger beside the model trigger (every pass: the
+       * seat moves with the window and the composer's own growth). */
+      function positionEffortTrigger() {
+        if (effortBtn === null) return
+        var modelBtn = document.querySelector('.dsh-claude-model-btn')
+        if (modelBtn === null) {
+          effortBtn.style.display = 'none'
+          return
+        }
+        var r = modelBtn.getBoundingClientRect()
+        effortBtn.style.display = 'inline-flex'
+        effortBtn.style.left = Math.round(r.right + 8) + 'px'
+        effortBtn.style.top = Math.round(r.top + (r.height - effortBtn.offsetHeight) / 2) + 'px'
+      }
+
       /** The slider, built once; the card holds this node for its whole life. */
       function effortControlElement() {
         if (effortSlider === null) {
@@ -169,7 +184,7 @@
           return
         }
         ensureEffortChrome()
-        if (effortBtn === null || effortBtn.parentElement !== slot) {
+        if (effortBtn === null || effortBtn.parentElement !== document.body) {
           if (effortBtn !== null && effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
           effortBtn = document.createElement('button')
           effortBtn.type = 'button'
@@ -189,11 +204,11 @@
             if (effortPop !== null && effortPop.getAttribute('data-open') === 'true') closeEffortPopover()
             else openEffortPopover()
           })
-          // Right after the model trigger, never before it: the model is the
-          // seat's subject and the level is its modifier.
-          var modelBtn = slot.querySelector('.dsh-claude-model-btn')
-          if (modelBtn !== null) slot.insertBefore(effortBtn, modelBtn.nextSibling)
-          else slot.appendChild(effortBtn)
+          // NOT inside the seat slot: that subtree is React-managed, and a foreign
+          // node in it crashed the host with React #130 at plugin load. The button
+          // lives on <body> like the card and is pinned beside the model trigger
+          // on every pass instead.
+          document.body.appendChild(effortBtn)
         }
         // Same-value guards: sync runs on every scheduler pass, and an identical
         // write still mutates the DOM (textContent replaces the text node;
@@ -203,6 +218,8 @@
         var aria = copyLabel('effortLabel', MODEL_EFFORT_LABEL) + ' ' + info.label
         if (effortBtn.getAttribute('aria-label') !== aria) effortBtn.setAttribute('aria-label', aria)
         if (effortSlider !== null) effortSlider.update()
+        positionEffortTrigger()
+
         if (effortPop !== null && effortPop.getAttribute('data-open') === 'true') positionEffortPopover()
       }
 
@@ -225,7 +242,7 @@
         sync: syncEffortControl,
         close: closeEffortPopover,
         owns: ownsEffort,
-        reposition: positionEffortPopover,
+        reposition: function () { positionEffortTrigger(); positionEffortPopover() },
         teardown: teardown,
       }
       return teardown
