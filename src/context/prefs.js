@@ -93,14 +93,56 @@
      */
     var prefsForm = null
 
-    /** This plugin's settings namespace: the loader entry id, or the patch's id. */
-    function settingsEntryId(ctx) {
+    /**
+     * Candidate namespaces, best first: the running loader entry id (host
+     * halves report "<kind>:<id>", so the kind prefix is stripped), the package
+     * name (the `plugins.bundle.config` key), and the id `cordis.patch.yml`
+     * inserts — which is what the host half actually registers the namespace
+     * as.
+     */
+    function settingsNamespaceCandidates(ctx) {
+      var entryId = null
       try {
         var entry = ctx && ctx.fiber ? ctx.fiber.entry : null
         var id = entry ? entry.id : null
-        if (typeof id === 'string' && id !== '') return id
-      } catch (error) { /* no loader entry: fall back to the id the patch declares */ }
-      return SETTINGS_ENTRY_FALLBACK
+        if (typeof id === 'string' && id !== '') {
+          var colon = id.lastIndexOf(':')
+          entryId = colon === -1 ? id : id.slice(colon + 1)
+        }
+      } catch (error) { /* no loader entry (the dynamic façade hides fiber): fall back */ }
+      return [entryId, PACKAGE_NAME, SETTINGS_ENTRY_FALLBACK]
+    }
+
+    /**
+     * The namespace the host actually serves, picked from the candidates.
+     *
+     * The browser cannot trust its own loader entry id: `dsh-client-modules`
+     * creates each boot entry with only `name`, so the loader mints a RANDOM
+     * id. Asking `configForms.get()` for that id hands back a controller for a
+     * namespace no one owns — reads stay at the defaults and every write is
+     * refused ("No configurable plugin entry"). The served list is the truth.
+     *
+     * @param forms - the `configForms` service.
+     * @param candidates - namespace ids, best first.
+     * @returns the first served candidate, or null when none is served yet.
+     */
+    function servedNamespace(forms, candidates) {
+      try {
+        var mirror = typeof forms.describe === 'function' ? forms.describe() : null
+        var snapshot = mirror && typeof mirror.getSnapshot === 'function' ? mirror.getSnapshot() : null
+        var view = snapshot ? snapshot.view : null
+        var namespaces = view ? view.namespaces : null
+        if (namespaces) {
+          for (var i = 0; i < candidates.length; i++) {
+            var candidate = candidates[i]
+            if (typeof candidate !== 'string' || candidate === '') continue
+            for (var j = 0; j < namespaces.length; j++) {
+              if (namespaces[j] && namespaces[j].ns === candidate) return candidate
+            }
+          }
+        }
+      } catch (error) { /* mirror unreadable: caller falls back to the route */ }
+      return null
     }
 
     /** Whether this host serves namespaces to the browser (0.1.7+). */
@@ -138,9 +180,14 @@
       if (prefsForm !== null) return true
       var forms = hostConfigForms(ctx)
       if (forms === null) return false
+      // Only bind a namespace the host actually serves; a generated loader id
+      // would yield a controller for nobody's namespace (reads stuck at the
+      // defaults, every write refused). Not served yet -> keep the route.
+      var namespace = servedNamespace(forms, settingsNamespaceCandidates(ctx))
+      if (namespace === null) return false
       var form = null
       try {
-        form = forms.get(settingsEntryId(ctx))
+        form = forms.get(namespace)
       } catch (error) {
         form = null
       }
@@ -259,8 +306,11 @@
           if (formName) setFallbackUsername('')
           adoptPrefs(normalizePrefs(formValue))
           replayPendingBanLocale(formValue)
+          return
         }
-        return
+        // The bound form is not ready yet (namespace not served at bind time, or
+        // the mirror is still loading): fall through to the route instead of
+        // returning with the defaults, which is what froze the settings page.
       }
       if (typeof fetch !== 'function') return
       try {
@@ -426,7 +476,28 @@
      * @returns a promise for the resolved preferences, or null when unavailable.
      */
     function savePrefs(patch) {
-      if (prefsForm !== null) return savePrefsViaForm(patch)
+      // The official form only when it actually carries values; otherwise (and
+      // whenever it refuses the write) the route is the transport, so a
+      // not-ready form can never swallow a save.
+      if (prefsForm !== null && readFormValue() !== null) {
+        return savePrefsViaForm(patch).then(function (result) {
+          return result === null ? savePrefsViaRoute(patch) : result
+        })
+      }
+      return savePrefsViaRoute(patch)
+    }
+
+    /**
+     * Write a partial preference change through the plugin's own route.
+     *
+     * The revision travels with the write so a concurrent move of the namespace
+     * is rejected rather than silently overwritten; on that rejection the
+     * authoritative value is re-read.
+     *
+     * @param patch - preference keys to change.
+     * @returns a promise for the resolved preferences, or null when unavailable.
+     */
+    function savePrefsViaRoute(patch) {
       if (typeof fetch !== 'function') return Promise.resolve(null)
       var body = { revision: prefsRevision }
       for (var key in patch) body[key] = patch[key]
