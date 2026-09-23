@@ -21,6 +21,16 @@
     }).catch(function () { /* stay on the fallback */ })
   }
   loadAccount()
+  /**
+   * Keep it live without a page refresh. The host exposes a real account stream
+   * (`remote.account.watch`), but it is an async iterable and this half is ES5;
+   * a slow poll costs one cheap RPC every five seconds and covers sign-in,
+   * sign-out and avatar changes alike.
+   */
+  var accountTimer = setInterval(function () {
+    if (accountBtn === null || accountBtn.parentElement === null) return
+    loadAccount()
+  }, 5000)
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
@@ -761,6 +771,10 @@
       }
 
       return function () {
+        if (accountTimer !== null) {
+          clearInterval(accountTimer)
+          accountTimer = null
+        }
         cancelClosePopover()
         var footArea = document.querySelector('[class*="footArea"]')
         if (footArea) {
