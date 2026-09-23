@@ -18,7 +18,29 @@
       if (!profile || profile.status !== 'ready' || !profile.value) return
       accountName = profile.value.name || profile.value.contact || null
       accountAvatar = profile.value.avatarUrl || profile.avatarUrl || null
+      verifyAvatar(accountAvatar)
     }).catch(function () { /* stay on the fallback */ })
+      }
+      /**
+       * A picture only earns the avatar slot once it has actually loaded: a broken
+       * or unreachable URL must leave the hand-drawn mark in place rather than an
+       * empty circle. One extra request per distinct URL.
+       */
+      var accountAvatarOk = false
+      var accountAvatarChecked = null
+      function verifyAvatar(url) {
+        if (url === null || url === undefined || url === '') {
+          accountAvatarOk = false
+          accountAvatarChecked = null
+          return
+        }
+        if (accountAvatarChecked === url) return
+        accountAvatarChecked = url
+        accountAvatarOk = false
+        var probe = new Image()
+        probe.onload = function () { accountAvatarOk = true }
+        probe.onerror = function () { accountAvatarOk = false }
+        probe.src = url
       }
       loadAccount()
       /**
@@ -823,7 +845,7 @@
           accountBtn.setAttribute('aria-haspopup', 'menu')
           accountBtn.setAttribute('aria-expanded', 'false')
           accountBtn.innerHTML =
-            '<span class="dsh-claude-account-avatar"' + (accountAvatar ? ' data-dsh-claude-photo style="--dsh-claude-account-photo:url(' + JSON.stringify(accountAvatar) + ')"' : '') + '></span>' +
+            '<span class="dsh-claude-account-avatar"' + (accountAvatar && accountAvatarOk ? ' data-dsh-claude-photo style="--dsh-claude-account-photo:url(' + JSON.stringify(accountAvatar) + ')"' : '') + '></span>' +
             '<span class="dsh-claude-account-label">' +
               '<span class="dsh-claude-account-user">' + username + '</span>' +
             '</span>' +
