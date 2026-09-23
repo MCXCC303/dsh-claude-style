@@ -212,13 +212,11 @@
             if (/账号|account/i.test(el.getAttribute('aria-label') || '')) return el
           }
         }
-        if (foot === null) return null
-        var fallback = foot.querySelectorAll('[aria-haspopup="menu"]')
-        for (var k = 0; k < fallback.length; k++) {
-          if (String(fallback[k].className || '').indexOf('dsh-claude-') !== -1) continue
-          if ((fallback[k].getAttribute('aria-label') || '') === '') continue
-          return fallback[k]
-        }
+        // No fallback. The skin replaces the host's account row, so on a host
+        // without the desktop account there is simply no account menu to mirror —
+        // and "the first non-ours anchor in the footer" picked the open-in-app
+        // menu instead, filling the drawer with Cursor / VS Code / … Returning
+        // null is the honest answer: the drawer keeps only its own 设置 row.
         return null
       }
 
@@ -341,8 +339,22 @@
       function syncPopoverItems(footArea) {
         if (!popoverBody || !footArea) return
 
-        var origSettingsTrigger = footArea.querySelector('[class*="settingsArea"] button[aria-haspopup="dialog"]') ||
-                                  footArea.querySelector('[class*="settingsArea"] button')
+        // A `menu` anchor is not the settings button: on the desktop the footer's
+        // first button in that slot is the ACCOUNT trigger, which made this row
+        // read "叶落风随" and, when clicked, open the account menu. Accept only a
+        // dialog trigger, then any button that is not a menu anchor.
+        var settingsButtons = footArea.querySelectorAll('[class*="settingsArea"] button')
+        var origSettingsTrigger = null
+        for (var sb = 0; sb < settingsButtons.length; sb++) {
+          if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { origSettingsTrigger = settingsButtons[sb]; break }
+        }
+        if (origSettingsTrigger === null) {
+          for (var sb2 = 0; sb2 < settingsButtons.length; sb2++) {
+            if (settingsButtons[sb2].getAttribute('aria-haspopup') === 'menu') continue
+            origSettingsTrigger = settingsButtons[sb2]
+            break
+          }
+        }
         var labelText = '设置'
         if (origSettingsTrigger) {
           var txt = (origSettingsTrigger.textContent || '').trim()
@@ -368,8 +380,13 @@
           settingsItem.addEventListener('click', function (e) {
             e.stopPropagation()
             closePopover()
-            var realTrigger = footArea.querySelector('[class*="settingsArea"] button[aria-haspopup="dialog"]') ||
-                              footArea.querySelector('[class*="settingsArea"] button')
+            var realTrigger = null
+            var candidates = footArea.querySelectorAll('[class*="settingsArea"] button')
+            for (var cb = 0; cb < candidates.length; cb++) {
+              if (candidates[cb].getAttribute('aria-haspopup') === 'menu') continue
+              realTrigger = candidates[cb]
+              break
+            }
             if (realTrigger) {
               realTrigger.click()
             }
