@@ -220,7 +220,7 @@
           '</div>' +
           '<div class="dsh-claude-ban-toast" data-dsh-ban-dismiss role="status">' +
             '<span class="dsh-claude-ban-toast-icon">' + BAN_ICONS.warning + '</span>' +
-            '<span class="dsh-claude-ban-toast-text">' + username + ': account_banned</span>' +
+            '<span class="dsh-claude-ban-toast-text"></span>' +
             '<span class="dsh-claude-ban-toast-close">' + BAN_ICONS.close + '</span>' +
           '</div>' +
           '<div class="dsh-claude-ban-scroll">' +
@@ -279,6 +279,10 @@
               '</div>' +
             '</div>' +
           '</div>'
+        // The username is user- and host-supplied text (a preference, the OS user,
+        // the account nickname), so it is written as text, never spliced into the
+        // markup above.
+        root.querySelector('.dsh-claude-ban-toast-text').textContent = username + ': account_banned'
 
         // One listener for every way out that is a click: the markup marks each
         // control with `data-dsh-ban-dismiss`, and a click that lands on the

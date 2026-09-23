@@ -155,23 +155,28 @@ body[data-dsh-claude-style] .dsh-claude-account-popover-header .dsh-claude-accou
 
 
 /* The account mark is a background image on the span itself (see the rule above).
-   When the desktop has a real avatar, that mark has to go — otherwise both paint
-   and the star shows through. The picture rides a ::after layer with its URL in
-   a custom property, so the mark is removed in one place and the photo is drawn
-   in another, with no fight over `background-image`. */
+   When the desktop has a real avatar, the picture is an <img> layered over that
+   mark (src/overrides/account-footer.js) rather than a background: the picture
+   host expects the request without a referrer, the way the host's own avatar
+   <img> sends it, and only an element can say so. A picture that fails to load
+   hides itself, and the mark underneath shows instead of an empty circle. */
 body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo] {
   position: relative !important;
 }
 body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::before {
   display: none !important;
 }
-body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::after {
-  content: "" !important;
+body[data-dsh-claude-style] .dsh-claude-account-photo {
   position: absolute !important;
   inset: 0 !important;
-  background: var(--dsh-claude-account-photo) center / cover no-repeat !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
   border-radius: inherit !important;
   pointer-events: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-photo[hidden] {
+  display: none !important;
 }
 
 /* While the skin drives the host's account menu (to read its items and to

@@ -51,6 +51,53 @@
         probe.onerror = function () { accountAvatarOk = false; nudge() }
         probe.src = url
       }
+
+      /**
+       * The profile picture's address, or null when there is none usable. It
+       * comes from the account service, so only http(s) is accepted, and it is
+       * handed to an `<img>` as a property — never written into markup.
+       */
+      function accountPhotoUrl(raw) {
+        if (typeof raw !== 'string' || raw === '') return null
+        try {
+          var url = new URL(raw, window.location.href)
+          return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
+        } catch (error) {
+          return null
+        }
+      }
+
+      /**
+       * Paint (or clear) the picture inside the avatar circle. It is a real
+       * `<img>` layered over the starburst rather than a CSS background: the
+       * host's own avatar `<img>` carries `referrerPolicy="no-referrer"`, which
+       * is what the picture host expects, and a background cannot drop the
+       * referrer. A picture that fails to load hides itself, so the starburst
+       * underneath shows instead of an empty circle.
+       */
+      function syncAccountAvatar(avatarEl) {
+        if (avatarEl === null) return
+        var src = accountPhotoUrl(accountAvatar)
+        var photo = avatarEl.querySelector('.dsh-claude-account-photo')
+        if (src === null) {
+          if (photo !== null) avatarEl.removeChild(photo)
+          if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+          return
+        }
+        if (photo === null) {
+          photo = document.createElement('img')
+          photo.className = 'dsh-claude-account-photo'
+          photo.alt = ''
+          photo.decoding = 'async'
+          photo.draggable = false
+          photo.referrerPolicy = 'no-referrer'
+          photo.addEventListener('load', function () { photo.hidden = false })
+          photo.addEventListener('error', function () { photo.hidden = true })
+          avatarEl.appendChild(photo)
+        }
+        if (photo.getAttribute('src') !== src) photo.src = src
+        if (!avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.setAttribute('data-dsh-claude-photo', '')
+      }
       loadAccount()
       /**
        * Keep it live without a page refresh. The host exposes a real account stream
@@ -290,7 +337,9 @@
               // the skin's row stays enabled, or the drawer would dead-end the
               // very action the user is reaching for.
               disabled: false,
-              icon: icon !== null ? icon.outerHTML : ''
+              // A detached copy of the host's node, not its markup: the menu is
+              // closed again right after this read, and a copy never re-parses.
+              icon: icon !== null ? icon.cloneNode(true) : null
             })
           }
           accountItems = next
@@ -316,8 +365,9 @@
             row.className = 'dsh-claude-popover-item'
             row.setAttribute('data-dsh-claude-account-item', '')
             row.innerHTML =
-              '<span class="dsh-claude-popover-item-icon">' + entry.icon + '</span>' +
+              '<span class="dsh-claude-popover-item-icon"></span>' +
               '<span class="dsh-claude-popover-item-text"></span>'
+            if (entry.icon !== null) row.querySelector('.dsh-claude-popover-item-icon').appendChild(entry.icon.cloneNode(true))
             row.querySelector('.dsh-claude-popover-item-text').textContent = entry.text
             if (entry.disabled) row.setAttribute('aria-disabled', 'true')
             row.addEventListener('click', function (event) {
@@ -416,8 +466,9 @@
                 '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' +
               '</svg>' +
             '</span>' +
-            '<span class="dsh-claude-popover-item-text">' + labelText + '</span>' +
+            '<span class="dsh-claude-popover-item-text"></span>' +
             '<span class="dsh-claude-popover-item-shortcut">Ctrl+,</span>'
+          settingsItem.querySelector('.dsh-claude-popover-item-text').textContent = labelText
 
           settingsItem.addEventListener('click', function (e) {
             e.stopPropagation()
@@ -508,7 +559,6 @@
             var activator = trigger
             var item = popoverBody.querySelector('[data-action-index="' + idx + '"]')
             var iconEl = (trigger && trigger.querySelector('svg')) || entry.querySelector('svg')
-            var iconHtml = iconEl ? iconEl.outerHTML : ''
             var text = activator.getAttribute('aria-label') || (activator.textContent || '').trim() || '插件'
             var badge = activator.getAttribute('data-cordis-badge') || entry.getAttribute('data-cordis-badge') || ''
 
@@ -518,9 +568,8 @@
               item.className = 'dsh-claude-popover-item'
               item.setAttribute('data-action-index', idx)
               item.innerHTML =
-                '<span class="dsh-claude-popover-item-icon">' + iconHtml + '</span>' +
-                '<span class="dsh-claude-popover-item-text">' + text + '</span>' +
-                (badge ? '<span class="dsh-claude-popover-item-badge">' + badge + '</span>' : '')
+                '<span class="dsh-claude-popover-item-icon"></span>' +
+                '<span class="dsh-claude-popover-item-text"></span>'
 
               item.addEventListener('click', function (e) {
                 e.stopPropagation()
@@ -548,19 +597,13 @@
                 if (live && typeof live.click === 'function') live.click()
               })
               popoverBody.insertBefore(item, settingsItem)
-            } else {
-              // Entries are reused by index: the host re-sorts list slots by
-              // `order` on every render, so a re-sort can seat a different
-              // plugin under an existing item — icon, text, badge AND the
-              // click target must all re-sync, or the label shows one entry
-              // while the click fires the previous occupant's trigger.
-              var iEl = item.querySelector('.dsh-claude-popover-item-icon')
-              if (iEl && iEl.innerHTML !== iconHtml) iEl.innerHTML = iconHtml
-              var tEl = item.querySelector('.dsh-claude-popover-item-text')
-              if (tEl && tEl.textContent !== text) tEl.textContent = text
-              var bEl = item.querySelector('.dsh-claude-popover-item-badge')
-              if (bEl && bEl.textContent !== badge) bEl.textContent = badge
             }
+            // Entries are reused by index: the host re-sorts list slots by
+            // `order` on every render, so a re-sort can seat a different
+            // plugin under an existing item — icon, text, badge AND the
+            // click target must all re-sync, or the label shows one entry
+            // while the click fires the previous occupant's trigger.
+            syncMirrorItem(item, iconEl, text, badge)
             // Rebind the click target to the entry currently behind this
             // index. Done on every pass, for new and reused items alike.
             item.__dshActivator = activator
@@ -675,6 +718,35 @@
           return
         }
         el.setAttribute('data-dsh-claude-footer-hidden', '')
+      }
+
+      /**
+       * Bring one mirrored text item in line with the entry behind its index.
+       * The label and badge are the plugin's own strings, so they are written as
+       * text; the icon is a copy of the plugin's node rather than re-parsed
+       * markup, and is replaced only when the source's markup changed.
+       */
+      function syncMirrorItem(item, iconEl, text, badge) {
+        var iconBox = item.querySelector('.dsh-claude-popover-item-icon')
+        var iconHtml = iconEl ? iconEl.outerHTML : ''
+        if (iconBox !== null && iconBox.__dshIconHtml !== iconHtml) {
+          iconBox.__dshIconHtml = iconHtml
+          while (iconBox.firstChild) iconBox.removeChild(iconBox.firstChild)
+          if (iconEl) iconBox.appendChild(iconEl.cloneNode(true))
+        }
+        var textBox = item.querySelector('.dsh-claude-popover-item-text')
+        if (textBox !== null && textBox.textContent !== text) textBox.textContent = text
+        var badgeBox = item.querySelector('.dsh-claude-popover-item-badge')
+        if (badge) {
+          if (badgeBox === null) {
+            badgeBox = document.createElement('span')
+            badgeBox.className = 'dsh-claude-popover-item-badge'
+            item.appendChild(badgeBox)
+          }
+          if (badgeBox.textContent !== badge) badgeBox.textContent = badge
+        } else if (badgeBox !== null) {
+          item.removeChild(badgeBox)
+        }
       }
 
       /** Remove the mirrored text item for one entry index, if present. */
@@ -945,9 +1017,9 @@
           accountBtn.setAttribute('aria-haspopup', 'menu')
           accountBtn.setAttribute('aria-expanded', 'false')
           accountBtn.innerHTML =
-            '<span class="dsh-claude-account-avatar"' + (accountAvatar ? ' data-dsh-claude-photo style="--dsh-claude-account-photo:url(' + JSON.stringify(accountAvatar) + ')"' : '') + '></span>' +
+            '<span class="dsh-claude-account-avatar"></span>' +
             '<span class="dsh-claude-account-label">' +
-              '<span class="dsh-claude-account-user">' + username + '</span>' +
+              '<span class="dsh-claude-account-user"></span>' +
             '</span>' +
             '<span class="dsh-claude-account-chevron"></span>'
 
@@ -967,10 +1039,14 @@
             togglePopover()
           })
           footArea.appendChild(accountBtn)
-        } else {
-          var userEl = accountBtn.querySelector('.dsh-claude-account-user')
-          if (userEl && userEl.textContent !== username) userEl.textContent = username
         }
+        // The name and the picture are user- and host-supplied (a preference, the
+        // OS user, the account profile), so they are written as text and as an
+        // image source, never spliced into markup — and synced on every pass, so a
+        // profile that lands after the row was built still shows up.
+        var userEl = accountBtn.querySelector('.dsh-claude-account-user')
+        if (userEl && userEl.textContent !== username) userEl.textContent = username
+        syncAccountAvatar(accountBtn.querySelector('.dsh-claude-account-avatar'))
 
         if (accountPopover === null || !footArea.contains(accountPopover)) {
           if (accountPopover && accountPopover.parentElement) accountPopover.parentElement.removeChild(accountPopover)
