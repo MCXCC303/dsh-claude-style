@@ -436,6 +436,12 @@
             if (entry.getAttribute('aria-haspopup') === 'menu') return
             if (entry.querySelector('[aria-haspopup="menu"]') !== null) return
             if (/退出|登出|注销|sign ?out|log ?out/i.test(entry.textContent || '')) return
+            // The host's sign-out row is ICON-ONLY, so its text says nothing. Read
+            // the label/title/class, and skip anything living in the host's account
+            // area — that is where the stray [→] in the drawer header came from.
+            var entryLabel = (entry.getAttribute('aria-label') || '') + ' ' + (entry.getAttribute('title') || '') + ' ' + String(entry.className || '')
+            if (/退出|登出|注销|sign ?out|log ?out|logout/i.test(entryLabel)) return
+            if (typeof entry.closest === 'function' && entry.closest('[class*="account"]') !== null) return
             var trigger = findFooterTrigger(entry)
             var hasContent = (entry.textContent || '').trim() !== '' ||
                              entry.querySelector('svg, img, canvas') !== null
