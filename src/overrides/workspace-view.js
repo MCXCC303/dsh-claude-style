@@ -125,6 +125,24 @@
       }
 
       function loadArchived(attempt) {
+        // Archiving is a DSH feature, not a third-party one: the official client
+        // service carries the registry-global archived set as `archivedSessionIds`.
+        // The old `remote.workspaceRegistry` route belongs to the archive-manager
+        // plugin and simply 404s without it — which used to be read as "this host
+        // cannot archive" and took the segment control away on 0.1.7-rc.1.
+        var official = service('workspaces')
+        var officialSnapshot = null
+        try {
+          officialSnapshot = official !== undefined && official !== null && official.list ? official.list.getSnapshot() : null
+        } catch (error) { officialSnapshot = null }
+        if (officialSnapshot !== null && officialSnapshot.archivedSessionIds !== undefined) {
+          supported = true
+          loading = false
+          items = officialSnapshot.archivedSessionIds.map(function (id) { return { id: id, title: null, at: null } })
+          renderList()
+          fillTitles(0)
+          return
+        }
         function retry() {
           if (disposed || attempt >= 4) {
             // No archive service answered: this host does not have one (0.1.5), so
@@ -207,6 +225,14 @@
 
       /** Put a conversation back among the live ones; it leaves this list. */
       function restoreArchived(id) {
+        var official = service('workspaces')
+        if (official !== undefined && official !== null && typeof official.unarchiveSession === 'function') {
+          official.unarchiveSession(id).then(function () {
+            if (items !== null) items = items.filter(function (row) { return row.id !== id })
+            renderList()
+          }).catch(function () { /* the row stays; the next read tells the truth */ })
+          return
+        }
         var registry = service('remote.workspaceRegistry')
         if (registry === undefined || registry === null || typeof registry.unarchiveSession !== 'function') return
         registry.unarchiveSession(id).then(function (result) {
