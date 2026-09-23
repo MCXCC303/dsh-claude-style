@@ -156,6 +156,10 @@
 
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
+      /** The frame the pending pass waits on, so the teardown can cancel it. */
+      var pendingFrame = 0
+      /** Set by the teardown: no pass may be scheduled, or run, after it. */
+      var stopped = false
       var composerCardObserver = null
       var observedCard = null
       if (typeof ResizeObserver !== 'undefined') {
@@ -201,10 +205,11 @@
       }
 
       function schedule() {
-        if (scheduled) return
+        if (scheduled || stopped) return
         scheduled = true
-        requestAnimationFrame(function () {
+        pendingFrame = requestAnimationFrame(function () {
           scheduled = false
+          if (stopped) return
           for (var i = 0; i < PASS_FEATURES.length; i++) runSync(PASS_FEATURES[i])
           try {
             // Covers the rail toggle (and any reflow) while the popover is open:
@@ -243,6 +248,14 @@
       }, 60000)
 
       return function () {
+        // A pass already requested would run against torn-down features and
+        // build their DOM again after the teardown (measured: dozens of skin
+        // nodes and the composer's body attribute came back). Cancel it, and
+        // refuse every later schedule() — a feature's pending promise (the
+        // account profile, a preset switch) may still call it.
+        stopped = true
+        if (scheduled) cancelAnimationFrame(pendingFrame)
+        scheduled = false
         clearInterval(greetingTimer)
         greetingTimer = null
         window.removeEventListener('resize', onFixedPopoverViewportChange)
