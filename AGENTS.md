@@ -15,12 +15,13 @@
 
 ```sh
 npm run build            # 拼接 src/ → lib/client.js，校验 %%TOKEN%%、CSS gate、语法与 model-descriptions.json
+npm run smoke            # 对 lib/ 产物冒烟：宿主半边私有路由的栅栏；无头 Chrome 里启动、空闲 0 pass、不注入 markup、回车归宿主、特性隔离、teardown 干净
 node scripts/probe.cjs --token <launch-token>   # 无头 Chrome 对运行中的 GUI 断言 composer 不变量
 node scripts/probe-timing.cjs --token <launch-token>   # 分项计时：启动长任务与资源、模型目录就绪、打开延迟、行构成、锁定标 markup 解析、堆
 node scripts/shoot.cjs --token <launch-token>   # 重拍 README 截图（docs/light.png / docs/dark.png）
 ```
 
-probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI URL 的 `/?token=…`（或环境变量 `DSH_WEB_TOKEN`）；本机需有 Chrome/Edge（可用 `CHROME_PATH` 指定）。
+probe / shoot 需要一个正在运行的 `dsh web` 实例，token 取自 GUI URL 的 `/?token=…`（或环境变量 `DSH_WEB_TOKEN`）；smoke 不需要，它用替身宿主页面检查产物。三者都需要本机有 Chrome/Edge（可用 `CHROME_PATH` 指定）。
 
 ## 仓库布局
 

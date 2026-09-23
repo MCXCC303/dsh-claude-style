@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "probe": "node scripts/probe.cjs",
+    "smoke": "node scripts/smoke.cjs",
     "prepublishOnly": "npm run build"
   },
   "exports": {
