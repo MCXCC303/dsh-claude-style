@@ -156,13 +156,16 @@ body[data-dsh-claude-style] [data-slot="conversation.session.header.actions"] > 
   z-index: 9 !important;
 }
 
-/* The shipped queue dock cancels the stack gap AND pulls 3px further, so the
-   composer card overlaps its open bottom edge and the card shadow reads as a
-   line across the dock. Cancel only the gap: the dock bottom then lands on
-   the card border and the two tiers share one seam. */
-body[data-dsh-claude-style] [data-queue-dock] {
-  margin-bottom: calc(0px - var(--dsh-composer-stack-gap, 6px)) !important;
-}
+/* The queue dock's spacing is the HOST's to own: its own rule cancels the stack
+   gap and tucks 3px under the input card, so the two read as one attached
+   surface. The skin used to override that to cancel only the gap, because the
+   card then carried a 6px background-coloured halo (`0 0 0 6px
+   var(--dsw-alias-bg-base)`) which painted over the tucked strip and read as a
+   line across the dock. The halo is gone — the seat paints the bar and its fade
+   band instead — and with it the reason to override: cancelling only the gap
+   now leaves the dock's panel short of the card, which is the gap that opened
+   between the queue row and the input box. No rule here on purpose; re-add one
+   only if the host changes its own geometry. */
 
 /* The conversation header (title + view tabs) carries the host's own
    order-bottom: 0.5px solid var(--dsw-alias-border-l3)
