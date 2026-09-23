@@ -72,7 +72,16 @@ body[data-dsh-claude-style] :is([data-phase="active"], [data-content-phase="acti
   right: 0 !important;
   bottom: 100% !important;
   height: var(--dsh-composer-fade-h, 40px) !important;
-  background: linear-gradient(to top, var(--dsw-alias-bg-base), transparent) !important;
+  /* Four stops, matching the transcript's top band in reverse: a straight
+     100% -> 0% ramp reads as a haze band, so hold near-opaque against the card
+     and ease out upward. color-mix keeps it theme-aware. */
+  background: linear-gradient(
+    to top,
+    var(--dsw-alias-bg-base, #FCFCFB) 0%,
+    color-mix(in srgb, var(--dsw-alias-bg-base, #FCFCFB) 82%, transparent) 32%,
+    color-mix(in srgb, var(--dsw-alias-bg-base, #FCFCFB) 40%, transparent) 68%,
+    transparent 100%
+  ) !important;
   pointer-events: none !important;
 }
 /* Message body clearance: the transcript ends where the fade band begins (same
