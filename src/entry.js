@@ -29,7 +29,8 @@
       teardowns.push(installCopy(ctx, ui))
       teardowns.push(installPermissions(ctx, ui))
       teardowns.push(installModelPicker(ctx, ui))
-      teardowns.push(installEffortPicker(ctx, ui)) // 档位：独立的座位触发器与弹层，读 ui.model 的席位/档位/提交接口
+      // TEMP(exclusion): 与构建清单的排除配对 —— 碎片不在产物里，调用也不能在。
+      // teardowns.push(installEffortPicker(ctx, ui))
       teardowns.push(installHeroMenu(ctx, ui)) // hero 行的目录/预设弹层：打标记给样式表用
       teardowns.push(installQuickProviders(ctx, ui)) // 设置页的「快捷供应商」多选弹层
       teardowns.push(installAccountFooter(ctx, ui))
