@@ -42,6 +42,10 @@
       var head = modelEl('div', 'dsh-claude-effort-head')
       var labelEl = modelEl('span', 'dsh-claude-effort-label')
       var valueEl = modelEl('span', 'dsh-claude-effort-value')
+      /* The outgoing name, absolutely positioned over the value: it takes no
+         layout space and never needs removing — the out animation ends at
+         opacity 0 and is re-armed on the next swap. */
+      var valueGhost = modelEl('span', 'dsh-claude-effort-value-ghost')
       var ends = modelEl('div', 'dsh-claude-effort-ends')
       var fasterEl = modelEl('span', 'dsh-claude-effort-end')
       var smarterEl = modelEl('span', 'dsh-claude-effort-end')
@@ -53,6 +57,7 @@
 
       head.appendChild(labelEl)
       head.appendChild(valueEl)
+      head.appendChild(valueGhost)
       ends.appendChild(fasterEl)
       ends.appendChild(smarterEl)
       /* Paint order is DOM order: the fill under the ticks, the matrix over
@@ -409,27 +414,45 @@
       }
 
       /**
+       * Re-arm a stylesheet animation on one element. The reset must be an
+       * !important inline: the rules carry !important (they have to, to outrank
+       * the host), and a plain inline 'none' loses that cascade — the restart
+       * would be a silent no-op.
+       */
+      function restartAnimation(el) {
+        el.style.setProperty('animation', 'none', 'important')
+        void el.offsetWidth
+        el.style.removeProperty('animation')
+      }
+
+      /**
        * The level's name while the gesture runs, the committed one otherwise.
        * Same-value guard: the write runs per frame while dragging, and an
        * identical textContent assignment still replaces the text node — the
        * resulting mutation would feed the scheduler's observer and keep a full
-       * pass running every frame. A real change re-arms the name's blur-in.
+       * pass running every frame.
+       *
+       * A real change is a SWAP, not a replacement: the outgoing name is copied
+       * into the ghost (which sits exactly where the value sat), the ghost blurs
+       * away upward, and the value — now carrying the new name — rises out of a
+       * blur from below. Both animations are re-armed on every swap, mid-drag
+       * included: a slider whose label changes as the knob crosses a stop reads
+       * as a rolling counter, which is the point.
        */
       function paintValue() {
         var at = pressed ? live : selected
         var text = at >= 0 && steps[at] ? steps[at].name : noneLabel
         if (valueEl.textContent !== text) {
-          valueEl.textContent = text
-          /* Re-arm the name's blur-in — but not mid-gesture, where a blur per
-             stop crossing reads as smear; a dragged change simply stays crisp.
-             The stylesheet's animation carries !important, so the reset must
-             be an !important inline too — a plain inline 'none' loses the
-             cascade and the restart is a no-op. */
-          if (!pressed) {
-            valueEl.style.setProperty('animation', 'none', 'important')
-            void valueEl.offsetWidth
-            valueEl.style.removeProperty('animation')
+          var previous = valueEl.textContent
+          if (previous !== '') {
+            /* Anchor the ghost where the value sits (offsetLeft is measured
+               against the positioned head, and the ghost shares that space). */
+            valueGhost.textContent = previous
+            valueGhost.style.left = valueEl.offsetLeft + 'px'
+            restartAnimation(valueGhost)
           }
+          valueEl.textContent = text
+          restartAnimation(valueEl)
         }
         paintApex(at)
       }
