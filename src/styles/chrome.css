@@ -169,7 +169,7 @@ body[data-dsh-claude-style] [data-queue-dock] {
    (ConversationRoot.module.css) — the line under the tabs. The transcript's own
    top fade below takes over that job, so the rule goes. Scoped with :has() to
    the header that owns the tab strip, so no other header loses its edge. */
-body[data-dsh-claude-style] [class*="_header_"]:has([class*="_tabs_"]) {
+body[data-dsh-claude-style] [class*="header"]:has([class*="tabs"]) {
   border-bottom-color: transparent !important;
 }
 
@@ -180,7 +180,7 @@ body[data-dsh-claude-style] [class*="_header_"]:has([class*="_tabs_"]) {
    --dsh-transcript-fade-h is the single knob, matching the composer's own
    --dsh-composer-fade-h; the canvas token is theme-aware, so light and dark
    share one rule. */
-body[data-dsh-claude-style] [class*="_header_"]:has([class*="_tabs_"])::after {
+body[data-dsh-claude-style] [class*="header"]:has([class*="tabs"])::after {
   content: "" !important;
   position: absolute !important;
   left: 0 !important;
