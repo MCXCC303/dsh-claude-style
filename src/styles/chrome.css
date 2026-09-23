@@ -133,16 +133,15 @@ body[data-dsh-claude-style][data-ds-dark-theme] :is(button, input, textarea, sel
   outline-color: rgba(250, 249, 245, 0.60);
 }
 
-/* ---------- composer dock overlays: stay above the message layer ---------- */
-/* Queue, jobs and goal are full-width overlays that can visually extend over
-   the transcript. The message cards paint later in the DOM, so give each
-   overlay its own stacking layer above the chat content. */
-body[data-dsh-claude-style] [data-queue-dock],
-body[data-dsh-claude-style] [data-goal-bar],
-body[data-dsh-claude-style] [data-slot="conversation.input.dock"] > * {
-  position: relative;
-  z-index: 100 !important;
-}
+/* ---------- composer dock overlays ---------- */
+/* Queue (QueueDock), the todo list (TodoDock) and the goal bar (GoalBar) all
+   live inside the composer seat, which is its own stacking context
+   (position: sticky + a z-index of 7): a z-index on the overlays only orders
+   them among the seat's own children and cannot lift them over the message
+   cards, which sit outside the seat. The rule that used to force
+   position: relative + z-index: 100 on all three was a workaround from the
+   old loading path and is gone; the seat's own layer is what carries them.
+   The header actions below are a different story — see the comment. */
 
 /* The header actions are NOT inside the composer seat, so unlike the three
    overlays above they escape every stacking context and their value is read
