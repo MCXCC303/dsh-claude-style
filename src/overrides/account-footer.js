@@ -183,17 +183,24 @@
       }
 
       /**
-       * The host's account trigger: the one menu anchor that is not ours. It is
-       * hidden with `visibility` rather than `display` (see the footer sync), so
-       * it keeps a box and stays reachable here.
+       * The host's account trigger: the menu anchor inside the FOOTER, which is
+       * where the account row lives. Taking "the first menu anchor that is not
+       * ours" was wrong — the shell has several (the open-in-app picker, the
+       * workspace selector), and on a host without the desktop account the skin
+       * then mirrored THAT menu into the account drawer. Hidden with `visibility`,
+       * so it keeps a box and stays reachable here.
        */
       function hostAccountTrigger() {
-        var anchors = document.querySelectorAll('[aria-haspopup="menu"]')
-        for (var i = 0; i < anchors.length; i++) {
-          var el = anchors[i]
-          if (String(el.className || '').indexOf('dsh-claude-') !== -1) continue
-          if ((el.getAttribute('aria-label') || '') === '') continue
-          return el
+        var scopes = [document.querySelector('[class*="footArea"]'), document]
+        for (var s = 0; s < scopes.length; s++) {
+          if (scopes[s] === null || scopes[s] === undefined) continue
+          var anchors = scopes[s].querySelectorAll('[aria-haspopup="menu"]')
+          for (var i = 0; i < anchors.length; i++) {
+            var el = anchors[i]
+            if (String(el.className || '').indexOf('dsh-claude-') !== -1) continue
+            if ((el.getAttribute('aria-label') || '') === '') continue
+            return el
+          }
         }
         return null
       }
