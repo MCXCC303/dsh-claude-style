@@ -161,7 +161,6 @@ body[data-dsh-claude-style] .dsh-claude-account-popover-header .dsh-claude-accou
    in another, with no fight over `background-image`. */
 body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo] {
   position: relative !important;
-  background-image: none !important;
 }
 body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::before {
   display: none !important;
