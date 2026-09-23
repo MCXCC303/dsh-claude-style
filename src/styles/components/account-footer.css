@@ -168,3 +168,10 @@ body[data-dsh-claude-style] .dsh-claude-account-avatar[data-dsh-claude-photo]::a
   border-radius: inherit !important;
   pointer-events: none !important;
 }
+
+/* While the skin drives the host's account menu (to read its items and to
+   forward a click), the menu must never be seen. Hiding, not removing, keeps the
+   items clickable: the drive dispatches its events directly at them. */
+body[data-dsh-claude-account-driving] [role="menu"] {
+  visibility: hidden !important;
+}
