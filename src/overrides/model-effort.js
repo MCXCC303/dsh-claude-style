@@ -71,6 +71,17 @@
       var steps = []
       var selected = -1
       var live = -1
+      /**
+       * A press and a drag are two states, not one. `pressed` starts on
+       * pointerdown and the knob GLIDES to the press position (the stylesheet's
+       * translate transition is still live, so a click on bare track reads as
+       * travel rather than a teleport). `dragging` starts on the first move and
+       * writes directly, with `data-dragging` switching the transition off so
+       * the knob keeps up with the pointer. Setting the drag flag at pointerdown
+       * would kill the glide before the browser ever started it: the transition
+       * list is read at the next style recalc, by which time the flag is on.
+       */
+      var pressed = false
       var dragging = false
       var painted = false
       var pointerId = null
@@ -153,19 +164,25 @@
 
       /**
        * Move the knob. While the gesture runs this is ONE compositor write:
-       * the stylesheet already forces `transition: none` for `data-dragging`,
-       * so an inline transition dance (and the forced reflow it needs to take
-       * effect) would be pure overhead on every pointermove. The inline dance
-       * survives only for the rare non-drag instant move (a ladder swap on
-       * first paint), where the stylesheet's transition would otherwise
-       * animate the jump.
+       * the stylesheet already drops `translate` from the transition for
+       * `data-dragging`, so an inline transition dance (and the forced reflow
+       * it needs to take effect) would be pure overhead on every pointermove.
+       * The inline dance survives only for the rare non-drag instant move (a
+       * ladder swap on first paint), where the stylesheet's transition would
+       * otherwise animate the jump.
+       *
+       * The travel goes through the INDIVIDUAL `translate` property, never
+       * `transform`: the drag lift is `scale`, and the individual properties
+       * compose as translate → scale. Writing the travel into `transform` puts
+       * it AFTER the scale in the product, so a 1.1 lift would scale the travel
+       * itself (see the stylesheet's note on the knob).
        */
-      var lastTransform = ''
+      var lastTravel = ''
       var lastWidth = ''
 
       function place(x, animate) {
         var px = Math.round(x)
-        var value = 'translateX(' + px + 'px)'
+        var value = px + 'px'
         /* The fill runs from the track's left end to the knob's centre (+8 is
            half the 16px knob from the stylesheet) and disappears under the
            opaque knob, so its right end is never seen. An empty ladder selects
@@ -175,17 +192,17 @@
            an unchanged position would run the transition dance's forced reflow
            for nothing — worse, mid-glide it cancels the transition and snaps the
            knob to its end. Only a real change touches the DOM. */
-        if (value === lastTransform && width === lastWidth) return
-        lastTransform = value
+        if (value === lastTravel && width === lastWidth) return
+        lastTravel = value
         lastWidth = width
         if (animate || dragging) {
-          knob.style.transform = value
+          knob.style.translate = value
           fill.style.width = width
           return
         }
         knob.style.transition = 'none'
         fill.style.transition = 'none'
-        knob.style.transform = value
+        knob.style.translate = value
         fill.style.width = width
         void knob.offsetWidth
         knob.style.transition = ''
@@ -197,6 +214,38 @@
         var box = geometry()
         var raw = clientX - track.getBoundingClientRect().left - box.size / 2
         return Math.max(0, Math.min(box.span, raw))
+      }
+
+      /**
+       * How strongly the knob resists leaving a stop, as a fraction of the
+       * pointer's speed right at the stop. 0 is pure 1:1 tracking; 0.8 makes the
+       * knob creep out of a stop at a FIFTH of the pointer's speed (slope
+       * 1 - D at t = 0) and then overtake it mid-segment (slope 1 + D at t = ½,
+       * i.e. 1.8×) — a detent you can feel. Must stay below 1: the slope
+       * `1 - D·cos(2πt)` would reach zero and the travel would stop being
+       * monotone, so the knob could jump backwards.
+       */
+      var DETENT = 0.8
+
+      /**
+       * The detent transfer: raw pointer travel → knob travel. Within one
+       * segment the knob lags near the ends and catches up in the middle
+       * (`t - D·sin(2πt)/2π`), so leaving a stop feels damped while the middle
+       * still tracks the pointer. The curve fixes every stop and every midpoint
+       * (t = 0, ½, 1 map to themselves) and is monotone, so `nearest()` may keep
+       * reading the RAW position: the knob's nearest stop is the pointer's
+       * nearest stop either way. Applied on the pointer paths only — settle and
+       * the host echo place the knob on a stop, which the curve already fixes.
+       */
+      function dampTravel(x) {
+        if (steps.length < 2) return x
+        var box = geometry()
+        if (box.span === 0) return x
+        var seg = box.span / (steps.length - 1)
+        var index = Math.floor(x / seg)
+        if (index >= steps.length - 1) return x
+        var t = (x - index * seg) / seg
+        return (index + t - DETENT * Math.sin(2 * Math.PI * t) / (2 * Math.PI)) * seg
       }
 
       /** The level nearest a travel position: the one a release settles on. */
@@ -267,6 +316,20 @@
           padRight: (restX - Math.floor(restX / 2)) / dpr,
         }
       }
+      /**
+       * Give one particle its twinkle: a hash-scattered phase, a hash-scattered
+       * CYCLE LENGTH and a hash-scattered tone. Nothing here is ordered — the
+       * phases spread across the cycle so no two neighbours fire together, and
+       * the per-block durations drift the phases apart so the pattern never
+       * repeats exactly. (An ordered wave was tried and rejected: it read as one
+       * sweeping bar rather than as a field of particles.)
+       */
+      function paintParticle(sq, r, c) {
+        sq.setAttribute('data-tone', String(Math.floor(cellUnit(r, c, 1) * 8) % 8))
+        sq.style.setProperty('animation-delay', (cellUnit(r, c, 2) * 1.38 + 0.3).toFixed(3) + 's', 'important')
+        sq.style.setProperty('animation-duration', (1.45 * (0.92 + cellUnit(r, c, 3) * 0.16)).toFixed(3) + 's', 'important')
+      }
+
 
       /**
        * (Re)build the matrix for the track's current device-pixel size. Returns
@@ -291,20 +354,16 @@
             var fx = lay.cols > 1 ? c / (lay.cols - 1) : 1
             var cell = modelEl('div', 'dsh-claude-effort-matrix-cell')
             /* The entrance sweeps in from the right — the end the knob reached
-               for — with a whisper of row scatter so it does not read as a wipe. */
-            /* !important inline: the stylesheet's animation shorthand is
-               !important (which resets delay/duration to 0s/1.45s), so a plain
-               inline assignment would silently lose. */
+               for — with a whisper of scatter so it does not read as a wipe.
+               !important inline: the stylesheet's animation shorthand is
+               !important (it resets delay/duration), so a plain assignment
+               would silently lose. */
             cell.style.setProperty('animation-delay', (((1 - fx) * 0.45) + cellUnit(r, c, 4) * 0.08).toFixed(3) + 's', 'important')
             var sq = modelEl('div', 'dsh-claude-effort-matrix-sq')
-            /* The mask fade is a STATIC opacity; the flash animates colour
-               through it (see the stylesheet for why it is not an opacity dip). */
+            /* The plume shape is a STATIC per-block opacity: the flash animates
+               the colour through it, so the two never fight. */
             sq.style.opacity = cellFade(fx).toFixed(3)
-            /* Only a tone BUCKET is picked here — the colours themselves live in
-               the stylesheet, so nothing can go stale in the DOM. */
-            sq.setAttribute('data-tone', String(Math.floor(cellUnit(r, c, 1) * 4) % 4))
-            sq.style.setProperty('animation-delay', (cellUnit(r, c, 2) * 1.38 + 0.3).toFixed(3) + 's', 'important')
-            sq.style.setProperty('animation-duration', (1.45 * (0.92 + cellUnit(r, c, 3) * 0.16)).toFixed(3) + 's', 'important')
+            paintParticle(sq, r, c)
             cell.appendChild(sq)
             matrix.appendChild(cell)
           }
@@ -357,7 +416,7 @@
        * pass running every frame. A real change re-arms the name's blur-in.
        */
       function paintValue() {
-        var at = dragging ? live : selected
+        var at = pressed ? live : selected
         var text = at >= 0 && steps[at] ? steps[at].name : noneLabel
         if (valueEl.textContent !== text) {
           valueEl.textContent = text
@@ -366,7 +425,7 @@
              The stylesheet's animation carries !important, so the reset must
              be an !important inline too — a plain inline 'none' loses the
              cascade and the restart is a no-op. */
-          if (!dragging) {
+          if (!pressed) {
             valueEl.style.setProperty('animation', 'none', 'important')
             void valueEl.offsetWidth
             valueEl.style.removeProperty('animation')
@@ -436,7 +495,7 @@
 
       /** The gesture ends: the knob lands on the nearest level and commits it. */
       function settle() {
-        if (!dragging) return
+        if (!pressed) return
         if (moveQueued) {
           // Land the still-pending position first, so the release settles on
           // where the pointer actually is rather than one event behind.
@@ -444,8 +503,9 @@
           moveQueued = false
           pendingFrame = 0
           applyPending()
-          if (!dragging) return
+          if (!pressed) return
         }
+        pressed = false
         dragging = false
         root.removeAttribute('data-dragging')
         releaseCapture()
@@ -465,14 +525,17 @@
         if (e.button !== 0) return
         e.preventDefault()
         e.stopPropagation()
-        dragging = true
         painted = true
-        root.setAttribute('data-dragging', '')
         pointerId = e.pointerId
         try { track.setPointerCapture(e.pointerId) } catch (error) { /* capture is a nicety */ }
         if (typeof opts.onDragStart === 'function') opts.onDragStart()
         var x = pointerTravel(e.clientX)
-        place(x, false)
+        /* Glide to the press position. The drag state (and with it the
+           transition-off flag) only starts on the first MOVE — see the flags'
+           note: setting it here would suppress the very transition that makes
+           this read as travel. */
+        pressed = true
+        place(dampTravel(x), true)
         live = nearest(x)
         paintValue()
       }
@@ -490,7 +553,7 @@
       var pendingY = 0
 
       function applyPending() {
-        if (!dragging) return
+        if (!pressed) return
         var box = root.getBoundingClientRect()
         // Leaving the control ends the gesture where it stands — the knob
         // settles on the nearest level instead of trailing the pointer away.
@@ -499,13 +562,19 @@
           return
         }
         var x = pointerTravel(pendingX)
-        place(x, false)
+        place(dampTravel(x), false)
         live = nearest(x)
         paintValue()
       }
 
       function onPointerMove(e) {
-        if (!dragging) return
+        if (!pressed) return
+        if (!dragging) {
+          // The pointer is moving: the gesture is a drag now, so the knob must
+          // follow it without easing.
+          dragging = true
+          root.setAttribute('data-dragging', '')
+        }
         pendingX = e.clientX
         pendingY = e.clientY
         if (moveQueued) return
@@ -562,7 +631,7 @@
         if (pendingEcho && next.index >= 0 && next.steps[next.index] !== void 0 && next.steps[next.index].id === pendingId) {
           clearPending()
         }
-        if (!dragging && !pendingEcho) {
+        if (!pressed && !pendingEcho) {
           var moved = painted && !changed && selected !== next.index
           selected = next.index
           place(positionFor(selected), moved)
@@ -576,6 +645,9 @@
       return {
         el: root,
         update: update,
-        isDragging: function () { return dragging },
+        // A press counts as a drag for the callers' purposes: the picker's
+        // hover-close guard must stand down from pointerdown, not from the
+        // first move.
+        isDragging: function () { return pressed },
       }
     }

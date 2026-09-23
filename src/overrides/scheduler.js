@@ -6,6 +6,11 @@
         if (target && ui.model && !ui.model.owns(target)) {
           ui.model.close()
         }
+        // The effort card is its own popover with its own trigger, so it closes
+        // on the same press-anywhere-outside rule.
+        if (target && ui.effort && !ui.effort.owns(target)) {
+          ui.effort.close()
+        }
         if (ui.settings) ui.settings.sync()
         if (!ui.footer || !ui.footer.isOpen()) return
         if (target && ui.footer.owns(target)) return
@@ -17,6 +22,7 @@
           if (ui.footer) ui.footer.close()
           if (ui.permissions) ui.permissions.closeMenu()
           if (ui.model) ui.model.close()
+          if (ui.effort) ui.effort.close()
           // The account-hold overlay is the one layer that does NOT close on a
           // window blur (it is meant to be read, and reading it may mean
           // switching windows), so Esc is its keyboard way out.
@@ -172,6 +178,7 @@
           if (ui.copy) ui.copy.sync()
           if (ui.permissions) ui.permissions.sync()
           if (ui.model) ui.model.sync()
+        if (ui.effort) ui.effort.sync()
           if (ui.heroMenu) ui.heroMenu.sync()
           if (ui.footer) ui.footer.sync()
           if (ui.workspace) ui.workspace.sync()

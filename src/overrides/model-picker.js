@@ -18,8 +18,9 @@
       var modelSubPop = null
       var modelBody = null
       var modelFooter = null
-      var effortSlider = null
       var modelSubBody = null
+      /** The host slot the seat lives in; the effort picker anchors there too. */
+      var modelSlot = null
       /**
        * The picker is two cards wide, and the level-2 card only cancels a pending
        * close once the pointer is ON it — so the grace has to cover the journey
@@ -107,6 +108,9 @@
 
       function openModelPopover() {
         cancelCloseModel()
+        // One card at a time: the two triggers sit side by side, so leaving the
+        // effort card up would stack two panels over the same corner.
+        if (ui.effort && typeof ui.effort.close === 'function') ui.effort.close()
         modelDirectory()
         // load() is async — the host itself guards with .catch(() => {}); a bare
         // try/catch cannot see its rejection.
@@ -290,30 +294,6 @@
         return { reasoning: reasoning, effective: effective, label: label }
       }
 
-      /**
-       * The effort slider (src/overrides/model-effort.js). It is handed a reader
-       * rather than the seat itself: the control re-reads the catalog on every
-       * pass, so a selection the host echoes back lands on the knob without the
-       * picker having to push it.
-       */
-      function effortControlElement() {
-        if (effortSlider === null) {
-          effortSlider = createEffortControl({
-            read: function () { return modelEffort(modelSnapshot()) },
-            onPick: pickEffort,
-            // A drag must not be cut short by the hover-close timer: the pointer
-            // is inside the control the whole time.
-            onDragStart: cancelCloseModel,
-          })
-        }
-        return effortSlider.el
-      }
-
-      /** Re-point the slider at the current seat (every render pass). */
-      function updateEffortControl() {
-        if (effortSlider !== null) effortSlider.update()
-      }
-
       var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
       var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
 
@@ -467,42 +447,61 @@
         return out
       }
 
-      /** Level 1: the provider sections, the divider, the effort slider, More models. */
+      /**
+       * Lay the footer out as divider → effort slider → More models, KEEPING the
+       * slider node attached when it is already there.
+       *
+       * The obvious clear-and-rebuild detaches and re-inserts the slider, and a
+       * re-insertion restarts every CSS animation inside it: the level name's
+       * blur-in and the apex matrix's entrance sweep both replay. The picker
+       * re-renders on every host round-trip — the signature carries `status`, so
+       * a selection renders once for `selecting` and once for the echo back —
+       * which made the control visibly double-take on every pick. Removing only
+       * the nodes that are NOT the slider leaves its animation timeline alone.
+       */
+      /**
+       * The footer holds the divider and the More-models row, and nothing else:
+       * the effort slider moved to its own card (src/overrides/effort-picker.js).
+       * Rebuilt only when the row set changes — the divider exists to close the
+       * list off from what follows it, so with no More-models row it is a stray
+       * line and is not drawn either.
+       */
+      function layoutModelFooter(showMore) {
+        if (!modelFooter) return
+        var stale = []
+        for (var child = modelFooter.firstChild; child !== null; child = child.nextSibling) stale.push(child)
+        for (var i = 0; i < stale.length; i++) modelFooter.removeChild(stale[i])
+        if (!showMore) return
+        modelFooter.appendChild(modelEl('div', 'dsh-claude-model-divider'))
+        modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL)))
+      }
+
+      /** Level 1: the provider sections, the divider, More models. */
       function renderModelBody() {
         if (!modelBody) return
-        // A drag in flight owns the slider: rebuilding the footer would detach it
-        // and drop its pointer capture mid-gesture. The pass that ends the drag —
-        // settle commits, the host answers, a pass is scheduled — picks it up.
-        if (effortSlider !== null && effortSlider.isDragging()) return
         var snap = modelSnapshot()
         var status = snap ? snap.status : 'idle'
         var groups = (snap && snap.groups) || []
         var current = modelCurrent(snap)
-        var effort = modelEffort(snap)
-        var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', effort ? String(effort.effective) : '', readPrefs().quickProviders.join(',')].join('|')
+        var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', readPrefs().quickProviders.join(',')].join('|')
         for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
         if (sig === modelBodySig) {
-          // The list is unchanged, but the slider still has to follow the seat:
-          // its geometry tracks the card's width, its value a selection the host
-          // echoed back.
-          updateEffortControl()
           return
         }
         modelBodySig = sig
         while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
-        while (modelFooter && modelFooter.firstChild) modelFooter.removeChild(modelFooter.firstChild)
 
         // A seat whose data is still in flight must not blank a picker that
         // already has a list. The host marks the directory `selecting` for the
         // WHOLE selectModel round-trip, and that round-trip runs for seconds on
-        // providers whose adapters resolve over the network — the effort slider
-        // commits through the very same RPC, so nudging it used to empty the
-        // card (list, slider and More-models row all gone) for exactly as long
-        // as the host took to answer. Only a directory with nothing to show
-        // yet falls back to the loading line.
+        // providers whose adapters resolve over the network, so nudging the
+        // effort used to empty the card for exactly as long as the host took to
+        // answer. Only a directory with nothing to show yet falls back to the
+        // loading line.
         var seated = groups.length > 0 && current !== null
         if (!seated && (status === 'idle' || status === 'loading' || status === 'selecting')) {
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('loading', MODEL_LOADING_LABEL)))
+          layoutModelFooter(false)
         } else {
           var sections = levelOneSections(groups)
           if (sections.length === 0) {
@@ -560,29 +559,22 @@
             })
             modelBody.appendChild(currentRow)
           }
-          // The divider closes the model list and the two drill rows follow it;
-          // all three live in the footer, OUTSIDE the scroll area — the list
-          // above scrolls under them while the controls stay reachable.
+          // The divider closes the model list and the More-models row follows it;
+          // both live in the footer, OUTSIDE the scroll area — the list above
+          // scrolls under them while the row stays reachable. The effort slider
+          // is not here any more: it has its own trigger and card.
           if (modelFooter) {
-            // The slider belongs to models that actually offer levels: without
-            // reasoning metadata there is nothing to configure, so the row is not
-            // drawn at all instead of being drawn inert.
-            var showEffort = effort !== null
             // "More models" carries what level 1 does not. With every provider
             // already on screen the row would only open an empty card, so it goes
             // away with the last remaining provider.
             var showMore = remainingGroups(groups, sections).length > 0
             // The divider exists to close the list off from what follows it. With
-            // both rows gone there is nothing left to close off, and a bare line
-            // under the list reads as a stray rule.
-            if (showEffort || showMore) {
-              modelFooter.appendChild(modelEl('div', 'dsh-claude-model-divider'))
-              if (showEffort) modelFooter.appendChild(effortControlElement())
-              if (showMore) modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL)))
-            }
+            // no More-models row there is nothing left to close off, and a bare
+            // line under the list reads as a stray rule. layoutModelFooter owns
+            // that judgement.
+            layoutModelFooter(showMore)
           }
         }
-        updateEffortControl()
       }
 
       /** Level 2: the providers level 1 does NOT show, each headed by its name. */
@@ -696,12 +688,7 @@
               if (modelSubPop !== null) modelSubPop.setAttribute('data-open', 'false')
             }, MODEL_CLOSE_DELAY)
           })
-          modelPop.addEventListener('mouseleave', function () {
-            // A drag in flight must not be cut short by the hover-close timer: the
-            // pointer is working the slider, not leaving the card.
-            if (effortSlider !== null && effortSlider.isDragging()) return
-            scheduleCloseModel()
-          })
+          modelPop.addEventListener('mouseleave', scheduleCloseModel)
           document.body.appendChild(modelPop)
           modelBodySig = ''
         }
@@ -760,6 +747,7 @@
         modelDirectory()
         warmModelCatalog()
         var slot = document.querySelector('[data-slot="conversation.input.model"]')
+        modelSlot = slot
         if (slot === null) return
         // Hide the host's own seat (React owns the node; re-mark on swap).
         // Idempotent against a torn-down-less reload, like the account footer:
@@ -804,7 +792,6 @@
 
         var snap = modelSnapshot()
         var current = modelCurrent(snap)
-        var effort = modelEffort(snap)
         var groupsNow = (snap && snap.groups) || []
         var label = current ? current.model.name : copyLabel('fallbackLabel', MODEL_FALLBACK_LABEL)
         var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
@@ -824,17 +811,11 @@
           var unsettled = !!(snap && (snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting')) && !(groupsNow.length > 0 && current !== null)
           labelEl.classList.toggle('dsh-claude-model-btn-loading', unsettled)
         }
-        var effortEl = modelBtn.querySelector('.dsh-claude-model-btn-effort')
-        if (effort) {
-          if (effortEl === null) {
-            effortEl = modelEl('span', 'dsh-claude-model-btn-effort')
-            modelBtn.insertBefore(effortEl, modelBtn.firstChild ? labelEl.nextSibling : null)
-          }
-          var effortText = '· ' + effort.label
-          if (effortEl.textContent !== effortText) effortEl.textContent = effortText
-        } else if (effortEl !== null && effortEl.parentElement) {
-          effortEl.parentElement.removeChild(effortEl)
-        }
+        // The level is NOT part of this trigger any more: it has its own button
+        // beside it (src/overrides/effort-picker.js). A stale "· High" span from
+        // an older generation is swept rather than reused.
+        var staleEffortEl = modelBtn.querySelector('.dsh-claude-model-btn-effort')
+        if (staleEffortEl !== null) staleEffortEl.parentElement.removeChild(staleEffortEl)
         var triggerAria = copyLabel('triggerLabel', MODEL_TRIGGER_LABEL, { model: label })
         if (modelBtn.getAttribute('aria-label') !== triggerAria) modelBtn.setAttribute('aria-label', triggerAria)
         modelBtn.disabled = false
@@ -852,6 +833,32 @@
       ui.model = {
         sync: syncModelControl,
         close: closeModelPopovers,
+        /**
+         * The seat slot, the effort descriptor and the commit call: the effort
+         * picker (a separate fragment) owns the level's trigger and card, and
+         * these three are all it needs from this one. `effort()` re-reads the
+         * catalog every call, so a level the host echoes back lands on the knob
+         * without either fragment pushing it.
+         */
+        seat: function () { return modelSlot },
+        effort: function () { return modelEffort(modelSnapshot()) },
+        /**
+         * Whether the catalog is currently able to name the seat. FALSE means
+         * "in flight": the host re-enumerates the whole directory for seconds
+         * after every selection, and during that window the snapshot can have no
+         * groups, no current seat and no reasoning metadata. Readers must not
+         * read that as "this model has no levels" — the model card learned this
+         * the hard way (it blanked its list on every pick), and the effort card
+         * would take its trigger away mid-selection.
+         */
+        settled: function () {
+          var snap = modelSnapshot()
+          if (!snap) return true
+          var inFlight = snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting'
+          var groups = snap.groups || []
+          return !inFlight || (groups.length > 0 && modelCurrent(snap) !== null)
+        },
+        pickEffort: pickEffort,
         owns: function (target) {
           if (!target) return false
           return (modelBtn !== null && modelBtn.contains(target)) ||
@@ -882,8 +889,8 @@
           modelSubPop = null
           modelBody = null
           modelFooter = null
-          effortSlider = null
           modelSubBody = null
+          modelSlot = null
           modelBodySig = ''
           modelSubSig = ''
         }
