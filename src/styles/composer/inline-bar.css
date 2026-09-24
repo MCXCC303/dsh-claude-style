@@ -59,20 +59,24 @@ body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-label {
    trigger is body-mounted and JS-pinned beside the model trigger — it never
    sits under [class*="trailing"], so the rules drafted for that seat were dead
    and have been removed.) */
-/* Token stats pills & dock line — positioned over the bottom toolbar row
-   without detaching nodes from their native React parents (preventing React
-   unmount DOMException / browser freeze). */
+/* The host's dock line — the stats pills and the context meter — laid over
+   the toolbar row. Both stay in their native React parent (moving them out
+   crashed React's unmount with Node.removeChild), so the dock itself leaves
+   the flow for the row's line: the stats sentence centred, the meter at the
+   row's right end. The dock is the card's next sibling; the queue, todo and
+   goal overlays above the card name their roots `dock` too and keep the
+   host's own placement. */
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) {
   position: relative !important;
 }
-body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [class*="dock"] {
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] + [class*="_dock"] {
   position: absolute !important;
   bottom: 6px !important;
-  left: 0 !important;
-  right: 0 !important;
+  left: var(--dsh-composer-side-clearance, 0px) !important;
+  right: var(--dsh-composer-side-clearance, 0px) !important;
   height: 28px !important;
   margin: 0 auto !important;
-  padding: 0 160px 0 140px !important;
+  padding: 0 calc(160px + var(--dsh-claude-meter-room, 0px)) 0 140px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -82,8 +86,23 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   max-width: var(--dsh-composer-card-max-width, 100%) !important;
   box-sizing: border-box !important;
 }
-body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [class*="dock"] > * {
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] + [class*="_dock"] > * {
   pointer-events: auto !important;
+}
+/* The meter holds the row's right end, inside the row's own 4px inset, after
+   the model and effort triggers: the trailing cluster keeps that room free
+   (--dsh-claude-meter-room, measured by the permissions pass). Centred by
+   stretching over the dock's height, never by a transform — the meter's panel
+   is position: fixed, and a transform here would anchor it to the meter. */
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] + [class*="_dock"] > [data-dsh-claude-context-meter] {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  right: 4px !important;
+  align-items: center !important;
+}
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-card] [class*="_row"] > [class*="trailing"] {
+  margin-right: var(--dsh-claude-meter-room, 0px) !important;
 }
 body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-stats] {
   position: relative !important;

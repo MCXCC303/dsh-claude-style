@@ -284,14 +284,12 @@
         if (ui.copy && ui.copy.syncAttachmentPlaceholder) ui.copy.syncAttachmentPlaceholder()
       }
 
-      /** The composer's dock line: the stack child that is not the card. */
+      /**
+       * The composer's dock line, which the host renders right after the card
+       * (a notice line, when there is one, sits before it).
+       */
       function composerDock(card) {
-        var stack = card.parentElement
-        if (stack === null) return null
-        for (var i = 0; i < stack.children.length; i++) {
-          if (stack.children[i] !== card) return stack.children[i]
-        }
-        return null
+        return card.nextElementSibling
       }
 
       /** The meter the host parks in that dock, or null when it is not there. */
@@ -310,31 +308,31 @@
         return null
       }
 
+      /** The room the meter takes at the toolbar row's right end, as last written. */
+      var meterRoom = ''
+
       /**
-       * Stamp the context-occupancy meter with a stable attribute for styling.
-       * The node is kept in its native React parent container (dock on 0.1.7,
-       * trailing on earlier hosts) to prevent React unmount crashes (Node.removeChild
-       * DOMException / browser freeze).
+       * Stamp the context-occupancy meter and keep its room on the toolbar row.
+       *
+       * The meter stays in the host's dock line, its native React parent: moving
+       * it out crashed React's unmount (Node.removeChild). The stylesheet lays
+       * the dock over the toolbar row and puts the meter at the row's right end,
+       * after the model and effort triggers; the trailing cluster keeps that
+       * room free through --dsh-claude-meter-room — the meter's width plus the
+       * cluster's own 8px gap, written only on a change.
        */
       function stampContextMeter() {
         var card = document.querySelector('[data-composer-card]')
-        if (card === null) return
-        var dock = composerDock(card)
-        var meter = dockedContextMeter(dock)
-        if (meter === null) {
-          var triggers = card.querySelectorAll('button[aria-haspopup="dialog"]')
-          for (var i = 0; i < triggers.length; i++) {
-            if (/^\d{1,3}%$/.test((triggers[i].textContent || '').trim())) {
-              var n = triggers[i]
-              while (n.parentElement !== null && !n.parentElement.matches('[class*="_row"]')) n = n.parentElement
-              meter = n
-              break
-            }
-          }
+        var meter = card === null ? null : dockedContextMeter(composerDock(card))
+        var room = ''
+        if (meter !== null) {
+          if (!meter.hasAttribute('data-dsh-claude-context-meter')) meter.setAttribute('data-dsh-claude-context-meter', '')
+          if (ui.copy.isComposerActive() && meter.offsetWidth > 0) room = (meter.offsetWidth + 8) + 'px'
         }
-        if (meter !== null && !meter.hasAttribute('data-dsh-claude-context-meter')) {
-          meter.setAttribute('data-dsh-claude-context-meter', '')
-        }
+        if (room === meterRoom) return
+        meterRoom = room
+        if (room === '') document.body.style.removeProperty('--dsh-claude-meter-room')
+        else document.body.style.setProperty('--dsh-claude-meter-room', room)
       }
 
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
@@ -527,5 +525,11 @@
         permBtn = null
         permLabel = null
         permContainer = null
+        var stampedMeters = document.querySelectorAll('[data-dsh-claude-context-meter]')
+        for (var sm = 0; sm < stampedMeters.length; sm++) stampedMeters[sm].removeAttribute('data-dsh-claude-context-meter')
+        if (meterRoom !== '') {
+          meterRoom = ''
+          document.body.style.removeProperty('--dsh-claude-meter-room')
+        }
       }
     }
