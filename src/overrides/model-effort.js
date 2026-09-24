@@ -31,11 +31,13 @@
      * picker skips its render pass while a drag is in flight (see
      * src/overrides/model-picker.js).
      *
-     * @param opts - `{ read, onPick, onDragStart }`. `read()` returns the model
-     *   picker's `modelEffort()` result for the current seat (or null), and
-     *   `onPick(levelId)` commits one level — `undefined` is the model's own
-     *   default level.
-     * @returns `{ el, update, isDragging }`.
+     * @param opts - `{ read, onPick, onDragStart, onDragEnd }`. `read()` returns
+     *   the model picker's `modelEffort()` result for the current seat (or
+     *   null), `onPick(levelId)` commits one level — `undefined` is the
+     *   model's own default level — and `onDragEnd(event)` hears the physical
+     *   release wherever it lands (the gesture itself may have settled earlier,
+     *   at the control's edge).
+     * @returns `{ el, update, isHeld }`.
      */
     function createEffortControl(opts) {
       var root = modelEl('div', 'dsh-claude-effort')
@@ -88,6 +90,13 @@
        */
       var pressed = false
       var dragging = false
+      /**
+       * The PHYSICAL hold: down at pointerdown, up only at the real release.
+       * `pressed` ends early when the pointer leaves the control (the gesture
+       * settles there), but the picker's hover-close must stand down until the
+       * button is up — the card closing mid-hold read as a crash.
+       */
+      var held = false
       var painted = false
       var pointerId = null
       /** The dash shown when there is no level to name; cached, not re-read per move. */
@@ -544,12 +553,31 @@
         paintValue()
       }
 
+      /**
+       * The physical release, wherever it lands: after a boundary settle the
+       * track's own pointerup only arrives while the capture holds, so the end
+       * of the hold is heard on the document — capture phase, so a host
+       * handler's stopPropagation cannot steal it. This fires BEFORE the
+       * track's bubble-phase pointerup (settle), which is safe: the close it
+       * may cause only flips data-open, the commit below proceeds regardless.
+       */
+      function onHeldRelease(e) {
+        if (e.pointerId !== pointerId) return
+        held = false
+        document.removeEventListener('pointerup', onHeldRelease, true)
+        document.removeEventListener('pointercancel', onHeldRelease, true)
+        if (typeof opts.onDragEnd === 'function') opts.onDragEnd(e)
+      }
+
       function onPointerDown(e) {
         if (e.button !== 0) return
         e.preventDefault()
         e.stopPropagation()
         painted = true
         pointerId = e.pointerId
+        held = true
+        document.addEventListener('pointerup', onHeldRelease, true)
+        document.addEventListener('pointercancel', onHeldRelease, true)
         try { track.setPointerCapture(e.pointerId) } catch (error) { /* capture is a nicety */ }
         if (typeof opts.onDragStart === 'function') opts.onDragStart()
         var x = pointerTravel(e.clientX)
@@ -668,9 +696,10 @@
       return {
         el: root,
         update: update,
-        // A press counts as a drag for the callers' purposes: the picker's
-        // hover-close guard must stand down from pointerdown, not from the
-        // first move.
-        isDragging: function () { return pressed },
+        // The picker's hover-close guard keys on the PHYSICAL hold: from
+        // pointerdown until the real release, wherever it lands. `pressed`
+        // ends earlier — at the boundary settle — which is exactly when the
+        // pointer is on its way out of the card.
+        isHeld: function () { return held },
       }
     }

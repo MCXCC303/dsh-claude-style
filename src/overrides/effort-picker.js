@@ -132,6 +132,15 @@
             // A drag must not be cut short by the hover-close timer: the pointer
             // is inside the control the whole time.
             onDragStart: cancelCloseEffort,
+            // ...and a hold that leaves the card closes it on the RELEASE, not
+            // at the boundary crossing (the mouseleave guard stands down while
+            // the button is held; this is the other half).
+            onDragEnd: function (e) {
+              if (effortPop === null || effortPop.getAttribute('data-open') !== 'true') return
+              var under = e && typeof e.clientX === 'number' ? document.elementFromPoint(e.clientX, e.clientY) : null
+              if (under !== null && effortPop.contains(under)) return
+              closeEffortPopover()
+            },
           })
         }
         return effortSlider.el
@@ -163,8 +172,11 @@
           effortPop.setAttribute('data-open', 'false')
           effortPop.addEventListener('mouseenter', cancelCloseEffort)
           effortPop.addEventListener('mouseleave', function () {
-            // A drag in flight must not be cut short by the hover-close timer.
-            if (effortSlider !== null && effortSlider.isDragging()) return
+            // A hold must not be cut short by the hover-close timer: the
+            // slider settles at its own edge while the pointer travels on
+            // with the button down, and the card closing mid-hold read as a
+            // crash. A release OUTSIDE the card closes it (onDragEnd).
+            if (effortSlider !== null && effortSlider.isHeld()) return
             effortHoverIntent.scheduleClose()
           })
           document.body.appendChild(effortPop)
