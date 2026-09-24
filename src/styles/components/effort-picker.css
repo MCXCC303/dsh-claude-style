@@ -371,10 +371,12 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   font-weight: 500 !important;
   white-space: nowrap !important;
   cursor: pointer !important;
-  /* Above the row's own layers (the card is 2, the stats sentence 3) and
-     nothing else: a page-level surface (the plugins page, a dialog) must be
-     free to cover it — and once the seat goes the trigger is hidden anyway. */
-  z-index: 4 !important;
+  /* Above the composer's own layers. The seat (the input area's container) is
+     the host's stacking context at z-index 9, so the card and its controls all
+     paint above anything lower — the trigger read as missing while it sat at 4
+     under the opaque card. Page-level surfaces sit at 1000 and above, and the
+     trigger goes with the seat when the composer does. */
+  z-index: 10 !important;
   transition: background-color 0.12s ease, color 0.12s ease !important;
 }
 body[data-dsh-claude-style] .dsh-claude-effort-btn:hover {
