@@ -55,44 +55,10 @@ body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-model-btn-label {
   min-width: 0 !important;
   overflow: hidden !important;
 }
-/* The level's own trigger, beside the model's. Same plate and metrics, quieter
-   ink: the model is the seat's subject, the level is its modifier. */
-body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-effort-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 2px !important;
-  height: 28px !important;
-  max-width: 160px !important;
-  /* Tight against the model trigger: the two read as one phrase ("Opus 5.5
-     High"), so only the model's own 8px right padding survives, minus a 6px
-     pull-back, plus 2px here — a ~4px gap. Symmetric padding would have left
-     16px of dead air between the name and its level. */
-  margin-left: -6px !important;
-  padding: 0 8px 0 2px !important;
-  border: none !important;
-  border-radius: 7px !important;
-  background: transparent !important;
-  color: var(--dsw-alias-label-caption, #a6a094) !important;
-  font-size: 13px !important;
-  font-weight: 400 !important;
-  line-height: 20px !important;
-  cursor: pointer !important;
-  box-sizing: border-box !important;
-  min-width: 0 !important;
-}
-body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-effort-btn:hover {
-  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
-  color: var(--dsw-alias-label-primary) !important;
-}
-body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-effort-btn > * {
-  background: transparent !important;
-}
-body[data-dsh-claude-style] [class*="trailing"] .dsh-claude-effort-btn-label {
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
-}
+/* (The effort trigger's styles live in components/effort-picker.css: the
+   trigger is body-mounted and JS-pinned beside the model trigger — it never
+   sits under [class*="trailing"], so the rules drafted for that seat were dead
+   and have been removed.) */
 /* Token stats pills — merged into the toolbar row (one line with the
    controls). The base rule below is the fallback for the host's own
    position (a full-width line under the card); once mergeStatsIntoRow()
