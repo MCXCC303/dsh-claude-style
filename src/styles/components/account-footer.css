@@ -87,8 +87,11 @@ body[data-dsh-claude-style] .dsh-claude-account-btn[data-open="true"] .dsh-claud
 body[data-dsh-claude-style] .dsh-claude-account-popover {
   position: absolute !important;
   bottom: calc(100% + 4px) !important;
-  left: 0 !important;
-  right: 0 !important;
+  /* The drawer's inline edges are the account row's own, measured by
+     overrides/account-footer.js: the footer's padding box is wider than the row,
+     so a flat 0 would make the card overhang the row it hangs from. */
+  left: var(--dsh-claude-account-inset-left, 0px) !important;
+  right: var(--dsh-claude-account-inset-right, 0px) !important;
   width: auto !important;
   max-width: none !important;
   min-width: 0 !important;
@@ -282,6 +285,7 @@ body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] {
   width: var(--dsh-claude-account-width, 260px) !important;
   min-width: 0 !important;
   max-width: none !important;
+  box-sizing: border-box !important;
   padding: 6px !important;
   border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
   border-radius: 12px !important;
@@ -293,6 +297,21 @@ body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] {
   --dsw-menu-surface-fill: #ffffff;
   --dsw-menu-backdrop-filter: none;
   font-family: var(--dsw-font-family) !important;
+  /* The host mounts the card instead of toggling a `data-open` attribute, so
+     the self-built drawer's transition becomes a one-shot entry animation with
+     the same values and the same origin (the drawer opens above the trigger). */
+  transform-origin: bottom left !important;
+  animation: dsh-claude-account-menu-in 0.15s ease !important;
+}
+@keyframes dsh-claude-account-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 body[data-dsh-claude-style][data-ds-dark-theme] [%%ACCOUNT_MENU_ATTR%%] {
   background: #1e1e1d !important;

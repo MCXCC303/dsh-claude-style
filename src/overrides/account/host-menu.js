@@ -145,11 +145,23 @@
         setTimeout(look, 40)
       }
 
+      /**
+       * Open the host's account menu the way the row's own click does. The
+       * "Open popovers on hover" preference opens the account surface without a
+       * click, so the footer has to drive the host's trigger from outside; a
+       * plain click is not enough for the host's React handlers, hence the full
+       * press the settings drive already uses.
+       */
+      function openAccountMenu() {
+        realClick(hostAccountTrigger())
+      }
+
       return {
         trigger: hostAccountTrigger,
         settingsTrigger: hostSettingsTrigger,
         findMenu: findAccountMenu,
         menuViewport: menuViewport,
+        openMenu: openAccountMenu,
         openSettings: openHostSettings
       }
     }

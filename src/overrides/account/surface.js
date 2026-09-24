@@ -34,13 +34,15 @@
        * Stamp the open account menu so the stylesheet can tell the host's
        * hashed card from its other menus, and clear the stamp when it is gone.
        * Value-change only: the attribute is written on the transition, never
-       * once per pass.
+       * once per pass. The transition is also reported to the caller, which
+       * binds its hover behaviour on the menu the host has just mounted.
        */
       function markMenu(menu) {
         if (markedMenu === menu) return
         if (markedMenu !== null) markedMenu.removeAttribute(ACCOUNT_MENU_ATTR)
         markedMenu = menu
         if (menu !== null) menu.setAttribute(ACCOUNT_MENU_ATTR, '')
+        if (options.onMenu) options.onMenu(menu)
       }
 
       function syncHost() {

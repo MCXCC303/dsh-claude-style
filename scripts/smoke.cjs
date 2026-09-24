@@ -401,6 +401,18 @@ const PROBE = `(function () {
   function attrs(el) { return el ? Array.prototype.map.call(el.attributes, function (a) { return a.name }) : null }
   window.__smoke = (async function () {
     var r = { applyError: window.__applyError, teardownRegistered: typeof window.__dispose === 'function' }
+    // The account menu is counted by content (its Sign out row), because the
+    // model picker keeps a hidden role=menu portal in the page.
+    function accountMenuOpen() {
+      var menus = document.querySelectorAll('body > [role="menu"]')
+      for (var mi = 0; mi < menus.length; mi++) {
+        var items = menus[mi].querySelectorAll('[role="menuitem"]')
+        for (var ii = 0; ii < items.length; ii++) {
+          if ((items[ii].textContent || '').trim() === 'Sign out') return true
+        }
+      }
+      return false
+    }
     if (window.SMOKE_CASE === 'sync-fault') {
       // A sync is retired after failing three passes in a row: drive four.
       for (var n = 0; n < 4; n++) { document.body.appendChild(document.createElement('i')); await sleep(80) }
@@ -422,6 +434,22 @@ const PROBE = `(function () {
       r.syntheticBtn = !!document.querySelector('.dsh-claude-account-btn')
       var triggerRow = document.querySelector('[class*="footArea"] [class*="triggerRow"]')
       r.triggerRowDisplay = triggerRow ? getComputedStyle(triggerRow).display : null
+      r.hostRowText = hostRow ? (hostRow.textContent || '').trim() : null
+      r.hostRowWidth = hostRow ? hostRow.getBoundingClientRect().width : null
+      r.accountWidthVar = document.body.style.getPropertyValue('--dsh-claude-account-width').trim()
+      // The hover preference is on in this stand-in: a pointer dwelling on the
+      // host's account row opens the host menu, and leaving it dismisses the
+      // menu the host had mounted.
+      if (hostRow) hostRow.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(250)
+      r.hoverOpenedMenu = accountMenuOpen()
+      if (hostRow) hostRow.dispatchEvent(new MouseEvent('mouseleave'))
+      await sleep(350)
+      r.hoverClosedMenu = !accountMenuOpen()
+      var styleEl = document.getElementById('dsh-claude-style-style')
+      var cssText = styleEl ? styleEl.textContent : ''
+      r.menuEntryKeyframes = cssText.indexOf('@keyframes dsh-claude-account-menu-in') !== -1
+      r.menuEntryAnimation = cssText.indexOf('animation: dsh-claude-account-menu-in 0.15s ease') !== -1
       // Open the host's own menu; the skin injects our container into its list.
       if (hostRow) hostRow.click()
       await sleep(500)
@@ -432,6 +460,7 @@ const PROBE = `(function () {
       // hidden menu portal elsewhere in the page cannot answer for it.
       var accountMenu = viewport ? viewport.closest('[role="menu"]') : null
       r.accountMenuMarked = !!(accountMenu && accountMenu.hasAttribute('data-dsh-claude-account-menu'))
+      r.menuCardWidth = accountMenu ? accountMenu.getBoundingClientRect().width : null
       r.injectInViewport = !!(viewport && inject && inject.parentElement === viewport)
       r.injectFirst = !!(viewport && viewport.firstElementChild === inject)
       r.injectRows = inject ? Array.prototype.map.call(inject.children, function (c) {
@@ -488,6 +517,15 @@ const PROBE = `(function () {
     }) : null
     var syntheticPopover = document.querySelector('.dsh-claude-account-popover')
     r.syntheticHeader = !!(syntheticPopover && syntheticPopover.querySelector('[data-dsh-claude-ban-row]'))
+    // offsetLeft/offsetWidth, not the rect: the closed drawer still carries its
+    // translateY/scale transition, which would shrink a measured rect.
+    var syntheticBtn = document.querySelector('.dsh-claude-account-btn')
+    r.syntheticBox = (syntheticPopover && syntheticBtn) ? {
+      popoverLeft: syntheticPopover.offsetLeft,
+      popoverWidth: syntheticPopover.offsetWidth,
+      buttonLeft: syntheticBtn.offsetLeft,
+      buttonWidth: syntheticBtn.offsetWidth,
+    } : null
     r.syntheticInject = document.querySelectorAll('.dsh-claude-account-inject').length
     var user = document.querySelector('.dsh-claude-account-user')
     r.accountUser = user ? user.textContent : null
@@ -615,6 +653,10 @@ const CASES = {
     check('synthetic path injects nothing into a host menu', r.syntheticInject === 0, `${r.syntheticInject} containers`)
     check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
     check('avatar is an <img> sent without a referrer', r.photo !== null && r.photo.referrerPolicy === 'no-referrer', JSON.stringify(r.photo))
+    check('the self-built drawer matches the account row box',
+      r.syntheticBox !== null && r.syntheticBox.popoverLeft === r.syntheticBox.buttonLeft &&
+        r.syntheticBox.popoverWidth === r.syntheticBox.buttonWidth,
+      JSON.stringify(r.syntheticBox))
     check('Enter on an open composer menu reaches the host', same(r.keys, ['host picked the menu item']), JSON.stringify(r.keys))
     commonChecks(r)
   },
@@ -659,6 +701,21 @@ const CASES = {
     check('the injected container carries the header and the plugin rows',
       same(r.injectRows, ['header', 'action', 'embed']) && r.injectName === 'Ada',
       JSON.stringify({ rows: r.injectRows, name: r.injectName }))
+    check('the injected header names the same user as the host account row',
+      r.injectName !== null && r.injectName === r.hostRowText,
+      JSON.stringify({ header: r.injectName, row: r.hostRowText }))
+    check('the account width variable is the account row box width',
+      r.accountWidthVar === Math.round(r.hostRowWidth) + 'px',
+      JSON.stringify({ variable: r.accountWidthVar, row: r.hostRowWidth }))
+    check('the host menu card is as wide as the account row',
+      r.menuCardWidth !== null && Math.round(r.menuCardWidth) === Math.round(r.hostRowWidth),
+      JSON.stringify({ card: r.menuCardWidth, row: r.hostRowWidth }))
+    check('hovering the host account row opens the host menu; leaving it closes',
+      r.hoverOpenedMenu === true && r.hoverClosedMenu === true,
+      JSON.stringify({ opened: r.hoverOpenedMenu, closed: r.hoverClosedMenu }))
+    check('the host account menu carries the skin entry animation',
+      r.menuEntryKeyframes === true && r.menuEntryAnimation === true,
+      JSON.stringify({ keyframes: r.menuEntryKeyframes, animation: r.menuEntryAnimation }))
     check('a host re-render is healed: container first and rows unchanged',
       r.injectHealedFirst === true && r.injectHealedSame === true,
       JSON.stringify({ first: r.injectHealedFirst, same: r.injectHealedSame }))
