@@ -132,8 +132,11 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-
 /* ---------- combined composer stats ---------- */
 /* The host ships two pills (time / usage) with icons and its own spacing.
    We keep the two click targets but hide their internals and render one
-   centered sentence from the CSS variables syncStatsSummary() writes. */
-body[data-dsh-claude-style] [data-composer-stats] {
+   centered sentence from the CSS variables syncStatsSummary() writes.
+   Guarded against the host's compact mode: there the host draws its own icon
+   readings with its own spacing, and there is no trigger or panel for the
+   merged sentence to stand in for, so the host's row is left untouched. */
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) {
   gap: 0 !important;
   justify-content: center !important;
   font-family: var(--dsw-font-family) !important;
@@ -142,15 +145,15 @@ body[data-dsh-claude-style] [data-composer-stats] {
   color: var(--dsw-alias-label-tertiary) !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats] svg {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) svg {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats] button > span {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button > span {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats] button {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button {
   padding: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -160,17 +163,17 @@ body[data-dsh-claude-style] [data-composer-stats] button {
 
 /* Let the first segment shrink and ellipsize (e.g. 20轮...), while the
    usage segment and the separator keep their width. */
-body[data-dsh-claude-style] [data-composer-stats] > span {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span {
   min-width: 0 !important;
   overflow: hidden !important;
 }
-body[data-dsh-claude-style] [data-composer-stats] > span:first-child {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:first-child {
   flex: 0 1 auto !important;
 }
-body[data-dsh-claude-style] [data-composer-stats] > span:last-child {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:last-child {
   flex: 0 0 auto !important;
 }
-body[data-dsh-claude-style] [data-composer-stats] button {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button {
   display: block !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -179,32 +182,32 @@ body[data-dsh-claude-style] [data-composer-stats] button {
   white-space: nowrap !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats] button:hover,
-body[data-dsh-claude-style] [data-composer-stats] button[aria-expanded="true"] {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button:hover,
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button[aria-expanded="true"] {
   background: transparent !important;
   color: var(--dsw-alias-label-secondary) !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats] > span:first-child button::after {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:first-child button::after {
   content: var(--dsh-stats-time, '');
 }
 
-body[data-dsh-claude-style] [data-composer-stats] > span:last-child button::after {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:last-child button::after {
   content: var(--dsh-stats-usage, '');
 }
 
-body[data-dsh-claude-style] [data-composer-stats] > span + span::before {
+body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span + span::before {
   content: ' · ';
   color: var(--dsw-alias-separator-primary);
 }
 
 /* The two buttons stay transparent; the hover plate belongs to the whole
    merged line so the stats area has one feedback surface. */
-body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats] {
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) {
   transition: background-color 0.12s ease;
 }
 
-body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:hover {
+body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]):hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
   border-radius: 6px !important;
 }

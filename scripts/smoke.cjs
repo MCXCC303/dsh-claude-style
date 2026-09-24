@@ -508,6 +508,26 @@ const PROBE = `(function () {
     var from = window.__passes
     await sleep(1000)
     r.idlePasses = window.__passes - from
+    // The stats row's host mode and the two structures' treatment. Detailed
+    // gets the merged sentence (icons hidden, our separator); compact keeps the
+    // host's icon readings and spacing and opens no card.
+    var statsRoot = document.querySelector('[data-composer-stats]')
+    r.statsMode = statsRoot ? statsRoot.getAttribute('data-dsh-claude-stats-mode') : null
+    r.statsIcons = statsRoot ? Array.prototype.map.call(statsRoot.querySelectorAll('svg'), function (svg) {
+      return getComputedStyle(svg).display
+    }) : null
+    var statsSpans = statsRoot ? statsRoot.children : null
+    r.statsSep = statsSpans && statsSpans.length > 1 ? getComputedStyle(statsSpans[1], '::before').content : null
+    if (window.SMOKE_CASE === 'stats-compact' && statsRoot) {
+      // Dwell past the 300 ms hover delay: a compact row has no trigger to read.
+      statsRoot.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(450)
+    }
+    r.statsOpen = document.querySelectorAll('.dsh-claude-stats-popover[data-open="true"]').length
+    if (window.SMOKE_CASE === 'stats-compact' && statsRoot) {
+      statsRoot.dispatchEvent(new MouseEvent('mouseleave'))
+      await sleep(150)
+    }
     var drawer = document.querySelector('.dsh-claude-account-popover-body')
     r.drawer = drawer ? Array.prototype.map.call(drawer.children, function (c) {
       if (c.hasAttribute('data-action-index')) return 'action'
@@ -574,7 +594,7 @@ const PROBE = `(function () {
       await sleep(200)
       r.passesAfterTeardown = window.__passes - before
       r.leftNodes = document.querySelectorAll('[class*="dsh-claude-"]').length
-      r.leftMarkers = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay], [data-dsh-claude-model-host], [data-dsh-claude-account-host-row]').length
+      r.leftMarkers = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay], [data-dsh-claude-model-host], [data-dsh-claude-account-host-row], [data-dsh-claude-stats-mode]').length
       r.leftAttrs = Array.prototype.filter.call(document.body.attributes, function (a) { return /^data-dsh-(claude|window)/.test(a.name) }).map(function (a) { return a.name })
       r.leftStylesheet = !!document.getElementById('dsh-claude-style-style')
       var hostRowEnd = document.getElementById('host-account')
@@ -609,6 +629,22 @@ function page(name) {
         '  <div class="_x_settingsArea_1"><button aria-haspopup="dialog">Settings</button></div>\n' +
         '  ' + footerActions + '\n' +
       '</div>'
+  // The host's statistics row (ui-chat StatsPills) in each of its two shapes.
+  // Detailed wraps each pill in an anchor span and makes the dialog-carrying
+  // ones buttons; compact renders bare icon+reading spans with no trigger. The
+  // skin must leave compact's icons and spacing alone and keep its own merged
+  // sentence for detailed.
+  var stats = name === 'stats-compact'
+    ? '<div data-composer-stats>' +
+        '<span class="_p_pill_1"><svg viewBox="0 0 16 16" width="14" height="14"></svg>20 tok/s</span>' +
+        '<span class="_p_pill_1"><svg viewBox="0 0 16 16" width="14" height="14"></svg>Cache hit 90%</span>' +
+      '</div>'
+    : '<div data-composer-stats>' +
+        '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="1 turns 1 steps">' +
+          '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">1 turns 1 steps</span></button></span>' +
+        '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="105 tok · Cache hit 90%">' +
+          '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">105 tok · Cache hit 90%</span></button></span>' +
+      '</div>'
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
 <body>
@@ -618,6 +654,7 @@ ${footer}
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
   <button aria-label="Send" id="send">Send</button>
 </div>
+${stats}
 <script>window.SMOKE_CASE = ${JSON.stringify(name)}</script>
 <script>${STAND_IN}</script>
 <script src="/client.js"></script>
@@ -647,6 +684,10 @@ const CASES = {
     check('apply() completes', r.applyError === null, r.applyError)
     check('stylesheet injected', r.stylesheet)
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('detailed stats keep the merged sentence: host icons hidden, our separator in',
+      r.statsMode === 'detailed' && r.statsIcons !== null && r.statsIcons.length === 2 &&
+        r.statsIcons.every((d) => d === 'none') && r.statsSep !== null && r.statsSep.indexOf('·') !== -1,
+      JSON.stringify({ mode: r.statsMode, icons: r.statsIcons, sep: r.statsSep }))
     check('synthetic path: the popover carries the header, the plugin rows and the settings row',
       r.drawer !== null && same(r.drawer, ['action', 'embed', 'settings']) && r.syntheticHeader === true,
       JSON.stringify({ drawer: r.drawer, header: r.syntheticHeader }))
@@ -658,6 +699,16 @@ const CASES = {
         r.syntheticBox.popoverWidth === r.syntheticBox.buttonWidth,
       JSON.stringify(r.syntheticBox))
     check('Enter on an open composer menu reaches the host', same(r.keys, ['host picked the menu item']), JSON.stringify(r.keys))
+    commonChecks(r)
+  },
+  'stats-compact'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('compact stats are marked, keep the host icons and drop our separator',
+      r.statsMode === 'compact' && r.statsIcons !== null && r.statsIcons.length === 2 &&
+        r.statsIcons.every((d) => d !== 'none') && r.statsSep === 'none',
+      JSON.stringify({ mode: r.statsMode, icons: r.statsIcons, sep: r.statsSep }))
+    check('a hover on compact stats opens no card', r.statsOpen === 0, r.statsOpen + ' open')
     commonChecks(r)
   },
   markup(r) {

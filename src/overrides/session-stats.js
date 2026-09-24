@@ -16,6 +16,17 @@
         var statsHideTimer = null
         /** Identity of the stats bindings THIS generation installed (see bindStatsHover). */
         var statsBindingToken = {}
+        /**
+         * The stats row's host mode, stamped by syncStatsSummary. The host keeps
+         * the performanceUsage preference in its React state and never puts it
+         * on the DOM, so the stylesheet and the hover binding read this marker.
+         */
+        var STATS_MODE_ATTR = 'data-dsh-claude-stats-mode'
+
+        /** The host's stats root, or null when this conversation has no row. */
+        function statsRoot() {
+          return document.querySelector('[data-composer-stats]')
+        }
 
         /**
          * Merge the host's time and usage pills into one compact sentence and
@@ -72,7 +83,7 @@
         }
 
         function collectStatsData(done) {
-          var root = document.querySelector('[data-composer-stats]')
+          var root = statsRoot()
           if (root === null) { done([]); return }
           var buttons = root.querySelectorAll('button')
           var timeBtn = null
@@ -166,6 +177,11 @@
 
 
         function showStatsPopover(anchor) {
+          // The card reads the host's two dialogs, which only the detailed row
+          // renders. A compact row has no trigger and no panel, so a hover or a
+          // click there must not start a read.
+          var modeRoot = statsRoot() || anchor
+          if (modeRoot === null || modeRoot.getAttribute(STATS_MODE_ATTR) !== 'detailed') return
           if (statsHideTimer) {
             clearTimeout(statsHideTimer)
             statsHideTimer = null
@@ -185,7 +201,7 @@
             renderStatsPopover(sections)
             var pop = ensureStatsPopover()
             pop.setAttribute('data-open', 'true')
-            var live = document.querySelector('[data-composer-stats]') || anchor
+            var live = statsRoot() || anchor
             var rect = live.getBoundingClientRect()
             var width = pop.offsetWidth
             var height = pop.offsetHeight
@@ -249,9 +265,41 @@
           })
         }
 
+        /**
+         * Whether the host rendered its DETAILED statistics row.
+         *
+         * The host keeps the performanceUsage mode in React state and puts no
+         * marker on the DOM, so the two structures have to be told apart by
+         * shape. Detailed wraps each pill in an anchor span and, when a pill
+         * has dialog rows, makes it a button[aria-haspopup="dialog"]; its open
+         * dialogs carry the data-session-stats-* markers. Compact renders bare
+         * span pills (icon + reading) directly under the root, with no trigger
+         * and no panel. The wrapper check catches the detailed pill whose
+         * dialog has no rows yet — a static span, not a button — so the two
+         * modes never collapse onto one another.
+         */
+        function hostStatsDetailed(root) {
+          if (root.querySelector('button[aria-haspopup="dialog"]') !== null) return true
+          if (document.querySelector('[data-session-stats-details], [data-session-stats-usage]') !== null) return true
+          var children = root.children
+          for (var i = 0; i < children.length; i++) {
+            if (children[i].querySelector('button, span') !== null) return true
+          }
+          return false
+        }
+
         function syncStatsSummary() {
-          var root = document.querySelector('[data-composer-stats]')
+          var root = statsRoot()
           if (root === null) return
+          var mode = hostStatsDetailed(root) ? 'detailed' : 'compact'
+          if (root.getAttribute(STATS_MODE_ATTR) !== mode) root.setAttribute(STATS_MODE_ATTR, mode)
+          if (mode === 'compact') {
+            // The host draws its own icon readings with its own spacing, and
+            // there is no trigger to open and no panel data to read: leave the
+            // row alone and close any card a detailed session left up.
+            hideStatsPopover()
+            return
+          }
           var buttons = root.querySelectorAll('button')
           var timeText = ''
           var usageText = ''
@@ -300,6 +348,9 @@
                 }
                 if (statsPopover !== null && statsPopover.parentElement !== null) statsPopover.parentElement.removeChild(statsPopover)
                 statsPopover = null
+                // Hand the host node back unmarked: the mode attribute is ours.
+                var root = statsRoot()
+                if (root !== null) root.removeAttribute(STATS_MODE_ATTR)
             }
         }
     }
