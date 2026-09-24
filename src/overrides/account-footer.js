@@ -481,6 +481,20 @@
           closePopover()
         },
         openSettings: hostMenu.openSettings,
+        /**
+         * Ctrl+, opens settings. The scheduler's keydown handler owns the
+         * unconditional preventDefault; this returns whether it acted, which the
+         * scheduler does not gate on.
+         */
+        onKey: function (e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+            // The footer knows both ways in (see openHostSettings): "the first
+            // button in the settings slot" was the account trigger on the desktop.
+            hostMenu.openSettings()
+            return true
+          }
+          return false
+        },
         owns: function (target) {
           if (!target) return false
           return (accountBtn !== null && accountBtn.contains(target)) ||
