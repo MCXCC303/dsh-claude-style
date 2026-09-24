@@ -177,15 +177,6 @@
 
       /**
        * The host's account menu (设置 / 意见反馈 / 退出登录, or 登录 when signed out)
-       * lives in a portal that only exists while its trigger is open, and the
-       * trigger listens on pointer events — a synthetic `click()` alone does
-       * nothing. So the skin drives it the way a pointer would, reads whatever
-       * items the host renders (never a hard-coded list, so a future option shows
-       * up on its own), and clicks one back when the user picks it. The drive is
-       * hidden with a body flag so no menu ever flashes.
-       */
-      /**
-       * The host's account menu (设置 / 意见反馈 / 退出登录, or 登录 when signed out)
        * lives in a portal that exists only while its trigger is open, and the
        * trigger listens on pointer events — a bare `click()` does nothing. The
        * skin drives it the way a pointer would, reads whatever items the host
@@ -197,13 +188,6 @@
       var DRIVING_ATTR = 'data-dsh-claude-account-driving'
       var accountItems = []
       var accountMenuError = false
-      /**
-       * True once the host's own account menu has been read. When it is, the
-       * drawer mirrors ITS items (which include 设置 on the desktop) and the
-       * skin's own settings row steps aside; on a host without the desktop
-       * account UI the drawer keeps that row, because there is nothing to mirror.
-       */
-      var hostMenuAvailable = false
       var accountReading = false
       var accountSignature = ''
 
@@ -262,9 +246,21 @@
       }
 
       /**
+       * The host's settings button, a dialog trigger in the footer, or null. The
+       * desktop has none: its account menu took that slot and carries 设置
+       * itself, and "any button that is not a menu anchor" there is the update
+       * pill beside it — the settings row read "Retry update" and clicked it.
+       */
+      function hostSettingsTrigger() {
+        return document.querySelector('[class*="footArea"] [class*="settingsArea"] button[aria-haspopup="dialog"]')
+      }
+
+      /**
        * Open the host's account menu out of sight, hand its items to `read`, close
        * it again. Asynchronous on purpose: the host renders the portal on a later
        * tick, so a synchronous wait would block the very render it waits for.
+       * `read` returns true when it clicked an item: the host's own selection
+       * closes the menu then, and the trigger's click would open it again.
        */
       function withHostAccountMenu(read) {
         return new Promise(function (resolve) {
@@ -274,8 +270,8 @@
           document.body.setAttribute(DRIVING_ATTR, '')
           realClick(trigger)
           var tries = 0
-          function finish(ok) {
-            realClick(trigger)
+          function finish(ok, picked) {
+            if (!picked) realClick(trigger)
             document.body.removeAttribute(DRIVING_ATTR)
             resolve(ok)
           }
@@ -288,8 +284,7 @@
             var items = menu !== null ? menu.querySelectorAll('[role="menuitem"]') : []
             if (menu !== null && items.length > 0) {
               menu.setAttribute(ACCOUNT_MENU_ATTR, '')
-              read(menu, items)
-              finish(true)
+              finish(true, read(menu, items) === true)
               return
             }
             if (tries++ > 20) { finish(false); return }
@@ -304,14 +299,17 @@
         if (accountReading) return
         accountReading = true
         withHostAccountMenu(function (menu, items) {
-          var ownSettings = settingsItem !== null && settingsItem.querySelector('.dsh-claude-popover-item-text') !== null
+          // The drawer's own settings row (with the shortcut hint) stands for the
+          // host's settings button where there is one, and the menu's copy would
+          // list 设置 twice. Without that button (the desktop) the menu's 设置 is
+          // the only way to settings, and the drawer's own row steps aside.
+          var ownSettings = hostSettingsTrigger() !== null && settingsItem !== null &&
+            settingsItem.querySelector('.dsh-claude-popover-item-text') !== null
             ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent
             : null
           var next = []
           for (var i = 0; i < items.length; i++) {
             var text = (items[i].textContent || '').trim()
-            // The drawer carries its own settings row (with the shortcut hint);
-            // mirroring the host's copy would list 设置 twice.
             if (ownSettings !== null && text === ownSettings) continue
             var icon = items[i].querySelector('svg')
             next.push({
@@ -386,12 +384,6 @@
               event.stopPropagation()
               closePopover()
               // 直连官方行为（与归档同一条思路：不再驱动宿主菜单）。
-              if (entry.text === (settingsItem && settingsItem.querySelector('.dsh-claude-popover-item-text') ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent : '') || /设置|settings/i.test(entry.text)) {
-                var settingsButtons = footArea ? footArea.querySelectorAll('[class*="settingsArea"] button') : []
-                for (var sb = 0; sb < settingsButtons.length; sb++) {
-                  if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { realClick(settingsButtons[sb]); return }
-                }
-              }
               if (/反馈|contact|意见/i.test(entry.text)) {
                 var url = 'https://trtgsjkv6r.feishu.cn/share/base/form/shrcnlCoGElW7MQznGy9r3YYXcg'
                 try { window.open(url, '_blank', 'noopener,noreferrer') } catch (error) { /* popup blocked */ }
@@ -419,12 +411,15 @@
                 }
                 return
               }
-              // An option the skin does not know: fall back to driving the host's
-              // own menu for that one item.
+              // 设置 has no call of its own — on the desktop the account menu is
+              // the settings launcher, and there is no settings button to click —
+              // and neither has an option the skin does not know: the host's own
+              // item does it.
               withHostAccountMenu(function (menu, menuItems) {
                 for (var k = 0; k < menuItems.length; k++) {
-                  if ((menuItems[k].textContent || '').trim() === entry.text) { realClick(menuItems[k]); return }
+                  if ((menuItems[k].textContent || '').trim() === entry.text) { realClick(menuItems[k]); return true }
                 }
+                return false
               })
             })
             popoverBody.appendChild(row)
@@ -453,22 +448,11 @@
       function syncPopoverItems(footArea) {
         if (!popoverBody || !footArea) return
 
-        // A `menu` anchor is not the settings button: on the desktop the footer's
-        // first button in that slot is the ACCOUNT trigger, which made this row
-        // read "叶落风随" and, when clicked, open the account menu. Accept only a
-        // dialog trigger, then any button that is not a menu anchor.
-        var settingsButtons = footArea.querySelectorAll('[class*="settingsArea"] button')
-        var origSettingsTrigger = null
-        for (var sb = 0; sb < settingsButtons.length; sb++) {
-          if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { origSettingsTrigger = settingsButtons[sb]; break }
-        }
-        if (origSettingsTrigger === null) {
-          for (var sb2 = 0; sb2 < settingsButtons.length; sb2++) {
-            if (settingsButtons[sb2].getAttribute('aria-haspopup') === 'menu') continue
-            origSettingsTrigger = settingsButtons[sb2]
-            break
-          }
-        }
+        // Only the host's settings button can name and open this row. Any other
+        // button in that slot is wrong: on the desktop the first one is the
+        // ACCOUNT trigger (the row read "叶落风随" and opened the account menu),
+        // and the next one is the update pill.
+        var origSettingsTrigger = hostSettingsTrigger()
         var labelText = '设置'
         if (origSettingsTrigger) {
           var txt = (origSettingsTrigger.textContent || '').trim()
@@ -495,16 +479,8 @@
           settingsItem.addEventListener('click', function (e) {
             e.stopPropagation()
             closePopover()
-            var realTrigger = null
-            var candidates = footArea.querySelectorAll('[class*="settingsArea"] button')
-            for (var cb = 0; cb < candidates.length; cb++) {
-              if (candidates[cb].getAttribute('aria-haspopup') === 'menu') continue
-              realTrigger = candidates[cb]
-              break
-            }
-            if (realTrigger) {
-              realTrigger.click()
-            }
+            var realTrigger = hostSettingsTrigger()
+            if (realTrigger) realTrigger.click()
           })
           popoverBody.appendChild(settingsItem)
         } else {
@@ -513,6 +489,11 @@
         }
 
         syncAccountMenuItems()
+        // No settings button, but the host's account menu has been read: that is
+        // the desktop, whose menu carries 设置 itself, so its row stands in for
+        // this one.
+        var stepAside = origSettingsTrigger === null && accountItems.length > 0
+        if (settingsItem.hidden !== stepAside) settingsItem.hidden = stepAside
 
         var footerActions = footArea.querySelector('[class*="footerActions"]')
         // The takeover hides the host's account row with its settings slot; this

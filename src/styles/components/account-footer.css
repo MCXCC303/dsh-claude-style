@@ -199,3 +199,9 @@ body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item
   opacity: 0.5 !important;
   cursor: default !important;
 }
+/* The drawer's own Settings row steps aside where the host's account menu
+   carries Settings itself (the desktop). The shared popover-item rule sets
+   `display: flex !important`, which `hidden` alone cannot beat. */
+body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item[hidden] {
+  display: none !important;
+}
