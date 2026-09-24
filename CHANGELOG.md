@@ -2,19 +2,21 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
-## [Unreleased]
+## [0.6.1] - 2026-09-24
 
-[中文](#cn-unreleased) | [English](#en-unreleased)
+[中文](#cn-0.6.1) | [English](#en-0.6.1)
 
-<h3 id="cn-unreleased">新增功能</h3>
+<h3 id="cn-0.6.1">新增功能</h3>
 
 - **适配 DSH 0.1.7 内置自动审查（Auto review）**：分段控件与权限菜单增加审查模式，分段控件显示为 `Auto`、弹层与当前状态显示为 `Auto review`；原 `Auto`（完全权限）更名为 `Yolo`；选择审查模式或完全权限时均正常调起宿主风险确认对话框。审查档位跟随宿主的权限目录：只有宿主的 `permissionPresets` 目录携带 `auto`（内置自动审查已启用）时才显示，目录变化时随之增减；目录读不到时整个权限控件交还宿主的访问模式按钮。
 - **已归档会话的删除按钮恢复可用**：宿主没有给浏览器半边提供删除会话的接口（工作区控制器只有归档与取消归档，agent 协议里的会话删除由宿主委托给持有存储的 ACP agent），插件此前调用第三方插件的路由，该插件不在环境里时点下去没有任何反应。现在由插件的宿主半边新增私有路由 `POST /dsh-claude-style/session-delete` 删除本机会话目录：只接受 POST 与同源请求，id 必须匹配宿主自身的会话 id 形状，正在打开的会话拒绝删除，目录解析后必须留在会话根目录内。
 
-<h3 id="en-unreleased">New Features</h3>
+<h3 id="en-0.6.1">New Features</h3>
 
 - **Support DSH 0.1.7 built-in Auto review**: add review mode to the permission segmented control and popover, displayed as `Auto` in segments and `Auto review` in the menu and current status; rename the former `Auto` (Full access) segment to `Yolo`; selecting either review mode or Full access drives the host's risk confirmation dialog. The review tier follows the host's permission catalog: it appears only while the host's `permissionPresets` catalog carries `auto` (the built-in auto review is enabled), and tracks catalog changes; when the catalog cannot be read, the whole permission control hands the host's access-mode button back.
 - **The archived rows' delete button works again**: the host gives the browser half no way to delete a session (the workspace controller only archives and unarchives, and the agent protocol's session delete is the host delegating to an ACP agent that owns the storage), so the skin used to call a third-party plugin's route and did nothing when that plugin was absent. The plugin's host half now serves a private route, `POST /dsh-claude-style/session-delete`, which removes the local session directory: POST and same-origin requests only, the id must match the host's own session id shape, an open session is refused, and the resolved directory must stay inside the sessions root.
+
+**Full Changelog**: [v0.6.0...v0.6.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.6.0...v0.6.1)
 
 ## [0.6.0] - 2026-09-24
 
