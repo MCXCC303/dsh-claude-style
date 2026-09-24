@@ -198,6 +198,16 @@
      */
     var ACCOUNT_MENU_ATTR = 'data-dsh-claude-account-menu'
     /**
+     * Set on <body> from the moment the account row is hovered or pressed until
+     * its menu closes. The card's own marker needs the menu's rows to identify
+     * the card, so it lands two or three frames after the host has already
+     * painted the card; an entry animation keyed on it therefore replayed from
+     * transparent over a card that was already visible. This one is in place
+     * before the host mounts the card, so the animation runs from its first
+     * frame.
+     */
+    var ACCOUNT_ARMED_ATTR = 'data-dsh-claude-account-armed'
+    /**
      * Stamped on the host's shared menu card while it is the hero row's picker
      * (the workspace chip or the agent-preset seat opened it). The host portals
      * that card to <body> with no marker of its own, so the stylesheet cannot

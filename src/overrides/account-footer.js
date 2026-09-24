@@ -24,6 +24,13 @@
       // close, so this drives the host's trigger and dismisses the menu with the
       // Escape the host's own Menu handles.
       var hostHoverIntent = createHoverIntent(openHostMenu, closeHostMenuForHover, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
+      /**
+       * Identity of the row bindings THIS generation installed. A client reload
+       * drops the old generation's disposals but the host's row node outlives
+       * them, so a boolean guard would leave the new generation's listeners
+       * unattached (the same reason session-stats keeps a binding token).
+       */
+      var hostRowBindingToken = {}
       // Whether the popover is up because it was CLICKED (rather than hovered).
       // Clicking the account row opens the ban-screen easter egg and leaves the
       // pointer inside the popover, so without this the row's own mouseleave
@@ -436,9 +443,19 @@
        * (the pointer re-entered the row) nothing is pressed, or the host's own
        * toggle would close it.
        */
+      /** Set from the row's hover or press until the menu closes (constants.js). */
+      function armAccountMenu() {
+        if (!document.body.hasAttribute(ACCOUNT_ARMED_ATTR)) document.body.setAttribute(ACCOUNT_ARMED_ATTR, '')
+      }
+
+      function disarmAccountMenu() {
+        if (document.body.hasAttribute(ACCOUNT_ARMED_ATTR)) document.body.removeAttribute(ACCOUNT_ARMED_ATTR)
+      }
+
       function openHostMenu() {
         if (surface.mode() !== 'host') return
         if (hostMenu.findMenu() !== null) return
+        armAccountMenu()
         hostMenu.openMenu()
       }
 
@@ -464,13 +481,20 @@
        * a host re-render that replaces the row must not stack a second pair.
        */
       function bindHostRowHover(row) {
-        if (row.__dshHostHoverBound) return
-        row.__dshHostHoverBound = true
+        if (row.__dshHostRowToken === hostRowBindingToken) return
+        row.__dshHostRowToken = hostRowBindingToken
         row.addEventListener('mouseenter', function () {
           if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) hostHoverIntent.scheduleOpen()
         })
         row.addEventListener('mouseleave', function () {
           if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) hostHoverIntent.scheduleClose()
+        })
+        // The row's own click opens the menu too (autoPopover off, or a press
+        // before the hover delay elapsed). A listener on the row runs in the
+        // target phase, ahead of the host's own delegated onClick, so the armed
+        // marker is in place before the host mounts the card.
+        row.addEventListener('click', function () {
+          armAccountMenu()
         })
       }
 
@@ -480,7 +504,11 @@
        * that dismisses the menu.
        */
       function onHostMenuChanged(menu) {
-        if (menu === null || menu.__dshHostHoverBound) return
+        if (menu === null) {
+          disarmAccountMenu()
+          return
+        }
+        if (menu.__dshHostHoverBound) return
         menu.__dshHostHoverBound = true
         menu.addEventListener('mouseenter', function () {
           if (readPrefs().autoPopover !== AUTO_POPOVER_OFF) hostHoverIntent.cancel()
@@ -508,6 +536,7 @@
       function dropAccountFooter(footArea) {
         cancelClosePopover()
         hostHoverIntent.cancel()
+        disarmAccountMenu()
         if (accountWidth !== 0) {
           accountWidth = 0
           document.body.style.removeProperty('--dsh-claude-account-width')

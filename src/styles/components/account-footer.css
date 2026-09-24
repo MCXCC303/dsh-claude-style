@@ -297,9 +297,13 @@ body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] {
   --dsw-menu-surface-fill: #ffffff;
   --dsw-menu-backdrop-filter: none;
   font-family: var(--dsw-font-family) !important;
-  /* The host mounts the card instead of toggling a `data-open` attribute, so
-     the self-built drawer's transition becomes a one-shot entry animation with
-     the same values and the same origin (the drawer opens above the trigger). */
+}
+/* The entry animation is keyed on the armed marker rather than on the card
+   marker (constants.js): the armed marker is in place before the host mounts
+   the card, so the animation runs from the card's first frame instead of
+   replaying over a card that was already painted. The host's shared menu card
+   is the only thing that mounts inside that window. */
+body[data-dsh-claude-style][%%ACCOUNT_ARMED_ATTR%%] div[role="menu"][data-menu-material] {
   transform-origin: bottom left !important;
   animation: dsh-claude-account-menu-in 0.15s ease !important;
 }
