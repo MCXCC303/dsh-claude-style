@@ -57,9 +57,13 @@
           if (!handle || typeof handle.owns !== 'function' || typeof handle.close !== 'function') continue
           if (target && !handle.owns(target)) handle.close('outside')
         }
-        // settingsNav's class changes are outside the observer's attributeFilter,
-        // so its sync runs on the press itself. It is last, in feature order.
-        if (ui.settingsNav) ui.settingsNav.sync()
+        // A press also drives hooks that are not about closing: settingsNav's
+        // class changes are outside the observer's attributeFilter, so its sync
+        // runs on the press itself. It is last, in feature order.
+        for (var j = 0; j < HOOK_FEATURES.length; j++) {
+          var pressed = ui[HOOK_FEATURES[j]]
+          if (pressed && typeof pressed.onPointerDown === 'function') pressed.onPointerDown(target)
+        }
       }
 
       function onGlobalKeyDown(e) {
@@ -121,7 +125,12 @@
         var target = e.target
         if (!target) return
         if (target.hasAttribute && (target.hasAttribute('data-composer-input') || (target.closest && target.closest('[data-composer-input]')))) {
-          if (ui.copy && ui.copy.syncAttachmentPlaceholder) ui.copy.syncAttachmentPlaceholder()
+          // The [data-composer-input] filter stays in this event pipe; a feature
+          // is only told that a composer-input event happened.
+          for (var i = 0; i < HOOK_FEATURES.length; i++) {
+            var handle = ui[HOOK_FEATURES[i]]
+            if (handle && typeof handle.onInput === 'function') handle.onInput(target)
+          }
         }
       }
 

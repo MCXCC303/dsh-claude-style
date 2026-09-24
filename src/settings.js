@@ -336,6 +336,9 @@
       if (ui) {
         ui.settingsNav = {
           sync: syncSettingsNav,
+          /** A pointer press anywhere: the nav's class changes are outside the
+           * observer's attributeFilter, so no pass would fire for them. */
+          onPointerDown: function () { syncSettingsNav() },
         }
         quickProviderApi = ui.quickProviders || null
       }
