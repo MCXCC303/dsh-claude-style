@@ -1,12 +1,17 @@
+<div align="center">
+
 # DSH Claude Style
 
 **A theme plugin that recreates the look and feel of Claude Code Desktop for the DeepSeek Harness Web GUI.**
 
-<div align="center">
+> **Claude Code Desktop, right inside DSH.**
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
+[![version](https://img.shields.io/npm/v/dsh-claude-style?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
+[![downloads](https://img.shields.io/npm/dm/dsh-claude-style?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
 [![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
+[![dsh.so install](https://www.dsh.so/badge/install/dsh-claude-style.svg)](https://www.dsh.so/artifact/dsh-claude-style/)
 [![license](https://img.shields.io/badge/license-MIT-2EA44F?style=flat)](LICENSE)
 
 </div>
@@ -41,6 +46,8 @@ Enabling the Anthropic fonts (pick one):
 > The Anthropic Sans/Serif fonts are copyright Anthropic, licensed for personal use only, and are not covered by the MIT license.
 
 ## Installation
+
+> Requires dsh ≥ 0.1.5-rc.2
 
 1. From a terminal
 
@@ -84,9 +91,16 @@ Then restart `dsh web`; if you added this theme's entry to `cordis.patch.yml` by
 | Document | What it covers |
 | --- | --- |
 | [Design tokens](docs/STYLE.md) | Palette, fonts, shapes, source layout and the host-selector discipline (in English) |
+| [Architecture decisions](docs/architecture.md) | D1–D13: single-file bundling, the one-scheduler rule, the feature contract, and the trade-offs |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Contributing](CONTRIBUTING.md) | Building from `src/`, commit conventions, screenshot and regression tooling (in English) |
 
 ## Friends
 
 > Running several themes at once? Try [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) — it switches between every installed theme from one settings page.
+
+> Want to bring your Claude Code / Codex sessions into DSH and keep chatting? Try the author's other plugin, [dsh-chat-import](https://github.com/Nwflower/dsh-chat-import).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://star-history.com/#Nwflower/dsh-claude-style&Date)

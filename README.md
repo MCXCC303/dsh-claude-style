@@ -1,12 +1,17 @@
+<div align="center">
+
 # DSH Claude Style
 
 **为 DeepSeek Harness Web 复刻 Claude Code Desktop 风格与交互体验的主题插件。**
 
-<div align="center">
+> **在 DSH 里，就是 Claude Code Desktop 的样子。**
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
+[![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md) [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md)
 
+[![version](https://img.shields.io/npm/v/dsh-claude-style?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
+[![downloads](https://img.shields.io/npm/dm/dsh-claude-style?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
 [![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
+[![dsh.so install](https://www.dsh.so/badge/install/dsh-claude-style.svg)](https://www.dsh.so/artifact/dsh-claude-style/)
 [![license](https://img.shields.io/badge/license-MIT-2EA44F?style=flat)](LICENSE)
 
 </div>
@@ -41,6 +46,8 @@ Anthropic 字体启用（二选一）：
 > Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可。
 
 ## 安装
+
+> 需要 dsh ≥ 0.1.5-rc.2
 
 1. 通过终端安装
 
@@ -84,9 +91,16 @@ dsh plugin --profile web remove dsh-claude-style   # 卸载
 | 文档 | 说明 |
 | --- | --- |
 | [设计令牌](docs/STYLE.md) | 调色板、字体、形状，源码结构与宿主选择器纪律（英文） |
+| [架构决策](docs/architecture.md) | D1–D13：单文件拼接、单一调度器、特性契约等十三条决策与权衡 |
 | [更新日志](CHANGELOG.md) | 版本历史 |
 | [贡献指南](CONTRIBUTING.md) | 如何从 `src/` 构建、提交规范与截图/回归工具（英文） |
 
 ## 友链
 
 > 同时启用多个主题？推荐 [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager)，在其设置页一键切换所有已安装主题。
+
+> 想把 Claude Code / Codex 等外部代理的会话历史导入 DSH 接着聊？推荐作者的另一个插件 [dsh-chat-import](https://github.com/Nwflower/dsh-chat-import)。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://star-history.com/#Nwflower/dsh-claude-style&Date)
