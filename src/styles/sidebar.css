@@ -120,6 +120,12 @@ body[data-dsh-claude-style] [data-sidebar-collapsed] button[class*="newSession"]
 body[data-dsh-claude-style] button[class*="newSession"] svg {
   display: none !important;
 }
+/* The expanded row centers its label inside a flex-1 mask and parks the
+   shortcut at the far right. Claude's row reads left to right from the chip,
+   so the mask's inner flex goes back to the start. */
+body[data-dsh-claude-style] button[class*="newSession"] [class*="newSessionContent"] {
+  justify-content: flex-start !important;
+}
 /* The chip: one 20px box that paints BOTH the circular fill and the plus. A mask
    cannot do that — it clips the element to the glyph, taking the fill with it —
    so the plus is a background image instead, which costs the currentColor
