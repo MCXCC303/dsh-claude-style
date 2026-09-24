@@ -18,6 +18,9 @@
  *   - idle       once settled, no scheduler pass runs — a pass that mutates the
  *                DOM schedules the next one, and then the page never idles;
  *   - enter      Enter on an open composer menu reaches the host, never "Send";
+ *   - desktop    the 0.1.7 desktop footer: the host's account menu in the
+ *                settings launcher slot, the drawer's mirrors of its rows,
+ *                Ctrl+, and the account stream's read discipline;
  *   - markup     strings from settings, the account service and plugins render
  *                as text, never as markup;
  *   - isolation  a host API that breaks one feature — at install or at sync —
@@ -175,11 +178,43 @@ const STAND_IN = `(function () {
   }
 
   var menu = null
+  function closeHostMenu() {
+    if (menu && menu.parentElement) menu.parentElement.removeChild(menu)
+    menu = null
+  }
+  function openHostSettingsDialog() {
+    var area = document.querySelector('[class*="settingsArea"]')
+    if (!area) return
+    var dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.textContent = 'Settings'
+    area.appendChild(dialog)
+  }
   document.getElementById('host-account').addEventListener('click', function () {
-    if (menu) { menu.remove(); menu = null; return }
+    if (menu) { closeHostMenu(); return }
     menu = document.createElement('div')
     menu.setAttribute('role', 'menu')
-    menu.innerHTML = '<div role="menuitem"><svg></svg>Settings</div><div role="menuitem"><svg></svg>Feedback</div><div role="menuitem"><svg></svg>Sign out</div>'
+    if (CASE === 'desktop') {
+      // The host's real account menu: picking an item selects it and the menu
+      // closes itself (onSelect), so the skin must not click the trigger again.
+      // The sign-out glyph copies LogoutIcon.tsx's geometry: a 16px relative box
+      // holding a 13.664x13.571 svg at (1.168, 1.214) absolute.
+      menu.innerHTML =
+        '<div role="menuitem"><svg viewBox="0 0 16 16" width="16" height="16"></svg>Settings</div>' +
+        '<div role="menuitem"><svg viewBox="0 0 16 16" width="16" height="16"></svg>Feedback</div>' +
+        '<div role="menuitem"><span style="position:relative;display:inline-block;width:16px;height:16px">' +
+          '<svg viewBox="0 0 13.664 13.571" width="13.664" height="13.571" style="position:absolute;left:1.168px;top:1.214px">' +
+            '<path d="M1 1 L12.664 12.571" fill="none" stroke="currentColor" stroke-width="1.4"></path>' +
+          '</svg></span>Sign out</div>'
+      menu.addEventListener('click', function (e) {
+        var item = e.target && e.target.closest ? e.target.closest('[role="menuitem"]') : null
+        if (!item) return
+        if ((item.textContent || '').trim() === 'Settings') openHostSettingsDialog()
+        closeHostMenu()
+      })
+    } else {
+      menu.innerHTML = '<div role="menuitem"><svg></svg>Settings</div><div role="menuitem"><svg></svg>Feedback</div><div role="menuitem"><svg></svg>Sign out</div>'
+    }
     document.body.appendChild(menu)
   })
 
@@ -207,10 +242,48 @@ const STAND_IN = `(function () {
   var profile = CASE === 'markup'
     ? { name: MARKUP, avatarUrl: 'https://cdn.example.invalid/a.png?"><img src=x onerror=window.__pwned=1> onmouseover=window.__pwned=1' }
     : { name: 'Ada', avatarUrl: 'https://cdn.example.invalid/a.png' }
+  // The desktop account stream, driven by hand: remote.$stream wraps
+  // remote.account.watch, and __pushAccountFrame hands the skin one frame.
+  // A frame's accept is a no-op, and the next next() pends until the next
+  // push, so the stream never spins.
+  window.__profileReads = 0
+  var accountFrameQueue = []
+  var accountFramePending = null
+  window.__pushAccountFrame = function (view) {
+    var step = { done: false, value: { value: view, accept: function () {} } }
+    if (accountFramePending !== null) {
+      var resolve = accountFramePending
+      accountFramePending = null
+      resolve(step)
+    } else {
+      accountFrameQueue.push(step)
+    }
+  }
+  function accountFrames() {
+    return {
+      next: function () {
+        if (accountFrameQueue.length > 0) return Promise.resolve(accountFrameQueue.shift())
+        return new Promise(function (resolve) { accountFramePending = resolve })
+      },
+    }
+  }
   var account = {
     getProfile: CASE === 'install-fault'
       ? function () { return undefined } // host API drift: not a promise
-      : function () { return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } }) },
+      : function () {
+          if (CASE === 'desktop') window.__profileReads++
+          return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } })
+        },
+    watch: CASE === 'desktop'
+      ? function () { return { [Symbol.asyncIterator]: accountFrames } }
+      : undefined,
+  }
+  var remote = {
+    $stream: function () {
+      var stream = { dispose: function () {} }
+      stream[Symbol.asyncIterator] = function () { return accountFrames() }
+      return stream
+    },
   }
   // Host API drift at sync time: a session list that throws, which only the
   // permission control reads on every pass.
@@ -229,10 +302,35 @@ const STAND_IN = `(function () {
     get: function (name) {
       if (name === 'configForms') return forms
       if (name === 'remote.account') return account
+      if (name === 'remote') return CASE === 'desktop' ? remote : undefined
       if (name === 'sessions') return sessions
       return undefined
     },
     effect: function (fn) { window.__dispose = fn() },
+  }
+  // The desktop account service mounts after this plugin does, so the skin waits
+  // for it through ctx.inject; the other cases keep no inject, which is what
+  // makes them read synchronously at install (the install-fault case depends on
+  // that read throwing).
+  if (CASE === 'desktop') {
+    window.__ctx.inject = function (deps, cb) {
+      var disposers = []
+      cb({
+        effect: function (fn) {
+          var dispose = fn()
+          if (typeof dispose === 'function') disposers.push(dispose)
+          return dispose
+        },
+        get: function (name) { return window.__ctx.get(name) },
+      })
+      return {
+        dispose: function () {
+          for (var i = disposers.length - 1; i >= 0; i--) {
+            try { disposers[i]() } catch (error) { /* already stopped */ }
+          }
+        },
+      }
+    }
   }
   var react = {
     createElement: function () { return null },
@@ -261,6 +359,70 @@ const PROBE = `(function () {
     if (window.SMOKE_CASE === 'sync-fault') {
       // A sync is retired after failing three passes in a row: drive four.
       for (var n = 0; n < 4; n++) { document.body.appendChild(document.createElement('i')); await sleep(80) }
+    }
+    if (window.SMOKE_CASE === 'desktop') {
+      // The first login frame makes the skin read the profile once.
+      window.__pushAccountFrame({ status: 'credential-stored', attempt: { phase: 'succeeded', id: 'smoke-1' } })
+      await sleep(500)
+      r.profileReadsAfterFirst = window.__profileReads
+      // The same state again (a reconnect): no second read.
+      window.__pushAccountFrame({ status: 'credential-stored', attempt: { phase: 'succeeded', id: 'smoke-1' } })
+      await sleep(500)
+      r.profileReadsAfterRepeat = window.__profileReads
+      var triggerRow = document.querySelector('[class*="footArea"] [class*="triggerRow"]')
+      r.triggerRowDisplay = triggerRow ? getComputedStyle(triggerRow).display : null
+      // Open the drawer and read what it mirrors.
+      var accountBtn = document.querySelector('.dsh-claude-account-btn')
+      if (accountBtn) accountBtn.click()
+      await sleep(600)
+      var ownSettings = document.querySelector('.dsh-claude-account-popover [data-action="settings"]')
+      r.ownSettingsHidden = ownSettings ? ownSettings.hidden : null
+      var accountRows = Array.prototype.slice.call(document.querySelectorAll('.dsh-claude-account-popover [data-dsh-claude-account-item]'))
+      r.accountRowTexts = accountRows.map(function (row) {
+        var text = row.querySelector('.dsh-claude-popover-item-text')
+        return text ? text.textContent : null
+      })
+      // The sign-out glyph must stay inside its icon box (the drawer-corner bug).
+      var signOut = null
+      for (var si = 0; si < accountRows.length; si++) {
+        if ((accountRows[si].textContent || '').indexOf('Sign out') !== -1) { signOut = accountRows[si]; break }
+      }
+      if (signOut) {
+        var iconBox = signOut.querySelector('.dsh-claude-popover-item-icon')
+        var iconSvg = iconBox ? iconBox.querySelector('svg') : null
+        if (iconBox && iconSvg) {
+          var ib = iconBox.getBoundingClientRect()
+          var sb = iconSvg.getBoundingClientRect()
+          r.signoutIcon = { icon: [ib.left, ib.top, ib.right, ib.bottom], svg: [sb.left, sb.top, sb.right, sb.bottom] }
+          r.signoutContained = sb.left >= ib.left - 0.5 && sb.top >= ib.top - 0.5 &&
+            sb.right <= ib.right + 0.5 && sb.bottom <= ib.bottom + 0.5
+        }
+      }
+      // Picking the drawer's Settings row drives the host menu and opens the dialog.
+      var settingsRow = null
+      for (var ri = 0; ri < accountRows.length; ri++) {
+        var rowText = accountRows[ri].querySelector('.dsh-claude-popover-item-text')
+        if (rowText && rowText.textContent === 'Settings') { settingsRow = accountRows[ri]; break }
+      }
+      if (settingsRow) settingsRow.click()
+      await sleep(600)
+      r.dialogAfterRowClick = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
+      // The permissions control keeps a role=menu of its own in the page, so the
+      // host's account menu is the one carrying the Sign out item.
+      r.hostAccountMenusAfterRowClick = Array.prototype.filter.call(document.querySelectorAll('[role="menu"]'), function (m) {
+        var items = m.querySelectorAll('[role="menuitem"]')
+        for (var mi = 0; mi < items.length; mi++) {
+          if ((items[mi].textContent || '').trim() === 'Sign out') return true
+        }
+        return false
+      }).length
+      // Clear the host's dialog so the shortcut's own open is observable.
+      Array.prototype.forEach.call(document.querySelectorAll('[class*="settingsArea"] [role="dialog"]'), function (dialog) {
+        if (dialog.parentElement) dialog.parentElement.removeChild(dialog)
+      })
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true, cancelable: true }))
+      await sleep(600)
+      r.dialogAfterShortcut = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
     }
     await sleep(1200)
     var from = window.__passes
@@ -321,14 +483,29 @@ const PROBE = `(function () {
 
 /** The stand-in page for one case: host footer, host composer, then the bundle. */
 function page(name) {
+  // The desktop footer mirrors 0.1.7's: the account menu lives in the
+  // `settings.launcher` slot inside the host's `triggerRow`, and the settings
+  // button the web-style footer has is gone. Every other case keeps the
+  // web-style footer unchanged.
+  var footerActions = '<div class="_x_footerActions_1"><div data-slot="sidebar.footer.action"><button id="plugin-action" aria-label="Cost meter" data-cordis-badge="3"><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg></button><div class="_p_balance_1" role="group"><span>Balance 10.07</span><div role="progressbar" aria-valuenow="40"></div></div></div></div>'
+  var footer = name === 'desktop'
+    ? '<div class="_x_footArea_1">' + footerActions +
+        '<div class="_x_settingsArea_1"><div data-slot="sidebar.settings"><div class="_s_triggerRow_1">' +
+          '<div data-slot="settings.launcher"><div class="_a_root_1"><span>' +
+            '<button id="host-account" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">Ada</button>' +
+          '</span></div></div>' +
+          '<button aria-label="Retry update">Retry update</button>' +
+        '</div></div></div>' +
+      '</div>'
+    : '<div class="_x_footArea_1">\n' +
+        '  <div class="_x_settingsArea_1"><button aria-haspopup="dialog">Settings</button></div>\n' +
+        '  ' + footerActions + '\n' +
+        '  <button id="host-account" aria-haspopup="menu" aria-label="Account menu">Me</button>\n' +
+      '</div>'
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
 <body>
-<div class="_x_footArea_1">
-  <div class="_x_settingsArea_1"><button aria-haspopup="dialog">Settings</button></div>
-  <div class="_x_footerActions_1"><div data-slot="sidebar.footer.action"><button id="plugin-action" aria-label="Cost meter" data-cordis-badge="3"><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg></button><div class="_p_balance_1" role="group"><span>Balance 10.07</span><div role="progressbar" aria-valuenow="40"></div></div></div></div>
-  <button id="host-account" aria-haspopup="menu" aria-label="Account menu">Me</button>
-</div>
+${footer}
 <div data-composer-card>
   <div class="_x_toolbar_1"><button aria-label="Access mode: Edit">Edit</button></div>
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
@@ -387,6 +564,30 @@ const CASES = {
     check('only the permission control was switched off', r.errors.length === 1 && r.errors[0].includes('"permissions"'), r.errors.join(' | '))
     check("the host's own composer is handed back", !r.composerRestyle)
     check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    commonChecks(r)
+  },
+  desktop(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('the takeover hides the host trigger row',
+      r.triggerRowDisplay === 'none', JSON.stringify(r.triggerRowDisplay))
+    check("the drawer's own Settings row steps aside for the host menu's",
+      r.ownSettingsHidden === true, JSON.stringify(r.ownSettingsHidden))
+    check('the host account rows are mirrored in order',
+      same(r.accountRowTexts, ['Settings', 'Feedback', 'Sign out']), JSON.stringify(r.accountRowTexts))
+    check('the sign-out icon stays inside its icon box',
+      r.signoutContained === true && r.signoutIcon !== undefined &&
+      r.signoutIcon.icon[2] - r.signoutIcon.icon[0] > 1 && r.signoutIcon.svg[2] - r.signoutIcon.svg[0] > 1,
+      JSON.stringify(r.signoutIcon))
+    check("picking the drawer's Settings opens the host dialog and leaves no host account menu open",
+      r.dialogAfterRowClick === 1 && r.hostAccountMenusAfterRowClick === 0,
+      JSON.stringify({ dialogs: r.dialogAfterRowClick, accountMenus: r.hostAccountMenusAfterRowClick }))
+    check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
+    check('the first account frame reads the profile exactly once',
+      r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
+    check('a repeated same-state frame reads nothing more',
+      r.profileReadsAfterRepeat === 1, JSON.stringify(r.profileReadsAfterRepeat))
+    check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     commonChecks(r)
   },
 }
