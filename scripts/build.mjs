@@ -73,6 +73,7 @@ const FRAGMENTS = [
   'overrides/popover-utils.js',
   'overrides/selection.js',
   'overrides/copy.js',
+  'overrides/session-stats.js',
   'overrides/permissions.js',
   'overrides/model-brand.js',
   'overrides/model-copy-lookup.js',
