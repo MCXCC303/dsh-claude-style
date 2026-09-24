@@ -13,6 +13,7 @@
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
+ *   src/overrides/session-stats.js  the permissions feature's split factory
  *   src/overrides/account/*.js   the account footer's split factories
  *   src/overrides/model/*.js     the model picker's split factories
  *   src/settings.js              settings section (brand)

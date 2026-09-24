@@ -189,11 +189,14 @@ assembles the bundle:
 | `src/styles/composer/hero.css` | hero brand mark and headline |
 | `src/styles/composer/card.css` | composer input card and footer tray (gated by composer preference) |
 | `src/styles/composer/inline.css` | in-conversation single-line composer (gated by composer preference) |
+| `src/styles/composer/inline-bar.css` | the inline composer's trailing bar: model trigger and merged time/usage stats line (gated by composer preference) |
 | `src/styles/sidebar.css` | sidebar brand, new-session row, workspace tree |
 | `src/styles/components/permissions.css` | permission segments and popover |
 | `src/styles/components/account-footer.css` | account row and floating popover |
 | `src/styles/components/ban-screen.css` | the account-hold easter egg (full-window overlay) |
 | `src/styles/components/model-picker.css` | model picker popovers |
+| `src/styles/components/effort-picker.css` | the reasoning-effort card, slider and its trigger |
+| `src/styles/components/popover.css` | shared popover chrome: header, body and menu rows |
 | `src/styles/components/hero-menu.css` | the host's menu primitive under the hero row's workspace/preset pickers (composer-gated) |
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
@@ -204,10 +207,16 @@ assembles the bundle:
 | `src/context/i18n.js` | localized copy lookups |
 | `src/overrides/popover-utils.js` | shared anchor positioning and hover intent |
 | `src/overrides/copy.js` | composer/copy rewrites installer |
-| `src/overrides/permissions.js` | permission segments/popover installer |
-| `src/overrides/model-picker.js` | model picker installer |
+| `src/overrides/session-stats.js` | session-stats card factory (`createSessionStats`), the permissions feature's split-out half |
+| `src/overrides/permissions.js` | permission segments/popover installer (the stats card lives in `session-stats.js`) |
+| `src/overrides/model/catalog.js` | model catalog factory (`createModelCatalog`): the per-session ModelDirectory store |
+| `src/overrides/model/rows.js` | model row factory (`createModelRows`): option cells, provider rules, level-1 sections |
+| `src/overrides/model-picker.js` | model picker installer, wiring the `model/` factories (thin orchestration) |
 | `src/overrides/hero-menu.js` | stamps the host menu card the hero row's pickers open |
-| `src/overrides/account-footer.js` | account footer/popover installer |
+| `src/overrides/account/profile.js` | account profile factory (`createAccountProfile`): signed-in name/avatar reads and retries |
+| `src/overrides/account/host-menu.js` | host account menu factory (`createHostAccountMenu`): reads and drives the host's own menu |
+| `src/overrides/account/footer-mirror.js` | footer mirror factory (`createFooterMirror`): redirects other plugins' footer entries into the drawer |
+| `src/overrides/account-footer.js` | account drawer installer, wiring the `account/` factories (thin orchestration) |
 | `src/overrides/ban-screen.js` | account-hold easter egg installer |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
