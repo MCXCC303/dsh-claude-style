@@ -152,8 +152,17 @@
        * plain click is not enough for the host's React handlers, hence the full
        * press the settings drive already uses.
        */
+      /**
+       * Open the host's account menu for the hover preference. The trigger opens
+       * on its own onClick, so one click is the whole press: the extra
+       * pointerdown/mouseup pair realClick adds reaches any host handler that
+       * acts on a press, and the click that follows then toggles the just-opened
+       * menu shut.
+       */
       function openAccountMenu() {
-        realClick(hostAccountTrigger())
+        var trigger = hostAccountTrigger()
+        if (trigger === null) return
+        trigger.click()
       }
 
       return {
