@@ -28,6 +28,7 @@ body[data-dsh-claude-style] .dsh-claude-account-popover-body {
   gap: 2px !important;
   max-height: 360px !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 body[data-dsh-claude-style] .dsh-claude-popover-item {
   width: 100% !important;

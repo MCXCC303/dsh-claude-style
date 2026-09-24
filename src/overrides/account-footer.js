@@ -165,6 +165,8 @@
         isOpen: function () { return surface.mode() === 'synthetic' && isPopoverOpen() },
         close: closeSurface
       })
+      /** The sidebar column's width, as last written to the stylesheet. */
+      var accountWidth = 0
 
       /**
        * The account header: the nickname and the hold-screen easter egg's entry.
@@ -422,6 +424,10 @@
        */
       function dropAccountFooter(footArea) {
         cancelClosePopover()
+        if (accountWidth !== 0) {
+          accountWidth = 0
+          document.body.style.removeProperty('--dsh-claude-account-width')
+        }
         dropSynthetic()
         // The menu marker goes with the takeover: an open host menu must not
         // keep the skin's card styling after the footer is handed back.
@@ -442,6 +448,14 @@
         if (!readPrefs().collapseFooter) {
           dropAccountFooter(footArea)
           return
+        }
+        // The host's account menu is portalled outside the sidebar, so it cannot
+        // inherit the column's width: measure the column here and hand it to the
+        // stylesheet, which sizes both cards with it. Written only on a change.
+        var columnWidth = Math.round(footArea.getBoundingClientRect().width)
+        if (columnWidth > 0 && columnWidth !== accountWidth) {
+          accountWidth = columnWidth
+          document.body.style.setProperty('--dsh-claude-account-width', columnWidth + 'px')
         }
         surface.sync()
         if (surface.mode() === 'host') {
