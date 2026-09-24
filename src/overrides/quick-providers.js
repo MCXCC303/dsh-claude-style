@@ -127,7 +127,15 @@
 
       ui.quickProviders = {
         toggle: toggle,
-        close: close,
+        /**
+         * The card closes on composer focus (and when the settings page tears it
+         * down, which calls this with no reason). Esc and an outside press are
+         * NOT its dismiss routes, so those reasons are ignored.
+         */
+        close: function (reason) {
+          if (reason === 'escape' || reason === 'outside') return
+          close()
+        },
         isOpen: function () { return card !== null },
       }
       return function () {

@@ -64,14 +64,14 @@
 
       function onGlobalKeyDown(e) {
         if (e.key === 'Escape') {
-          if (ui.footer) ui.footer.close()
-          if (ui.permissions) ui.permissions.closeMenu()
-          if (ui.model) ui.model.close()
-          if (ui.effort) ui.effort.close()
-          // The account-hold overlay is the one layer that does NOT close on a
-          // window blur (it is meant to be read, and reading it may mean
-          // switching windows), so Esc is its keyboard way out.
-          if (ui.ban) ui.ban.close()
+          // Every feature's own Esc route, in feature order. The account-hold
+          // overlay is the one layer that does NOT close on a window blur (it is
+          // meant to be read, and reading it may mean switching windows), so Esc
+          // is its keyboard way out; a feature that ignores the reason is skipped.
+          for (var i = 0; i < HOOK_FEATURES.length; i++) {
+            var handle = ui[HOOK_FEATURES[i]]
+            if (handle && typeof handle.close === 'function') handle.close('escape')
+          }
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
           e.preventDefault()

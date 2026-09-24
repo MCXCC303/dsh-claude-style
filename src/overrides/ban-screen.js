@@ -305,7 +305,15 @@
       // `ui.ban` at click time, so the order is safe either way.)
       ui.ban = {
         open: openBanScreen,
-        close: closeBanScreen,
+        /**
+         * Esc is the overlay's only keyboard exit. The scheduler dispatches
+         * 'composer' for composer focus and 'outside' for a press; neither may
+         * dismiss a page the reader is looking at.
+         */
+        close: function (reason) {
+          if (reason === 'composer' || reason === 'outside') return
+          closeBanScreen()
+        },
         isOpen: function () {
           return banRoot !== null
         },

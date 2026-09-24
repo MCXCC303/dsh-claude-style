@@ -836,6 +836,15 @@
           syncSegments()
           syncChatTabComposer()
         },
+        /**
+         * Esc closes the menu; composer focus additionally closes the stats
+         * card. There is deliberately no 'outside' route — the menu runs its
+         * own document pointerdown listener (see buildPermTriggerAndPopover).
+         */
+        close: function (reason) {
+          closePermMenu()
+          if (reason === 'composer') hideStatsPopover()
+        },
         closeMenu: closePermMenu,
         closeStats: hideStatsPopover
       }
