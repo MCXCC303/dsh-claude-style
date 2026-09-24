@@ -356,9 +356,12 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   position: fixed !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 6px !important;
   height: 28px !important;
-  padding: 0 10px !important;
+  /* Tight against the model trigger: positionEffortTrigger() already overlaps
+     6px of the model trigger's right padding, so the 2px here lands the two
+     texts ~4px apart — they read as one phrase ("Opus 5.5 High"). The 6px on
+     the right keeps the hover plate off the control that follows. */
+  padding: 0 6px 0 2px !important;
   border: none !important;
   border-radius: 6px !important;
   background: transparent !important;
@@ -366,6 +369,7 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   font-family: var(--dsw-font-family) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
+  white-space: nowrap !important;
   cursor: pointer !important;
   z-index: 10 !important;
   transition: background-color 0.12s ease, color 0.12s ease !important;

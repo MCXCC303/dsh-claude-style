@@ -104,17 +104,20 @@
           effortBtn.style.display = 'none'
           return
         }
-        var r = modelBtn.getBoundingClientRect()
-        // The model trigger is OUR element, so the effort picker reserves room
-        // for itself on the model trigger's right edge (a margin on it shifts the
-        // trigger left, out from under the context meter / send button) and then
-        // sits in that reserved space. Measured, not a magic number: the width
-        // follows the current level's name.
-        var need = effortBtn.offsetWidth + 16
+        // The two read as one phrase ("Opus 5.5 High"): sit 6px INTO the model
+        // trigger's 8px right padding, so with this trigger's 2px left padding
+        // the two texts land ~4px apart (the boxes overlap, as the retired
+        // margin-left:-6px draft had them). The model trigger is OUR element,
+        // so the effort picker reserves room for itself on its right edge (a
+        // margin on it shifts the trigger left, out from under the context
+        // meter / send button) and then sits in that reserved space: width,
+        // minus the overlap, plus 8px of slack. Measured, not a magic number:
+        // the width follows the current level's name.
+        var need = effortBtn.offsetWidth + 2
         if (modelBtn.style.marginRight !== need + 'px') modelBtn.style.marginRight = need + 'px'
         var shifted = modelBtn.getBoundingClientRect()
         effortBtn.style.display = 'inline-flex'
-        effortBtn.style.left = Math.round(shifted.right + 8) + 'px'
+        effortBtn.style.left = Math.round(shifted.right - 6) + 'px'
         effortBtn.style.top = Math.round(shifted.top + (shifted.height - effortBtn.offsetHeight) / 2) + 'px'
       }
 
@@ -186,8 +189,12 @@
         var info = effortInfo()
         if (info === null) {
           // No ladder on this seat: the trigger goes away with it, exactly as the
-          // model card drew no effort row for such a model.
+          // model card drew no effort row for such a model. The margin the
+          // trigger reserved on the model button goes with it, or the gap
+          // outlives the trigger.
           if (effortBtn !== null && effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
+          var idleModelBtn = document.querySelector('.dsh-claude-model-btn')
+          if (idleModelBtn !== null && idleModelBtn.style.marginRight !== '') idleModelBtn.style.marginRight = ''
           closeEffortPopover()
           return
         }
@@ -244,6 +251,9 @@
         effortBtn = null
         effortPop = null
         effortSlider = null
+        // Hand the reserved margin on the model trigger back too.
+        var modelBtn = document.querySelector('.dsh-claude-model-btn')
+        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
       }
 
       ui.effort = {
