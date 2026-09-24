@@ -102,9 +102,17 @@
 
 - **背景**：重构开始时，三个特性碎片都越过 750 行上限——`account-footer.js` 1357 行（账户资料、宿主账号菜单桥接、其他插件页脚条目的镜像、抽屉壳、行构建五份工作挤在一个闭包里）、`model-picker.js` 900 行（模型目录订阅与行构建也塞在里面）、`permissions.js` 868 行（会话统计卡也在里面）；`composer/inline.css` 847 行与 `components/model-picker.css` 767 行两条 CSS 同样超限。调度器同时把每个特性的触发调用硬编码在手写清单里：`PASS_FEATURES` 按名列 pass 序、与 entry.js 的安装序分开维护，另有 21 处特性专属调用散在各触发分支里，而且已经与特性漂移——`ui.heroMenu.close` 是被守卫着的死调用（heroMenu 的句柄只有 `{ sync, reposition }`）。`ui` 是跨特性共享的服务注册表，却没有任何文档说明句柄有哪些方法、谁可以读谁。
 - **决定**（重构 Phase 0–3 已落地）：
-  - **辅助碎片导出顶层 `createX(...)` 工厂**，仿 popover-utils 的 `createHoverIntent` 与 model-effort 的 `createEffortControl`：状态收在工厂自己的闭包里，返回一个小对象；访问器与回调经参数传入（如 `{ isOpen: fn, onChange: fn }`），绝不伸手进别的闭包。特性的 `installX` 负责把工厂接起来（现有六个：`createAccountProfile`、`createHostAccountMenu`、`createFooterMirror`、`createModelCatalog`、`createModelRows`、`createSessionStats`）。
+  - **辅助碎片导出顶层 `createX(...)` 工厂**，仿 popover-utils 的 `createHoverIntent` 与 model-effort 的 `createEffortControl`：状态收在工厂自己的闭包里，返回一个小对象；访问器与回调经参数传入（如 `{ isOpen: fn, onChange: fn }`），绝不伸手进别的闭包。特性的 `installX` 负责把工厂接起来（现有七个：`createAccountProfile`、`createHostAccountMenu`、`createFooterMirror`、`createAccountSurface`、`createModelCatalog`、`createModelRows`、`createSessionStats`）。
   - **拆出多个碎片的特性建一个子目录**（`overrides/account/`、`overrides/model/`）；只拆出一个辅助碎片的特性把它放在特性旁边（`overrides/session-stats.js`）——单文件目录是噪音。FRAGMENTS 里列在特性碎片紧前面；顶层名对整个 bundle 全局唯一、以特性起名（`createAccountProfile`，不是 `createProfile`）。移动就是移动：注释随行、风格与名字不变，只有闭包变量必须变成参数时才改签名。
-  - **特性契约**：entry.js 的 FEATURES 表（`{ name, handle?, install }`）统一安装序与 pass 序——pass 序就是安装序过滤出句柄带 `sync` 的特性（`settings` 安装到 `ui.settingsNav`）。scheduler 只认 FeatureHandle 的可选钩子（typedef 在 scheduler.js 头部）：`sync` / `owns` + `close('outside')` / `onPointerDown` / `close('escape')` / `close('composer')` / `onInput` / `reposition` / `onCopyChange`；没实现的钩子直接跳过，每个特性保住自己原有的关闭路线（permissions 没有外部点击关闭，quickProviders 只在 composer 聚焦时关）。`retire` 按 name 或 handle 匹配：纯 handle 命中只停 sync、不拆安装（settingsNav 的显式分支——失败计数器已拒绝后续 pass，安装继续跑、设置页不卸）；退役 `footer` / `permissions` 仍强制归还 body 属性（FOOTER_ATTR / COMPOSER_ATTR）。
+  - **特性契约**：entry.js 的 FEATURES 表（`{ name, handle?, install }`）统一安装序与 pass 序——pass 序就是安装序过滤出句柄带 `sync` 的特性（`settings` 安装到 `ui.settingsNav`）。scheduler 只认 FeatureHandle 的可选钩子（typedef 在 scheduler.js 头部）：`sync` / `owns` + `close('outside')` / `onPointerDown` / `close('escape')` / `close('composer')` / `onInput` / `reposition` / `onCopyChange` / `onKey`；没实现的钩子直接跳过，每个特性保住自己原有的关闭路线（permissions 没有外部点击关闭，quickProviders 只在 composer 聚焦时关）。`retire` 按 name 或 handle 匹配：纯 handle 命中只停 sync、不拆安装（settingsNav 的显式分支——失败计数器已拒绝后续 pass，安装继续跑、设置页不卸）；退役 `footer` / `permissions` 仍强制归还 body 属性（FOOTER_ATTR / COMPOSER_ATTR）。
 - **理由**：拆分前「加一个特性」要改两处清单（entry.js 安装序列 + scheduler 的 PASS_FEATURES）再往各触发分支加调用；现在变成往 FEATURES 表加一行、在句柄上实现钩子——scheduler 不再认识任何具体特性，手写清单无从漂移。拆分把千行闭包变成状态自持的工厂加薄编排，750 行上限重新可守。移动就是移动（注释随行、闭包变量变参数才改签名），搬运提交的 diff 因此可审：搬运里不该出现逻辑改动。本决策不推翻 D1/D6/D12：仍是单文件逐字拼接（D1）、仍是单一调度器统一驱动（D6，钩子只是把硬编码调用变成句柄方法）、特性级失败隔离与 retire 语义原样保留（D12）——它在三者之内工作。
 - **代价**：多一层间接——特性内部状态要经工厂参数表交接，动状态时多过一遍参数；「加一个特性」前要先读这条决策与 scheduler.js 的 typedef。
 - **重审条件**：钩子表继续膨胀（例如第二类键盘事件或第二种观察源进场）时，重审契约粒度——按事件域分组，或让特性自己声明要订阅的触发器。
+
+## D14. 账号表面：一套行模型，两个挂载点
+
+- **背景**：DSH 0.1.7 的桌面端自带账号区——侧栏页脚里的账号行，以及它自己的账号弹层。此前的做法是隐藏宿主账号行、由插件自建抽屉，并把宿主菜单里的条目读出来镜像进抽屉：隐形点开宿主菜单、等它的 portal 出现、复制文案与图标、再把点击转发回去。这套驱动依赖宿主菜单的渲染时序与双语标签，先后出过图标逃逸、文案过期、行重复等问题。
+- **决定**：插件的行（账号头部、其它插件的页脚条目、设置行）只在弹层里出现，弹层有两个挂载点，由 `overrides/account/surface.js` 每轮判定。宿主有账号区时，宿主账号行就是入口（插件只给它打标记，供样式表重绘），插件把容器追加到宿主账号菜单列表的首位，宿主自己渲染它那几行；宿主没有账号区（Web、0.1.5）时，插件自建账号行与弹层，容器就是弹层主体。宿主的行不复制、不移动、不转发点击；插件的行被点击后需要收起菜单时，派发一次 Escape 交给宿主的菜单处理。卡片与行的外观由插件的样式表按标记重绘，两条路径共用同一套样式。
+- **理由**：宿主的菜单自带定位、动画、键盘遍历、Esc 与外部点击关闭，追加进去的行会加入同一套键盘遍历；删除驱动与镜像之后，账号区不再依赖宿主菜单的渲染时序与标签文案。
+- **代价**：宿主菜单关闭即卸载，容器每轮重新确认并追加；宿主的列表是 React 管理的子树，追加位置固定在列表首位，宿主重渲染后由每轮同步自愈。
+- **重审条件**：宿主为账号菜单提供追加行的插槽时，改用插槽注册，去掉 DOM 追加。

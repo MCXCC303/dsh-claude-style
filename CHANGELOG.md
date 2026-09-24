@@ -4,23 +4,49 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 ## [Unreleased]
 
-[中文](#cn-unreleased) | [English](#en-unreleased)
+## [0.5.3] - 2026-09-23
 
-<h3 id="cn-unreleased">问题修复</h3>
+[中文](#cn-0.5.3) | [English](#en-0.5.3)
 
-- 修复 **关闭插件或关掉「折叠侧栏设置区」后，桌面端自带的账号区没有还原**：交出页脚时摘掉皮肤打在宿主账号行上的标记，宿主行恢复自带的外观与点击。
+<h3 id="cn-0.5.3">新增功能</h3>
+
+- **账号区改为在宿主账号弹层里追加插件自己的行**：宿主自带的账号行就是入口（不再隐藏、不再由插件代为接管），弹层里依次是账号头部、其它插件的页脚条目与宿主自己的设置 / 意见反馈 / 退出登录；宿主没有账号区的环境（Web、0.1.5）先由插件自建账号区，再追加同样的行。宿主行的文案、顺序与点击行为保持原样。
+
+### 体验优化
+
+- **账号弹层外观统一**：卡片改用纯白背景（暗色保持原样）、宽度与侧栏一致，并去掉底部的横向滚动条；宿主账号菜单套用插件的行、图标、分隔线与悬停底色。
+- **桌面 Windows 标题栏模式下对话 / 轨迹控件居中常显**：控件移到标题栏那一行（与新会话按钮同一行）并保持可见，点击不再被标题栏的拖拽区域吞掉。
+
+### 问题修复
+
+- 修复 **关闭插件或关掉「折叠侧栏设置区」后，桌面端自带的账号区没有还原**：交出页脚时摘掉插件打在宿主账号行上的标记，宿主行恢复自带的外观与点击。
+- 修复 **Ctrl+, 无法打开设置**：该组合键重新由插件接管（宿主文案一直宣传它，宿主自身没有绑定）。
+- 修复 **收起侧栏后新会话按钮在顶栏出现横贯的悬停底色**：收起状态交由宿主自己的图标控件承载，插件不再绘制悬停底色。
 
 ### 移除
 
-- **移除插件自带的 Ctrl+, 快捷键提示**：账号抽屉的设置行保留（点击仍可打开设置），但不再显示快捷键提示。
+- **移除设置行的 Ctrl+, 提示文案**：设置行保留，点击仍可打开设置。
 
-<h3 id="en-unreleased">Bug Fixes</h3>
+<h3 id="en-0.5.3">New Features</h3>
 
-- Fix **the desktop's own account area not coming back after the plugin is disabled or "Collapse the sidebar settings area" is turned off**: handing the footer back drops the skin's marker from the host's account row, which returns to its shipped look and click behavior.
+- **The account area now appends the plugin's own rows into the host's account popover**: the host's own account row is the entry (it is no longer hidden or taken over), and the popover lists the account header, the other plugins' footer entries and the host's own Settings / Feedback / Sign out; on a host without an account area (Web, 0.1.5) the plugin builds one first and appends the same rows. The host's own rows keep their copy, order and click behavior.
+
+### Improvements
+
+- **One look for the account popover**: the card now uses a pure white background (dark keeps its own), spans the sidebar's width, and no longer draws a horizontal scrollbar at its foot; the host's account menu takes the plugin's row, icon, separator and hover treatment.
+- **Centred, always-visible Conversation / Trajectory control in the desktop Windows titlebar**: the control moves onto the titlebar row (the same row as the New session button), stays visible, and its clicks are no longer swallowed by the titlebar's drag region.
+
+### Bug Fixes
+
+- Fix **the desktop's own account area not coming back after the plugin is disabled or "Collapse the sidebar settings area" is turned off**: handing the footer back drops the plugin's marker from the host's account row, which returns to its shipped look and click behavior.
+- Fix **Ctrl+, no longer opening settings**: the key combination is handled by the plugin again (the host's copy advertises it, while the host itself binds nothing).
+- Fix **a full-width hover plate on the New session button in the titlebar once the sidebar is collapsed**: the collapsed state is carried by the host's own icon control, and the plugin no longer paints a hover plate there.
 
 ### Removals
 
-- **Remove the plugin's Ctrl+, shortcut hint**: the drawer's settings row stays (a click still opens settings) but no longer shows the hint.
+- **Remove the settings row's Ctrl+, hint text**: the row stays and a click still opens settings.
+
+**Full Changelog**: [v0.5.2...v0.5.3](https://github.com/Nwflower/dsh-claude-style/compare/v0.5.2...v0.5.3)
 
 ## [0.5.2] - 2026-09-23
 
