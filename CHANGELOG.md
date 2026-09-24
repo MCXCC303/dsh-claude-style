@@ -2,11 +2,11 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
-## [Unreleased]
+## [0.6.0] - 2026-09-24
 
-[中文](#cn-unreleased) | [English](#en-unreleased)
+[中文](#cn-0.6.0) | [English](#en-0.6.0)
 
-<h3 id="cn-unreleased">问题修复</h3>
+<h3 id="cn-0.6.0">问题修复</h3>
 
 - 修复 **会话切换或卸载时因移动 React 插槽节点导致浏览器卡死与 DOM 异常**：停止将 `conversation.composer.dock` 容器内的会话统计药丸与上下文计量器通过 DOM 操作移入工具栏行，改为纯样式定位覆盖，保留节点在 React 虚拟树中的原生父子归属，消除 `Node.removeChild: The node to be removed is not a child of this node` 抛错与死循环卡死。
 - 修复 **权限控件或会话统计出错时整个输入区样式被一并关闭**：出错只关掉权限控件本身，交还宿主的访问模式按钮、统计弹窗与统计行，输入区其余样式照常。
@@ -20,7 +20,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - **内部结构整理，行为无变化**：输入区的布局工作收进独立的 composer 特性，推理强度滑块的点阵与账号行各自拆成独立碎片，重复的宿主查询与残留节点清理合并成共用函数；调度器不再点名具体特性。
 - **回归脚本共用一套无头浏览器启动**：smoke / probe / probe-timing / shoot 的浏览器配置目录改放 `.debug/`，调试端口由浏览器自选，`--cdp-port` 参数取消；probe 打开已有会话，跳过「新会话」。
 
-<h3 id="en-unreleased">Bug Fixes</h3>
+<h3 id="en-0.6.0">Bug Fixes</h3>
 
 - Fix **browser freezes and DOM exceptions during session switching or unmounting caused by moving React slot nodes**: stop moving the session stats pills and context meter out of the `conversation.composer.dock` container via DOM manipulation into the toolbar row; position them via CSS overlay instead, preserving native parent-child relationships in the React virtual tree and eliminating `Node.removeChild: The node to be removed is not a child of this node` crashes and freeze loops.
 - Fix **the whole composer restyle switching off when the permission control or the session stats fail**: a failure now switches off only the permission control, which hands back the host's access-mode button, statistics dialogs and statistics row, while the rest of the composer keeps its styling.
@@ -33,6 +33,8 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 - **Internal restructuring, no behavior change**: the composer's layout work moves into a composer feature of its own, the reasoning-effort slider's dot matrix and the account rows move into fragments of their own, and repeated host lookups and leftover-node sweeps merge into shared helpers; the scheduler no longer names individual features.
 - **One headless-browser launcher for the regression scripts**: smoke / probe / probe-timing / shoot keep the browser profile under `.debug/` and let the browser pick its own debugging port (the `--cdp-port` option is gone); probe opens an existing session and skips "New session".
+
+**Full Changelog**: [v0.5.3...v0.6.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.5.3...v0.6.0)
 
 ## [0.5.3] - 2026-09-23
 
