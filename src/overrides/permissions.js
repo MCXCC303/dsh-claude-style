@@ -6,6 +6,134 @@
       var permPopover = null
       var permHoverIntent = null
 
+      /**
+       * Whether the host's permission catalog carries the live Auto review
+       * preset (`auto`, registered by the auto-review plugin): true or false
+       * once a catalog read settled, null until then. While unknown the rows
+       * stay hidden, the way the shipped picker renders nothing before its
+       * first catalog read.
+       */
+      var autoPresetLive = null
+      /** The first catalog failure; thrown on the next sync to retire the feature. */
+      var autoPresetError = null
+      var catalogFiber = null
+      var catalogChangedDisposer = null
+
+      /** The Auto review rows are only offered while the host's catalog carries the preset. */
+      function rowVisible(preset) {
+        return preset !== AUTO_REVIEW_PRESET || autoPresetLive === true
+      }
+
+      /**
+       * Mirror the availability onto a row as data-hidden; the stylesheet turns
+       * that into display:none (an inline style would lose to the popover
+       * item's own `display: flex !important`).
+       */
+      function syncRowVisibility(row, preset) {
+        if (rowVisible(preset)) {
+          if (row.hasAttribute('data-hidden')) row.removeAttribute('data-hidden')
+        } else if (!row.hasAttribute('data-hidden')) {
+          row.setAttribute('data-hidden', '')
+        }
+      }
+
+      /**
+       * Read the host's permission catalog and record whether it carries the
+       * live Auto review preset. The shipped picker builds its rows from the
+       * same catalog, so it is the authority on what is switchable. A rejected
+       * read retries like the account profile's reads (the client connection
+       * may still be coming up at install); once the retries are exhausted the
+       * failure is remembered and thrown on the next sync, which retires this
+       * feature and hands the shipped access button back (D12).
+       */
+      var AUTO_PRESET_RETRY_MS = [1000, 5000]
+      var autoPresetRetries = 0
+      var autoPresetRead = 0
+      var autoPresetRetry = null
+
+      /** Invalidate the read in flight and drop any retry still waiting. */
+      function dropAutoPresetRead() {
+        autoPresetRead++
+        if (autoPresetRetry !== null) {
+          clearTimeout(autoPresetRetry)
+          autoPresetRetry = null
+        }
+      }
+
+      function probeAutoPreset() {
+        var namespace = null
+        try { namespace = ctx.get('remote.permissionPresets') } catch (error) { namespace = null }
+        if (namespace === null || namespace === void 0 || typeof namespace.catalog !== 'function') {
+          if (typeof ctx.inject !== 'function') {
+            autoPresetError = new Error('permission: the host exposes no remote.permissionPresets catalog')
+            ui.schedule()
+          }
+          return
+        }
+        dropAutoPresetRead()
+        var read = autoPresetRead
+        namespace.catalog().then(function (result) {
+          if (read !== autoPresetRead) return
+          if (result === null || typeof result !== 'object' || result.ok !== true ||
+              result.value === null || typeof result.value !== 'object' ||
+              !Array.isArray(result.value.options)) {
+            autoPresetError = new Error('permission: unexpected permissionPresets catalog shape')
+            ui.schedule()
+            return
+          }
+          autoPresetRetries = 0
+          autoPresetError = null
+          var live = false
+          for (var i = 0; i < result.value.options.length; i++) {
+            var option = result.value.options[i]
+            if (option !== null && typeof option === 'object' && option.value === AUTO_REVIEW_PRESET) {
+              live = true
+              break
+            }
+          }
+          autoPresetLive = live
+          ui.schedule()
+        }, function () {
+          if (read !== autoPresetRead) return
+          if (autoPresetRetries >= AUTO_PRESET_RETRY_MS.length) {
+            autoPresetError = new Error('permission: the permissionPresets catalog read failed ' + (AUTO_PRESET_RETRY_MS.length + 1) + ' times')
+            ui.schedule()
+            return
+          }
+          autoPresetRetry = setTimeout(function () {
+            autoPresetRetry = null
+            probeAutoPreset()
+          }, AUTO_PRESET_RETRY_MS[autoPresetRetries++])
+        })
+      }
+
+      /**
+       * The namespace may register after this plugin (the host registers each
+       * remote namespace as its package loads), so wait for it the way the
+       * account row waits for remote.account; a host without inject gets one
+       * read now. The catalog-changed event re-reads when the auto-review
+       * integration is registered or dropped while the page stays open.
+       */
+      function startAutoPresetProbe() {
+        if (typeof ctx.inject === 'function') {
+          catalogFiber = ctx.inject(['remote.permissionPresets'], function (scope) {
+            scope.effect(function () {
+              probeAutoPreset()
+              return function () {}
+            }, 'dsh-claude-style: permission catalog')
+          })
+        } else {
+          probeAutoPreset()
+        }
+        var remoteRoot = null
+        try { remoteRoot = ctx.get('remote') } catch (error) { remoteRoot = null }
+        if (remoteRoot !== null && remoteRoot !== void 0 && typeof remoteRoot.$on === 'function') {
+          catalogChangedDisposer = remoteRoot.$on('permission-presets/catalog-changed', function () {
+            probeAutoPreset()
+          })
+        }
+      }
+
       function buildSegments(onPick) {
         var group = document.createElement('div')
         group.className = SEGMENTS_CLASS
@@ -174,7 +302,9 @@
 
       function updatePermState(preset) {
         if (!permLabel || !permPopover) return
-        var matchedLabel = 'Accept edits'
+        // A preset our option list does not carry (the host's `custom`, or a
+        // row this host's catalog does not offer) shows its machine value.
+        var matchedLabel = preset === null ? 'Accept edits' : preset
         for (var i = 0; i < PERMISSION_OPTIONS.length; i++) {
           if (PERMISSION_OPTIONS[i].preset === preset) {
             matchedLabel = PERMISSION_OPTIONS[i].label
@@ -189,7 +319,8 @@
         var items = permPopover.querySelectorAll('[data-preset]')
         for (var j = 0; j < items.length; j++) {
           var it = items[j]
-          var isCurrent = it.getAttribute('data-preset') === preset
+          var rowPreset = it.getAttribute('data-preset')
+          var isCurrent = rowPreset === preset
           var check = it.querySelector('.dsh-claude-perm-check')
           if (check) {
             check.style.display = isCurrent ? 'inline' : 'none'
@@ -199,6 +330,7 @@
           } else {
             it.removeAttribute('data-active')
           }
+          syncRowVisibility(it, rowPreset)
         }
       }
 
@@ -210,29 +342,42 @@
       }
 
       /**
-       * Drive the shipped access menu to its full-access row, so the switch
-       * runs through the shipped risk-confirmation dialog rather than a
+       * Drive the shipped access menu to its risk-gated row (Full access or Auto review),
+       * so the switch runs through the shipped risk-confirmation dialog rather than a
        * skin-owned prompt. The trigger is hidden by this skin but still in
        * the tree, so a synthetic click still opens the menu; the row is then
        * picked by its label. A plain confirm stands in only when that menu
        * cannot be reached, which keeps the switch behind an explicit
        * acknowledgement either way.
        */
-      function openShippedGate() {
+      var gateInFlight = false
+
+      function openShippedGate(preset) {
+        if (gateInFlight) return
+        var isAuto = preset === AUTO_REVIEW_PRESET
+        var targetLabels = isAuto ? AUTO_REVIEW_LABELS : FULL_ACCESS_LABELS
+        var prompt = isAuto ? AUTO_REVIEW_PROMPT : GATED_PROMPT
         var trigger = findAccessTrigger()
         if (trigger === null) {
-          if (window.confirm(GATED_PROMPT)) submitPreset(GATED_PRESET)
+          if (window.confirm(prompt)) submitPreset(preset)
           return
         }
+        gateInFlight = true
         trigger.click()
         var attempts = 0
         function seek() {
-          var items = document.querySelectorAll('[role="menu"] button[role="menuitem"]')
+          // The skin's own popover is itself a role=menu whose row texts start
+          // with the same labels, so it must stay out of this search — matching
+          // it would click back into pick() and toggle the shipped menu every
+          // frame. The shipped Auto review row concatenates its EXP badge into
+          // the text ("Auto reviewEXP"), so the label matches as a prefix.
+          var items = document.querySelectorAll('[role="menu"]:not(.dsh-claude-perm-popover) button[role="menuitem"]')
           for (var i = 0; i < items.length; i++) {
             var text = (items[i].textContent || '').trim()
-            for (var j = 0; j < FULL_ACCESS_LABELS.length; j++) {
-              if (text === FULL_ACCESS_LABELS[j]) {
+            for (var j = 0; j < targetLabels.length; j++) {
+              if (text.indexOf(targetLabels[j]) === 0) {
                 items[i].click()
+                gateInFlight = false
                 return
               }
             }
@@ -242,8 +387,9 @@
             requestAnimationFrame(seek)
             return
           }
+          gateInFlight = false
           trigger.click()
-          if (window.confirm(GATED_PROMPT)) submitPreset(GATED_PRESET)
+          if (window.confirm(prompt)) submitPreset(preset)
         }
         requestAnimationFrame(seek)
       }
@@ -252,8 +398,8 @@
         var session = currentSession(ctx)
         if (session === null || preset === null) return
         if (preset === currentPreset(session)) return
-        if (preset === GATED_PRESET) {
-          openShippedGate()
+        if (preset === GATED_PRESET || preset === AUTO_REVIEW_PRESET) {
+          openShippedGate(preset)
           return
         }
         submitPreset(preset)
@@ -318,6 +464,7 @@
           }
           for (var j = 0; j < segments.children.length; j++) {
             var item = segments.children[j]
+            syncRowVisibility(item, item.getAttribute('data-preset'))
             if (item.getAttribute('data-preset') === preset) {
               item.setAttribute('data-active', '')
               item.setAttribute('aria-checked', 'true')
@@ -357,6 +504,7 @@
 
       ui.permissions = {
         sync: function () {
+          if (autoPresetError !== null) throw autoPresetError
           stats.sync()
           syncSegments()
         },
@@ -374,10 +522,20 @@
       // The composer restyle hides the host's access button and statistics
       // dialogs only while this says their replacement is installed.
       document.body.setAttribute(PERMISSIONS_ATTR, '')
+      startAutoPresetProbe()
 
       return function () {
         stats.teardown()
         if (permHoverIntent) permHoverIntent.cancel()
+        dropAutoPresetRead()
+        if (catalogFiber !== null && typeof catalogFiber.dispose === 'function') {
+          try { catalogFiber.dispose() } catch (error) { /* the fiber may already be gone */ }
+          catalogFiber = null
+        }
+        if (catalogChangedDisposer !== null) {
+          catalogChangedDisposer()
+          catalogChangedDisposer = null
+        }
         if (permDocPointerListener) {
           document.removeEventListener('pointerdown', permDocPointerListener)
           permDocPointerListener = null
@@ -389,6 +547,7 @@
         }
         removeStrayNodes(document, '.' + SEGMENTS_CLASS + '[data-composer-segments], .dsh-claude-perm-container', [])
         segments = null
+        gateInFlight = false
         if (permPopover !== null && permPopover.parentElement !== null) permPopover.parentElement.removeChild(permPopover)
         permPopover = null
         permBtn = null

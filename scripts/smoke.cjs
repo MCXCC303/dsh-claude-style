@@ -344,6 +344,29 @@ const STAND_IN = `(function () {
       stream[Symbol.asyncIterator] = function () { return accountFrames() }
       return stream
     },
+    $on: function () { return function () {} },
+  }
+  // The host's permission catalog: the configured presets, plus the live Auto
+  // review preset only while the auto-review integration is registered. The
+  // no-auto-review case models the plugin being disabled.
+  var configuredPresetOptions = [
+    { value: 'read-only', name: 'Read Only', description: 'read only' },
+    { value: 'workspace-write', name: 'Workspace Write', description: 'workspace write' },
+    { value: 'danger-full-access', name: 'Full access', description: 'full access' },
+  ]
+  var permissionPresets = {
+    catalog: function () {
+      return Promise.resolve({
+        ok: true,
+        value: {
+          options: CASE === 'no-auto-review'
+            ? configuredPresetOptions
+            : configuredPresetOptions.concat([{ value: 'auto', name: 'Auto review' }]),
+          defaultOptions: configuredPresetOptions,
+          defaultPreset: 'workspace-write',
+        },
+      })
+    },
   }
   // Host API drift at sync time: a session list that throws, which only the
   // permission control reads on every pass.
@@ -362,6 +385,7 @@ const STAND_IN = `(function () {
     get: function (name) {
       if (name === 'configForms') return forms
       if (name === 'remote.account') return account
+      if (name === 'remote.permissionPresets') return permissionPresets
       if (name === 'remote') return CASE === 'desktop' ? remote : undefined
       if (name === 'sessions') return sessions
       return undefined
@@ -582,6 +606,15 @@ const PROBE = `(function () {
     // it while installed, and hands it back when switched off.
     var hostAccess = document.querySelector('button[aria-label^="Access mode"]')
     r.hostAccessVisible = hostAccess !== null && getComputedStyle(hostAccess).display !== 'none'
+    // The Auto review rows follow the host's permission catalog: hidden while
+    // the catalog does not carry the preset, offered while it does.
+    var permAutoPopoverRow = document.querySelector('.dsh-claude-perm-popover [data-preset="auto"]')
+    var permAutoSegment = document.querySelector('.dsh-claude-segment[data-preset="auto"]')
+    r.permAutoRowDisplay = permAutoPopoverRow !== null ? getComputedStyle(permAutoPopoverRow).display : null
+    r.permAutoSegmentDisplay = permAutoSegment !== null ? getComputedStyle(permAutoSegment).display : null
+    r.permRows = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-perm-popover [data-preset]'), function (it) {
+      return { preset: it.getAttribute('data-preset'), display: getComputedStyle(it).display }
+    })
     // The host's own account row, when the host has one: the skin marks it and
     // repaints it as a Claude row, so the teardown has to hand it back exactly as
     // the host rendered it (D12).
@@ -720,6 +753,9 @@ const CASES = {
     check('Enter on an open composer menu reaches the host', same(r.keys, ['host picked the menu item']), JSON.stringify(r.keys))
     check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
       JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
+    check('the Auto review rows are offered while the catalog carries the preset',
+      r.permAutoRowDisplay !== null && r.permAutoRowDisplay !== 'none',
+      JSON.stringify({ popoverRow: r.permAutoRowDisplay, rows: r.permRows }))
     commonChecks(r)
   },
   'stats-compact'(r) {
@@ -756,6 +792,20 @@ const CASES = {
     check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))
     check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
     check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    commonChecks(r)
+  },
+  'no-auto-review'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
+      JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
+    check('the Auto review row is hidden while the catalog lacks the preset',
+      r.permAutoRowDisplay === 'none',
+      JSON.stringify({ popoverRow: r.permAutoRowDisplay, rows: r.permRows }))
+    check('the other permission rows stay offered',
+      Array.isArray(r.permRows) && r.permRows.length === 4 &&
+        r.permRows.every(function (row) { return row.preset === 'auto' ? row.display === 'none' : row.display !== 'none' }),
+      JSON.stringify(r.permRows))
     commonChecks(r)
   },
   desktop(r) {
