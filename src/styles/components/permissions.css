@@ -1,9 +1,10 @@
 /* --- 2.4 Custom Components (Segments & Account Popover) --- */
 /* ---------- Claude Code layout: permission segments ---------- */
 /* The shipped access control is one popup-select button; it is replaced by
-   a Read | Edit | Auto segmented control over the same three presets. */
-body[data-dsh-claude-style][data-dsh-claude-composer-active] button[aria-label^="访问模式"],
-body[data-dsh-claude-style][data-dsh-claude-composer-active] button[aria-label^="Access mode"] {
+   a Read | Edit | Auto segmented control over the same three presets — for
+   as long as the permission control is installed to stand in for it. */
+body[data-dsh-claude-style][data-dsh-claude-composer-active][%%PERMISSIONS_ATTR%%] button[aria-label^="访问模式"],
+body[data-dsh-claude-style][data-dsh-claude-composer-active][%%PERMISSIONS_ATTR%%] button[aria-label^="Access mode"] {
   display: none !important;
 }
 

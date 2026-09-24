@@ -11,16 +11,19 @@
      *     landed inside the feature's own DOM. A press the feature does not own
      *     closes it through `close('outside')`.
      * @property {Function} [onPointerDown] `onPointerDown(target)`: every
-     *     pointer press, owned or not. settingsNav uses this because its class
-     *     changes are outside the observer's attributeFilter, so no pass fires.
+     *     pointer press, owned or not. The composer focuses its editor from
+     *     here; settingsNav uses it because its class changes are outside the
+     *     observer's attributeFilter, so no pass fires.
      * @property {Function} [close] `close(reason)`: `'outside'` (press
      *     outside), `'escape'` (Esc), or `'composer'` (focus moved into the
      *     composer). Features ignore the reasons they do not act on, so each
      *     keeps its exact shipped dismiss routes.
      * @property {Function} [onInput] `onInput(target)`: an input or
      *     compositionend event whose target is inside the composer input.
-     * @property {Function} [reposition] `reposition()`: a viewport scroll or
-     *     resize. The feature checks whether it is open.
+     * @property {Function} [reposition] `reposition(reason)`: `'viewport'` (a
+     *     viewport scroll or resize) or `'composer'` (the composer card changed
+     *     size). A popover checks whether it is open; the composer keeps the
+     *     transcript at its end on a card change.
      * @property {Function} [onCopyChange] `onCopyChange()`: the locale, the
      *     preferences or the model copy changed.
      * @property {Function} [onKey] `onKey(event) → boolean`: a keydown, after
@@ -28,9 +31,10 @@
      *     scheduler's unconditional Ctrl+, preventDefault.
      *
      * Cross-feature reads outside the scheduler stay direct handle reads:
-     *   effort → model.{effort, pickEffort, seat, settled, close}
-     *   model → effort.close, copy.isComposerActive
-     *   heroMenu, permissions → copy.*
+     *   copy, permissions → composer.{isHero, isActive}
+     *   heroMenu → composer.isActive
+     *   effort → model.{seat, trigger, effort, named, settled, pickEffort, close}
+     *   model → effort.close, composer.isActive
      *   quickProviders → model.{providers, onProviders}
      *   footer → ban.open
      */
@@ -93,16 +97,6 @@
         // stole all of that — Enter on an open menu sent the half-typed text.
       }
 
-      function onCardPointerDown(e) {
-        var card = e.target.closest && e.target.closest('[data-composer-card][data-composer-variant="inline"]')
-        if (!card) return
-        if (e.target.closest('button, [role="button"], [role="menu"], [role="radiogroup"], input, select')) return
-        var input = card.querySelector('[data-composer-input]')
-        if (input && document.activeElement !== input) {
-          input.focus()
-        }
-      }
-
       // Focus moving into the composer means the user is about to type: every
       // popover the skin keeps open around the card is in the way there, so each
       // feature's composer route runs, in feature order. `focusin` bubbles
@@ -135,19 +129,18 @@
       }
 
       document.addEventListener('pointerdown', onGlobalPointerDown)
-      document.addEventListener('pointerdown', onCardPointerDown)
       document.addEventListener('keydown', onGlobalKeyDown, true)
       document.addEventListener('input', onComposerInput, true)
       document.addEventListener('compositionend', onComposerInput, true)
       document.addEventListener('focusin', onComposerFocusIn, true)
 
       // Re-pin every feature that anchors to a moving target. The scheduler
-      // knows only the hook: a feature with a `reposition()` re-resolves its
-      // own anchor (and checks whether it is open).
-      function repositionFeatures() {
+      // knows only the hook: a feature with a `reposition(reason)` re-resolves
+      // its own anchor (and checks whether it is open).
+      function repositionFeatures(reason) {
         for (var i = 0; i < HOOK_FEATURES.length; i++) {
           var handle = ui[HOOK_FEATURES[i]]
-          if (handle && typeof handle.reposition === 'function') handle.reposition()
+          if (handle && typeof handle.reposition === 'function') handle.reposition(reason)
         }
       }
 
@@ -155,7 +148,7 @@
       // the conversation's own auto-stick) and resizes move the anchor, so
       // whichever is open must re-resolve it in the same frame as the reflow.
       function onFixedPopoverViewportChange() {
-        repositionFeatures()
+        repositionFeatures('viewport')
       }
       window.addEventListener('resize', onFixedPopoverViewportChange)
       window.addEventListener('scroll', onFixedPopoverViewportChange, true)
@@ -208,17 +201,10 @@
       var observedCard = null
       if (typeof ResizeObserver !== 'undefined') {
         composerCardObserver = new ResizeObserver(function () {
-          var scroller = document.querySelector('[data-conversation-scroll], [class*="scrollBody"]')
-          if (scroller) {
-            var dist = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
-            if (dist < 150) {
-              scroller.scrollTop = scroller.scrollHeight
-            }
-          }
           // The card resizing moves the anchors pinned to it (the rail toggle,
           // a container width change) with no window resize: re-pin in the same
           // frame, or a JS-pinned control trails the ones CSS just reflowed.
-          repositionFeatures()
+          repositionFeatures('composer')
         })
       }
 
@@ -291,12 +277,11 @@
       })
       schedule()
 
-      // The hero greeting follows the clock: re-apply it every minute so the
-      // line rolls over on the hour while the app stays open. rewriteHeadline
-      // skips identical text, so this cannot feed the observer.
-      var greetingTimer = setInterval(function () {
-        if (ui.copy) ui.copy.syncGreeting()
-      }, 60000)
+      // Copy that follows the clock (the hero greeting rolls over on the hour)
+      // has no DOM change to wake a pass, so the clock runs one every minute
+      // while the app stays open. The syncs skip identical writes, so this
+      // cannot feed the observer.
+      var clockTimer = setInterval(schedule, 60000)
 
       return function () {
         // A pass already requested would run against torn-down features and
@@ -307,8 +292,8 @@
         stopped = true
         if (scheduled) cancelAnimationFrame(pendingFrame)
         scheduled = false
-        clearInterval(greetingTimer)
-        greetingTimer = null
+        clearInterval(clockTimer)
+        clockTimer = null
         window.removeEventListener('resize', onFixedPopoverViewportChange)
         window.removeEventListener('scroll', onFixedPopoverViewportChange, true)
         if (localeUnsubscribe !== null) {
@@ -334,25 +319,9 @@
           observedCard = null
         }
         document.removeEventListener('pointerdown', onGlobalPointerDown)
-        document.removeEventListener('pointerdown', onCardPointerDown)
         document.removeEventListener('keydown', onGlobalKeyDown, true)
         document.removeEventListener('input', onComposerInput, true)
         document.removeEventListener('compositionend', onComposerInput, true)
         document.removeEventListener('focusin', onComposerFocusIn, true)
-        // Safety-net DOM sweep. Feature teardowns run after this and tolerate
-        // nodes already being detached.
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-account-inject, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, .dsh-claude-ban, [data-dsh-synthetic-placeholder]')
-        for (var li = 0; li < leftoverItems.length; li++) {
-          if (leftoverItems[li].parentElement) {
-            leftoverItems[li].parentElement.removeChild(leftoverItems[li])
-          }
-        }
-        // Un-hide host footer controls the popover redirection had hidden.
-        var footerMarked = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay]')
-        for (var fm = 0; fm < footerMarked.length; fm++) {
-          footerMarked[fm].removeAttribute('data-dsh-claude-footer-entry')
-          footerMarked[fm].removeAttribute('data-dsh-claude-footer-hidden')
-          footerMarked[fm].removeAttribute('data-dsh-claude-footer-overlay')
-        }
       }
     }

@@ -9,18 +9,28 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 <h3 id="cn-unreleased">问题修复</h3>
 
 - 修复 **会话切换或卸载时因移动 React 插槽节点导致浏览器卡死与 DOM 异常**：停止将 `conversation.composer.dock` 容器内的会话统计药丸与上下文计量器通过 DOM 操作移入工具栏行，改为纯样式定位覆盖，保留节点在 React 虚拟树中的原生父子归属，消除 `Node.removeChild: The node to be removed is not a child of this node` 抛错与死循环卡死。
+- 修复 **权限控件或会话统计出错时整个输入区样式被一并关闭**：出错只关掉权限控件本身，交还宿主的访问模式按钮、统计弹窗与统计行，输入区其余样式照常。
 
 ### 移除
 
 - **移除 0.1.5 及更早宿主的适配**：偏好读写只走宿主官方的 `configForms` 表单，删掉插件自建的 `/prefs` 路由；最低宿主版本提高到 0.1.7。
 
+### 其他变更
+
+- **内部结构整理，行为无变化**：输入区的布局工作收进独立的 composer 特性，推理强度滑块的点阵与账号行各自拆成独立碎片，重复的宿主查询与残留节点清理合并成共用函数；调度器不再点名具体特性。
+
 <h3 id="en-unreleased">Bug Fixes</h3>
 
 - Fix **browser freezes and DOM exceptions during session switching or unmounting caused by moving React slot nodes**: stop moving the session stats pills and context meter out of the `conversation.composer.dock` container via DOM manipulation into the toolbar row; position them via CSS overlay instead, preserving native parent-child relationships in the React virtual tree and eliminating `Node.removeChild: The node to be removed is not a child of this node` crashes and freeze loops.
+- Fix **the whole composer restyle switching off when the permission control or the session stats fail**: a failure now switches off only the permission control, which hands back the host's access-mode button, statistics dialogs and statistics row, while the rest of the composer keeps its styling.
 
 ### Removals
 
 - **Remove the adaptation for hosts 0.1.5 and earlier**: preference reads and writes go only through the host's `configForms` form, dropping the plugin's own `/prefs` route; the minimum host version rises to 0.1.7.
+
+### Chores
+
+- **Internal restructuring, no behavior change**: the composer's layout work moves into a composer feature of its own, the reasoning-effort slider's dot matrix and the account rows move into fragments of their own, and repeated host lookups and leftover-node sweeps merge into shared helpers; the scheduler no longer names individual features.
 
 ## [0.5.3] - 2026-09-23
 

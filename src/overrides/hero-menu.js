@@ -94,7 +94,7 @@
       /** The `all` scope only, and only while the composer restyle is in play. */
       function hoverEnabled() {
         return readPrefs().autoPopover === AUTO_POPOVER_ALL &&
-               ui.copy !== undefined && ui.copy.isComposerActive()
+               ui.composer !== undefined && ui.composer.isActive()
       }
 
       function closestWithin(target, selector) {

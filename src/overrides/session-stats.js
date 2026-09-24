@@ -5,9 +5,7 @@
      * Split out of installPermissions (src/overrides/permissions.js); this
      * fragment is the stats half of that feature. It takes no options: the card
      * reads no cross-feature handle — its only external reads are module-level
-     * (readPrefs, AUTO_POPOVER_ALL, POPOVER_CLOSE_DELAY). The ui.copy reads that
-     * move the pills live in the menu half (mergeStatsIntoRow /
-     * mergeContextMeterIntoRow) and stay in installPermissions.
+     * (readPrefs, AUTO_POPOVER_ALL, POPOVER_CLOSE_DELAY, removeStrayNodes).
      *
      * @returns { sync, close, teardown }.
      */
@@ -345,9 +343,14 @@
                 }
                 if (statsPopover !== null && statsPopover.parentElement !== null) statsPopover.parentElement.removeChild(statsPopover)
                 statsPopover = null
-                // Hand the host node back unmarked: the mode attribute is ours.
+                // Hand the host node back unmarked: the mode attribute and the
+                // sentence variables are ours.
                 var root = statsRoot()
-                if (root !== null) root.removeAttribute(STATS_MODE_ATTR)
+                if (root !== null) {
+                    root.removeAttribute(STATS_MODE_ATTR)
+                    root.style.removeProperty('--dsh-stats-time')
+                    root.style.removeProperty('--dsh-stats-usage')
+                }
             }
         }
     }

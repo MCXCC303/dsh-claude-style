@@ -74,6 +74,7 @@ const FRAGMENTS = [
   'context/i18n.js',
   'overrides/popover-utils.js',
   'overrides/selection.js',
+  'overrides/composer.js',
   'overrides/copy.js',
   'overrides/session-stats.js',
   'overrides/permissions.js',
@@ -166,7 +167,7 @@ function loadTokens() {
   const factory = new Function(`
     ${constants}
     return {
-      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC, BRAND_CLAUDE, FOOTER_ATTR, COMPOSER_ATTR, ACCOUNT_MENU_ATTR, ACCOUNT_ARMED_ATTR, HERO_MENU_ATTR,
+      SANS, SERIF, PROSE, MONO, BRAND_ATTR, BRAND_ANTHROPIC, BRAND_CLAUDE, FOOTER_ATTR, COMPOSER_ATTR, PERMISSIONS_ATTR, ACCOUNT_MENU_ATTR, ACCOUNT_ARMED_ATTR, HERO_MENU_ATTR,
       // "a skin brand is selected": the brand preference's third value is
       // "off", which must match neither variant — so the shared rules that
       // hide the host's mark and paint the ::before are gated on this rather

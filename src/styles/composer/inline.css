@@ -157,8 +157,10 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
   overflow-x: auto !important;
   overflow-y: hidden !important;
 }
-/* Attachment thumbnail card: enlarged by 75% (~140px), matching non-focus border without shadow */
-body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) :is(._54WpYG_imageItem, [class*="imageItem"], [class*="thumbnail"], [class*="FileCard"], [class*="item"]:has(img), [class*="card"]:has(img), [class*="attachment"]:has(img)) {
+/* Attachment thumbnail card: enlarged by 75% (~140px), matching non-focus
+   border without shadow. The composer pass finds the tiles once per pass and
+   marks them data-dsh-claude-attachment (src/overrides/composer.js). */
+body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) [data-dsh-claude-attachment] {
   width: 140px !important;
   height: 140px !important;
   min-width: 140px !important;
@@ -174,10 +176,10 @@ body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="tr
   flex: 0 0 140px !important;
   box-sizing: border-box !important;
 }
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card] [class*="rail"]:not([class*="trailing"]) :is(._54WpYG_imageItem, [class*="imageItem"], [class*="thumbnail"], [class*="FileCard"], [class*="item"]:has(img), [class*="card"]:has(img), [class*="attachment"]:has(img)) {
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) [data-composer-card] [class*="rail"]:not([class*="trailing"]) [data-dsh-claude-attachment] {
   border-color: #e8e6dc !important;
 }
-body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) :is(._54WpYG_imageItem, [class*="imageItem"], [class*="thumbnail"], [class*="FileCard"], [class*="item"]:has(img), [class*="card"]:has(img), [class*="attachment"]:has(img)) :is(img, canvas, [class*="preview"], [class*="image"]) {
+body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) [data-dsh-claude-attachment] :is(img, canvas, [class*="preview"], [class*="image"]) {
   width: 100% !important;
   height: 100% !important;
   max-width: 100% !important;
@@ -186,7 +188,7 @@ body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="tr
   display: block !important;
   border-radius: 11px !important;
 }
-body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) :is(._54WpYG_imageItem, [class*="imageItem"], [class*="thumbnail"], [class*="FileCard"], [class*="item"]:has(img), [class*="card"]:has(img), [class*="attachment"]:has(img)) :is(button, [role="button"], [class*="close"], [class*="delete"], [class*="remove"], [class*="badge"], [class*="tag"]) {
+body[data-dsh-claude-style] [data-composer-card] [class*="rail"]:not([class*="trailing"]) [data-dsh-claude-attachment] :is(button, [role="button"], [class*="close"], [class*="delete"], [class*="remove"], [class*="badge"], [class*="tag"]) {
   position: absolute !important;
   z-index: 6 !important;
 }

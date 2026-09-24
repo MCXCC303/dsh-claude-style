@@ -535,6 +535,10 @@ const PROBE = `(function () {
     r.titlebarTabs = document.body.hasAttribute('data-dsh-titlebar-tabs')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
+    // The host's own access-mode button: the permission control stands in for
+    // it while installed, and hands it back when switched off.
+    var hostAccess = document.querySelector('button[aria-label^="Access mode"]')
+    r.hostAccessVisible = hostAccess !== null && getComputedStyle(hostAccess).display !== 'none'
     // The host's own account row, when the host has one: the skin marks it and
     // repaints it as a Claude row, so the teardown has to hand it back exactly as
     // the host rendered it (D12).
@@ -671,6 +675,8 @@ const CASES = {
         r.syntheticBox.popoverWidth === r.syntheticBox.buttonWidth,
       JSON.stringify(r.syntheticBox))
     check('Enter on an open composer menu reaches the host', same(r.keys, ['host picked the menu item']), JSON.stringify(r.keys))
+    check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
+      JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
     commonChecks(r)
   },
   'stats-compact'(r) {
@@ -704,7 +710,8 @@ const CASES = {
   'sync-fault'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('only the permission control was switched off', r.errors.length === 1 && r.errors[0].includes('"permissions"'), r.errors.join(' | '))
-    check("the host's own composer is handed back", !r.composerRestyle)
+    check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))
+    check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
     check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Ada', JSON.stringify(r.accountUser))
     commonChecks(r)
   },

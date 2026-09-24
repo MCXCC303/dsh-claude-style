@@ -189,6 +189,14 @@
     /** Present while the composer restyle applies to the page currently shown. */
     var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
     /**
+     * Present while the permission control is installed. The composer restyle
+     * hides the host's access-mode button and its statistics dialogs because
+     * this feature replaces them, and those rules also require this attribute:
+     * a permission control that is switched off hands them back while the rest
+     * of the composer restyle keeps running.
+     */
+    var PERMISSIONS_ATTR = 'data-dsh-claude-permissions'
+    /**
      * Stamped on the host's own account menu card while it is open (Desktop
      * 0.1.7+). That card is the host's shared Menu portal and its class names
      * are hashed, so src/overrides/account/surface.js stamps this attribute and

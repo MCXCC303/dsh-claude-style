@@ -38,9 +38,10 @@
        * Switch one feature off for the rest of this generation: run its own
        * teardown, and give back the host surface it had taken over. The footer
        * takeover and the composer restyle HIDE host controls (their gates are
-       * body attributes the preferences and the permissions pass write), so with
-       * the feature gone they must stop hiding them. The scheduler calls this for
-       * a sync that keeps failing.
+       * body attributes the preferences and the composer pass write), so with
+       * the feature gone they must stop hiding them. The permission control's
+       * own hiding rules key on the attribute its teardown removes, so it needs
+       * no branch here. The scheduler calls this for a sync that keeps failing.
        *
        * `name` may be the install name or the handle name. The scheduler retires
        * a failing sync through the handle; a handle that differs from the install
@@ -61,7 +62,7 @@
           break
         }
         if (name === 'footer') retireFooterTakeover()
-        if (name === 'permissions') retireComposerRestyle()
+        if (name === 'composer') retireComposerRestyle()
       }
       ui.retire = retire
 
@@ -116,6 +117,7 @@
        */
       var FEATURES = [
         { name: 'selection', install: installSelectionFocus },
+        { name: 'composer', install: function () { return installComposer(ctx, ui) } }, // 输入区的布局：每轮先读 hero / 重绘状态，写形态、闸门、附件与上下文圆环
         { name: 'copy', install: function () { return installCopy(ctx, ui) } },
         { name: 'permissions', install: function () { return installPermissions(ctx, ui) } },
         { name: 'model', install: function () { return installModelPicker(ctx, ui) } },

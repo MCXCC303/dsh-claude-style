@@ -453,7 +453,7 @@
         // Two ways to be off: the composer restyle does not apply to this page, or
         // the picker preference is off. Both hand the host's own model seat and
         // menu back, so both run the same sweep.
-        if (!ui.copy.isComposerActive() || !readPrefs().modelPicker) {
+        if (!ui.composer.isActive() || !readPrefs().modelPicker) {
           dropModelControl()
           return
         }

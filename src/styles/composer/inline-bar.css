@@ -136,9 +136,11 @@ body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant=
 /* The host ships two pills (time / usage) with icons and its own spacing.
    We keep the two click targets but hide their internals and render one
    centered sentence from the CSS variables syncStatsSummary() writes. These
-   rules key off the host's detailed button structure, so they carry the mode
-   marker; the compact row gets its own block further down. */
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) {
+   rules key off the host's detailed button structure, so they carry the
+   detailed mode marker — which only the running stats card writes, so a card
+   that is switched off hands the pills back as the host drew them. The compact
+   row gets its own block further down. */
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] {
   gap: 0 !important;
   justify-content: center !important;
   font-family: var(--dsw-font-family) !important;
@@ -147,15 +149,15 @@ body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mod
   color: var(--dsw-alias-label-tertiary) !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) svg {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] svg {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button > span {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] button > span {
   display: none !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] button {
   padding: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -165,17 +167,17 @@ body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mod
 
 /* Let the first segment shrink and ellipsize (e.g. 20轮...), while the
    usage segment and the separator keep their width. */
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span {
   min-width: 0 !important;
   overflow: hidden !important;
 }
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:first-child {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span:first-child {
   flex: 0 1 auto !important;
 }
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:last-child {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span:last-child {
   flex: 0 0 auto !important;
 }
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] button {
   display: block !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -184,32 +186,32 @@ body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mod
   white-space: nowrap !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button:hover,
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) button[aria-expanded="true"] {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] button:hover,
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] button[aria-expanded="true"] {
   background: transparent !important;
   color: var(--dsw-alias-label-secondary) !important;
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:first-child button::after {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span:first-child button::after {
   content: var(--dsh-stats-time, '');
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span:last-child button::after {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span:last-child button::after {
   content: var(--dsh-stats-usage, '');
 }
 
-body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) > span + span::before {
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="detailed"] > span + span::before {
   content: ' · ';
   color: var(--dsw-alias-separator-primary);
 }
 
 /* The two buttons stay transparent; the hover plate belongs to the whole
    merged line so the stats area has one feedback surface. */
-body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) {
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-stats][data-dsh-claude-stats-mode="detailed"] {
   transition: background-color 0.12s ease;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]):hover {
+body[data-dsh-claude-style] [class*="composerStack"]:not([data-composer-variant="hero"]) [data-composer-stats][data-dsh-claude-stats-mode="detailed"]:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
   border-radius: 6px !important;
 }
@@ -264,9 +266,10 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] .dsh-claude-mod
 }
 
 /* The host renders two separate stat dialogs; hide them and use one custom
-   combined popover instead. */
-body[data-dsh-claude-style] [role="dialog"]:has([data-session-stats-details]),
-body[data-dsh-claude-style] [role="dialog"]:has([data-session-stats-usage]) {
+   combined popover instead — for as long as the permission control, which
+   owns that popover, is installed. */
+body[data-dsh-claude-style][%%PERMISSIONS_ATTR%%] [role="dialog"]:has([data-session-stats-details]),
+body[data-dsh-claude-style][%%PERMISSIONS_ATTR%%] [role="dialog"]:has([data-session-stats-usage]) {
   display: none !important;
 }
 

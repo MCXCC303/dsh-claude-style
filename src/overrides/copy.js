@@ -24,22 +24,9 @@
         }
       }
 
-      function isHeroView() {
-        var hasTurns = document.querySelector('[class*="turn"], [class*="message"], [data-turn], [data-message-id]') !== null
-        return !hasTurns && (document.querySelector('[class*="composerHero"], [data-phase="hero"]') !== null)
-      }
-
-      function isComposerActive() {
-        if (composerRestyleRetired) return false
-        var isHero = isHeroView()
-        var scope = readPrefs().composerScope
-        return scope === 'all' || (isHero ? scope === 'hero' : scope === 'conversation')
-      }
-
       function rewriteHint() {
-        if (!isComposerActive()) return
-        var isHero = document.querySelector('[class*="heroWorkspaceRow"], [class*="titleGroup"]') !== null
-        var targetHint = isHero ? COMPOSER_HINT : 'Type / for commands'
+        if (!ui.composer.isActive()) return
+        var targetHint = ui.composer.isHero() ? COMPOSER_HINT : 'Type / for commands'
         var hints = document.querySelectorAll('[data-composer-placeholder]')
         for (var i = 0; i < hints.length; i++) {
           var node = hints[i]
@@ -53,19 +40,14 @@
           }
           if (idle && text !== targetHint) node.textContent = targetHint
         }
-        syncAttachmentPlaceholder()
       }
 
       function syncAttachmentPlaceholder() {
-        if (!isComposerActive()) {
-          var synths = document.querySelectorAll('[data-dsh-synthetic-placeholder]')
-          for (var si = 0; si < synths.length; si++) {
-            if (synths[si].parentElement) synths[si].parentElement.removeChild(synths[si])
-          }
+        if (!ui.composer.isActive()) {
+          removeStrayNodes(document, '[data-dsh-synthetic-placeholder]', [])
           return
         }
-        var isHero = document.querySelector('[class*="heroWorkspaceRow"], [class*="titleGroup"]') !== null
-        var targetHint = isHero ? COMPOSER_HINT : 'Type / for commands'
+        var targetHint = ui.composer.isHero() ? COMPOSER_HINT : 'Type / for commands'
         var cards = document.querySelectorAll('[data-composer-card]')
         for (var ci = 0; ci < cards.length; ci++) {
           var card = cards[ci]
@@ -139,18 +121,19 @@
         sync: function () {
           rewriteHeadline()
           rewriteHint()
+          // Every pass, the restyle on or off: its off branch is what takes the
+          // skin's placeholders away again.
+          syncAttachmentPlaceholder()
           rewriteTurnStatus()
         },
-        syncGreeting: function () {
-          rewriteHeadline()
-        },
-        syncAttachmentPlaceholder: syncAttachmentPlaceholder,
         /** A composer input/compositionend event: refresh the placeholder. The
          * scheduler owns the [data-composer-input] filter. */
-        onInput: function () { syncAttachmentPlaceholder() },
-        isHeroView: isHeroView,
-        isComposerActive: isComposerActive
+        onInput: function () { syncAttachmentPlaceholder() }
       }
 
-      return function () {}
+      return function () {
+        // The placeholders the skin added stand in for the host's own, so they
+        // leave with it.
+        removeStrayNodes(document, '[data-dsh-synthetic-placeholder]', [])
+      }
     }
