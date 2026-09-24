@@ -141,15 +141,21 @@
       document.addEventListener('compositionend', onComposerInput, true)
       document.addEventListener('focusin', onComposerFocusIn, true)
 
-      // Fixed popovers are anchored to their trigger; scroll of the page (not
-      // the conversation's own auto-stick) and resizes move the anchor, so
-      // whichever is open must re-resolve it. Each feature checks whether it is
-      // open itself.
-      function onFixedPopoverViewportChange() {
+      // Re-pin every feature that anchors to a moving target. The scheduler
+      // knows only the hook: a feature with a `reposition()` re-resolves its
+      // own anchor (and checks whether it is open).
+      function repositionFeatures() {
         for (var i = 0; i < HOOK_FEATURES.length; i++) {
           var handle = ui[HOOK_FEATURES[i]]
           if (handle && typeof handle.reposition === 'function') handle.reposition()
         }
+      }
+
+      // Fixed popovers are anchored to their trigger; scroll of the page (not
+      // the conversation's own auto-stick) and resizes move the anchor, so
+      // whichever is open must re-resolve it in the same frame as the reflow.
+      function onFixedPopoverViewportChange() {
+        repositionFeatures()
       }
       window.addEventListener('resize', onFixedPopoverViewportChange)
       window.addEventListener('scroll', onFixedPopoverViewportChange, true)
@@ -209,6 +215,10 @@
               scroller.scrollTop = scroller.scrollHeight
             }
           }
+          // The card resizing moves the anchors pinned to it (the rail toggle,
+          // a container width change) with no window resize: re-pin in the same
+          // frame, or a JS-pinned control trails the ones CSS just reflowed.
+          repositionFeatures()
         })
       }
 

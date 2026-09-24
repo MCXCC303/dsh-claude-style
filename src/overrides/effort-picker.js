@@ -115,10 +115,13 @@
         // space: the row's 12px gap covers 12 of the needed width+2, the margin
         // covers the rest. Measured, not a magic number: the width follows the
         // current level's name.
+        // Show it BEFORE measuring: a trigger coming back from the hidden state
+        // (its seat returned) would otherwise read offsetWidth 0, reserve no
+        // room for that one pass and overlap the control that follows.
+        if (effortBtn.style.display !== 'inline-flex') effortBtn.style.display = 'inline-flex'
         var need = Math.max(0, effortBtn.offsetWidth - 6)
         if (modelBtn.style.marginRight !== need + 'px') modelBtn.style.marginRight = need + 'px'
         var shifted = modelBtn.getBoundingClientRect()
-        effortBtn.style.display = 'inline-flex'
         effortBtn.style.left = Math.round(shifted.right + 2) + 'px'
         effortBtn.style.top = Math.round(shifted.top + (shifted.height - effortBtn.offsetHeight) / 2) + 'px'
       }
@@ -189,10 +192,29 @@
         if (control.parentElement !== effortPop) effortPop.appendChild(control)
       }
 
+      /**
+       * Take the body-mounted trigger down with its seat. Nothing else removes
+       * it: it is not inside the composer, so when the seat slot goes away (the
+       * composer handed back, or another view — the plugins page — is up) it
+       * used to stay pinned on <body> and float over the page that came next.
+       * The model trigger's reserved margin goes back with it.
+       */
+      function hideEffortTrigger() {
+        if (effortBtn !== null && effortBtn.style.display !== 'none') effortBtn.style.display = 'none'
+        var modelBtn = document.querySelector('.dsh-claude-model-btn')
+        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
+        closeEffortPopover()
+      }
+
       /** Re-point the trigger and the slider at the seat in force (every pass). */
       function syncEffortControl() {
         var slot = seat()
-        if (slot === null) return
+        // No seat to sit beside, or no model trigger to attach to: the trigger
+        // comes down (see hideEffortTrigger).
+        if (slot === null || document.querySelector('.dsh-claude-model-btn') === null) {
+          hideEffortTrigger()
+          return
+        }
         // Never take the trigger away on an in-flight catalog: that is the
         // "selector crashed" report — a pick blanks the snapshot for seconds and
         // the trigger (with its open card) disappeared with it.
@@ -282,6 +304,17 @@
           closeEffortPopover()
         },
         owns: ownsEffort,
+        /**
+         * The trigger is JS-pinned beside the model trigger, so a viewport or
+         * composer-card change has to re-pin it in the SAME frame as the CSS
+         * reflow. The scheduler calls this on resize / scroll (and on a card
+         * resize); without it the pin waited for the next pass and visibly
+         * trailed the controls it sits between.
+         */
+        reposition: function () {
+          positionEffortTrigger()
+          positionEffortPopover()
+        },
         teardown: teardown,
       }
       return teardown

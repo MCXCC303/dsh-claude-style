@@ -351,7 +351,8 @@ body[data-dsh-claude-style] .dsh-claude-effort[data-empty] .dsh-claude-effort-va
 
 /* ---------- reasoning-effort trigger ---------- */
 /* Body-mounted (the seat slot is React-managed and crashed on a foreign node),
-   pinned beside the model trigger by view-tabs-style measurement on every pass. */
+   pinned beside the model trigger by measurement — every pass, and in the same
+   frame as a resize / scroll / card-resize through the handle's reposition(). */
 body[data-dsh-claude-style] .dsh-claude-effort-btn {
   position: fixed !important;
   display: inline-flex !important;
@@ -370,7 +371,10 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   font-weight: 500 !important;
   white-space: nowrap !important;
   cursor: pointer !important;
-  z-index: 10 !important;
+  /* Above the row's own layers (the card is 2, the stats sentence 3) and
+     nothing else: a page-level surface (the plugins page, a dialog) must be
+     free to cover it — and once the seat goes the trigger is hidden anyway. */
+  z-index: 4 !important;
   transition: background-color 0.12s ease, color 0.12s ease !important;
 }
 body[data-dsh-claude-style] .dsh-claude-effort-btn:hover {
