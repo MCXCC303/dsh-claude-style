@@ -1,6 +1,3 @@
-    /** The marker the stylesheet hangs the host account row's Claude shape on. */
-    var HOST_ROW_ATTR = 'data-dsh-claude-account-host-row'
-
     /**
      * The account area of the sidebar footer.
      *
@@ -13,6 +10,8 @@
      * and, on the self-built path only, the settings row — are shared.
      */
     function installAccountFooter(ctx, ui) {
+      /** The marker the stylesheet hangs the host account row's Claude shape on. */
+      var HOST_ROW_ATTR = 'data-dsh-claude-account-host-row'
       var profile = createAccountProfile(ctx, function () {
         if (typeof ui.schedule === 'function') ui.schedule()
       })
