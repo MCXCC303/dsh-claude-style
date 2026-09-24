@@ -447,6 +447,30 @@
         })
       }
 
+      /**
+       * Open the host's settings: its settings button where it has one, or else
+       * the 设置 item of its account menu — the desktop, where that menu is the
+       * settings launcher. The menu's rows carry no ids, so the item is found by
+       * the host's own label in its two locales. The drawer's settings row and
+       * Ctrl+, both come through here; "the first button in the settings slot"
+       * was the account trigger on the desktop, and Ctrl+, opened that menu.
+       */
+      var SETTINGS_LABEL = /^(设置|settings)$/i
+      function openHostSettings() {
+        closePopover()
+        var trigger = hostSettingsTrigger()
+        if (trigger !== null) {
+          trigger.click()
+          return
+        }
+        withHostAccountMenu(function (menu, menuItems) {
+          for (var k = 0; k < menuItems.length; k++) {
+            if (SETTINGS_LABEL.test((menuItems[k].textContent || '').trim())) { realClick(menuItems[k]); return true }
+          }
+          return false
+        })
+      }
+
       /** Read the host's items (once per account state) and re-render the rows. */
       function refreshAccountItems() {
         if (accountReading) return
@@ -631,9 +655,7 @@
 
           settingsItem.addEventListener('click', function (e) {
             e.stopPropagation()
-            closePopover()
-            var realTrigger = hostSettingsTrigger()
-            if (realTrigger) realTrigger.click()
+            openHostSettings()
           })
           popoverBody.appendChild(settingsItem)
         } else {
@@ -1302,6 +1324,7 @@
       ui.footer = {
         sync: syncAccountFooter,
         close: closePopover,
+        openSettings: openHostSettings,
         owns: function (target) {
           if (!target) return false
           return (accountBtn !== null && accountBtn.contains(target)) ||

@@ -40,11 +40,9 @@
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
           e.preventDefault()
-          var realTrigger = document.querySelector('[class*="footArea"] [class*="settingsArea"] button[aria-haspopup="dialog"]') ||
-                            document.querySelector('[class*="footArea"] [class*="settingsArea"] button')
-          if (realTrigger) {
-            realTrigger.click()
-          }
+          // The footer knows both ways in (see openHostSettings): "the first
+          // button in the settings slot" was the account trigger on the desktop.
+          if (ui.footer && typeof ui.footer.openSettings === 'function') ui.footer.openSettings()
         }
         // Enter is deliberately NOT handled here. The host's composer keymap (every
         // supported host, 0.1.5-rc.2 on) already sends on Enter, and first picks
