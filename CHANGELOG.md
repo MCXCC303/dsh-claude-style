@@ -1,322 +1,755 @@
 # Changelog
 
+All notable changes to `dsh-claude-style` are documented here, newest first.
+
 ## [Unreleased]
+
+[中文](#cn-unreleased) | [English](#en-unreleased)
+
+<h3 id="cn-unreleased">问题修复</h3>
+
+<h3 id="en-unreleased">Bug Fixes</h3>
 
 ## [0.5.2] - 2026-09-23
 
-### Added
-- **冒烟测试新增 `desktop` 桌面端页脚用例**：按 0.1.7 桌面端的真实页脚形状搭替身（账号菜单住在 `settings.launcher` 槽、设置区只剩一行 triggerRow，并补上 `ctx.inject` / `remote.$stream` / `remote.account.watch` 的替身实现）——这条路径此前完全没被覆盖。断言：宿主那一行被接管隐藏、抽屉把宿主菜单的 Settings / Feedback / Sign out 镜像出来而自己那行让位、从抽屉点设置与按 Ctrl+, 都打开宿主设置且不留下打开着的账号菜单、登出图标留在自己的图标位里、账号资料首帧只读一次且同状态重复帧不再读、抽屉开着时 Esc 与外部点击都收得起。
+[中文](#cn-0.5.2) | [English](#en-0.5.2)
 
-### Fixed
-- **切到插件页后档位触发器浮在页面上**：触发器挂在 `<body>` 上、`position: fixed`（宿主 React 插槽排斥外来节点），全靠每轮 pass 的定位逻辑照看；切到插件页时模型座位插槽随对话视图一起消失，`seat()` 返回 null 让同步**提前 return**——触发器没人收拾，就停在原地浮在插件列表上（z-index 还是 10，压得住页面）。现在座位或模型触发器不在时把触发器隐藏、把预留的右边距还回去并关掉卡片；z-index 也从 10 收到 4（只在合成器卡片 2 与统计句 3 之上，页面级浮层 / 对话框可以盖住它）。
-- **窗口宽度变化时档位触发器慢半拍**：它是 JS 钉在模型触发器旁边的，而重定位只发生在调度器 pass 里；窗口 resize 不产生 DOM 变动，于是其他控件随 CSS 实时重排、触发器要等下一次 pass 才跟上（卡片自身 resize，如拨侧栏导轨，同样如此）。现在 `ui.effort` 提供 `reposition()`，调度器在 resize / scroll 与合成器卡片 resize 时与 CSS 同一帧重钉；顺带把「先显示再量宽度」的顺序修好——触发器从隐藏状态回来时不会有一帧量到 0 宽、挤住后面的控件。
-- **按住滑块拖出卡片边界，卡片在按键还按着时就收起了**：滑块在到达自己的边缘时会先落定（旋钮归到最近档位），此后悬停关闭守卫看到「拖动结束」便放行——指针带着按下的按键越出卡片，卡片就当着用户的面收掉。现在守卫改看**物理按住**（pointerdown 到真正的按键弹起，弹起监听挂在 document 捕获阶段，不依赖 pointer capture 还在不在）；按住期间越界不收起，按键在卡片外弹起时才收起（以弹起坐标命中测试为准）。
-- **模型名、档位、上下文仪表 / 发送按钮之间的间距忽大忽小**：档位触发器挂在 body 上由 JS 逐帧钉位（宿主 React 插槽排斥外来节点），定位常数是「模型按钮右缘 +8px」加按钮自身 10px 左 padding，模型名与档位名隔了约 26px；为档位预留的右边距也比实际宽一截，把后面的控件推得更远。现在三个控件的间距对齐到这一行自己的节奏（宿主 trailing 组的 12px flex gap）：档位触发器贴在模型按钮右缘 +2px（模型 8px 右 padding + 档位 2px 左 padding，两段文本恰好 12px），预留边距收紧为「宽度 −6」，让下一个控件（仪表环内容离它的 pill 8px、发送图标离圆边 9px）与档位的文本间距也落在 12–15px 一带。换到无档位的模型、或特性退役时，预留的右边距一并撤掉，不再留下死空隙。
-- **桌面端按 Ctrl+, 弹出的是账号菜单，不是设置**：快捷键此前找「设置区里带 dialog 标记的按钮，没有就取第一个按钮」，而桌面端没有设置按钮，第一个按钮正是宿主账号菜单的触发器。现在快捷键与抽屉的设置行共用一个入口：有设置按钮就点它（Web 端）；没有就驱动宿主账号菜单、点它的「设置」项（桌面端——菜单行不带 id，按宿主两种语言的标签「设置 / Settings」认）。设置已开着时再按一次不会把它关掉。
-- **登录后账号抽屉里「退出登录」的图标跑到抽屉左上角**：宿主的登出图标是一个 16px 相对定位盒子里、绝对定位的 13.7px svg；抽屉只复制了 svg、没带那个盒子，它于是以抽屉本身为定位参照，落在抽屉左上角。现在抽屉的图标位自己就是定位参照，宿主图标也按宿主自己的尺寸绘制（封顶 16px），不再被统一放大到 16px。
-- **登录时账号资料请求被中止，昵称与头像要等下一轮轮询才出现**：账号行此前每 60 秒调一次 `getProfile()`，而宿主在凭据写入的那一刻会中止所有在途的资料请求（`[deepseek-account] request failed … aborted: true`）；这一次拿不到，就一直显示本地用户名，直到下一轮轮询。桌面端还有一层：账号服务比皮肤晚挂载，安装时那一次读取根本找不到服务，昵称从来都要等轮询第一跳（一分钟后）才出现——轮询把这件事掩盖了。现在用 `ctx.inject(['remote.account'])` 等服务就绪（与设置页等 `slots` 同一做法），并改为订阅宿主自己的账号界面读的那条账号状态流（`remote.$stream` + `remote.account.watch`，断线自动重连），**只在启动 / 热重载的首帧、登录（凭据写入）与登出时读取**；同一状态的重复帧、还在浏览器里的登录、失败的登录尝试都不发请求。一次读取没拿到答案（平台超时，或凭据在读取途中被换掉）会在 2 / 10 / 30 秒后重试，之后等下一次状态变化。登出直接回到本地用户名与星芒，不再请求。代价：在别处改了头像或昵称，要到下次启动、热重载或重新登录才会显示。顺带修掉从抽屉登出后的回调：它引用了两个不存在的变量（从归档代码复制来的，报错被 `catch` 吞掉），登出结果从没被用上。
-- **桌面端从账号抽屉打不开设置（`ReferenceError: footArea is not defined`）**：抽屉「设置」行的点击处理引用了一个只存在于别的函数里的 `footArea`；而且桌面端根本没有可点的设置按钮——宿主账号菜单占了设置入口的位置，设置只能从这个菜单进去。皮肤自带的设置行也因此找错了按钮：兜底「第一个不是菜单锚点的按钮」在桌面端是更新提示，于是这一行读作「Retry update」、点了会去重试更新。现在皮肤自带的设置行**只认宿主的设置按钮**（`aria-haspopup="dialog"`）；桌面端没有这个按钮，它就让位给镜像来的宿主「设置」行，点击走宿主菜单里它自己的那一项。驱动宿主菜单点完某项之后也不再补点一次触发器（宿主选中后自己会关菜单，补点会把它重新打开）。
-- **宿主自己的账号行叠在皮肤账号行上**：页脚接管本该把宿主设置区的那一行（桌面端是账号菜单加更新 / 连接提示，Web 端是设置按钮加连接提示）整行隐藏，但选择器写的是 `settingsArea > triggerRow`，而这一行实际渲染在 `sidebar.settings` 插槽锚点（`display: contents` 的 div）里面，子选择器从没命中过。它于是留在被压成 0 宽的设置区里，放不下的部分就画在皮肤账号行上面——桌面端最明显的是压在昵称上的「Retry update」胶囊。现在选择器穿过插槽锚点，整行隐藏；账号菜单与登录对话框走 portal、设置面板是这一行的兄弟节点，都不受影响。代价：接管开着时，宿主这一行里的连接 / 更新提示也一起隐藏（关掉设置里的「重绘设置弹层」即恢复宿主原样页脚）。
+<h3 id="cn-0.5.2">新增功能</h3>
 
-### Changed
-- **内部结构拆分，行为无变化**：超 750 行上限的碎片按 D13 约定拆开——`account-footer.js`（1357 → 编排 500 + `account/` 三工厂）、`model-picker.js`（910 → 632 + `model/` 目录与行构建）、`permissions.js`（875 → 600 + `session-stats.js`）、`model-picker.css`（767 → 283 + 共享 `popover.css` 与 `effort-picker.css`）、`inline.css`（847 → 503 + `inline-bar.css`）；调度器不再硬编码每个特性的触发调用，改为 `entry.js` 一张 FEATURES 表统一安装序与 pass 序，特性经句柄上的可选钩子（`sync` / `close(reason)` / `owns` / `onPointerDown` / `onInput` / `reposition` / `onCopyChange` / `onKey`）响应触发器，约定全文见 `docs/architecture.md` D13。
+- **冒烟测试新增 `desktop` 桌面端页脚用例**：覆盖 0.1.7 桌面端页脚接管、抽屉镜像与账号资料首帧读取。
+
+### 问题修复
+
+- 修复 **切到插件页后档位触发器浮在页面上**：座位消失时隐藏触发器并归还预留边距。
+- 修复 **窗口宽度变化时档位触发器慢半拍**：随 resize 与卡片尺寸变化和 CSS 同帧重定位。
+- 修复 **按住滑块拖出卡片边界时卡片提前收起**：悬停关闭改看物理按住，松开按键才收起。
+- 修复 **模型名、档位与后续控件间距忽大忽小**：统一到该行自身的 12px 节奏。
+- 修复 **桌面端 Ctrl+, 弹出账号菜单而非设置**：快捷键与抽屉设置行共用入口，改为驱动宿主菜单。
+- 修复 **账号抽屉的登出图标跑到左上角**：图标位自己作定位参照，按宿主尺寸绘制。
+- 修复 **登录时账号资料请求被中止**：等服务就绪并订阅账号状态流，只在首帧、登录与登出读取。
+- 修复 **桌面端从抽屉打不开设置**：设置行只认宿主设置按钮，桌面端让位给镜像的宿主设置行。
+- 修复 **宿主账号行叠在皮肤账号行上**：选择器穿过插槽锚点整行隐藏。
+
+### 其他变更
+
+- **内部结构拆分，行为无变化**：超限碎片按 D13 约定拆开，调度器改由 `entry.js` 的 FEATURES 表统一安装与 pass 序。
+
+<h3 id="en-0.5.2">New Features</h3>
+
+- **New `desktop` footer smoke-test case**: covers 0.1.7 desktop footer takeover, drawer mirroring and the first account-profile read.
+
+### Bug Fixes
+
+- Fix **the effort trigger lingering on the plugins page**: hide it with its seat and give the reserved margin back.
+- Fix **the effort trigger lagging on window resize**: reposition it in the same frame as CSS on resize and card-size changes.
+- Fix **the card closing while the slider is still held**: hover-close now tracks the physical press and closes only on release.
+- Fix **uneven spacing between model, effort and later controls**: unify them on the row's own 12px rhythm.
+- Fix **Ctrl+, opening the account menu instead of settings on desktop**: the shortcut and drawer row now share one entry that drives the host menu.
+- Fix **the sign-out icon landing in the drawer's top-left corner**: the icon slot is now the positioning context and draws at the host's size.
+- Fix **the account profile request being aborted at sign-in**: wait for the service and subscribe to the account state stream, reading only on first frame, sign-in and sign-out.
+- Fix **settings not opening from the drawer on desktop**: the settings row accepts only the host settings button and yields to the mirrored host row on desktop.
+- Fix **the host account row stacking over the skin's row**: the selector now reaches through the slot anchor and hides the whole row.
+
+### Chores
+
+- **Internal restructuring, no behavior change**: oversized fragments were split per D13, and the scheduler now installs and orders passes from a FEATURES table in `entry.js`.
+
+**Full Changelog**: [v0.5.1...v0.5.2](https://github.com/Nwflower/dsh-claude-style/compare/v0.5.1...v0.5.2)
 
 ## [0.5.1] - 2026-09-23
 
-### Added
-- **冒烟测试 `npm run smoke`（`scripts/smoke.cjs`）**：零依赖、不需要运行中的 dsh，直接检查构建产物。宿主半边：用假的 cordis 上下文驱动 `lib/index.js`，对私有路由发跨站页面、局域网、DNS 重绑定、浏览器同源、桌面壳转发几种请求，分别走宿主的 `requestRejection()` 与本地替身，核对拒绝与放行、415 / 413 / 400 与数组上限。浏览器半边：在无头 Chrome/Edge 里把 `lib/client.js` 装进一个替身宿主页面（模块加载器、ctx、带账号菜单与两个插件条目的侧栏页脚、按宿主键位处理回车的输入框），核对启动完整、空闲时 0 pass、设置 / 账号 / 插件来的字符串不按 markup 解析、回车交给宿主、宿主 API 出故障时只退役对应特性（安装期与同步期各一例）、teardown（包括 pass 正在排队时的 teardown）不留任何节点、标记、属性与样式表。它第一次跑就抓到了两个此前没人发现的问题：对话页权限按钮让调度器空转，以及 teardown 之后复活的那一轮 pass。
-- **账号行显示真实头像与昵称（桌面端登录）**：桌面端登录后，皮肤从官方 `remote.account.getProfile()` 取昵称（`value.name ?? contact`）与 `avatarUrl`，账号行改绘**正圆头像**（`border-radius: 50%`），照片加载失败时手绘星芒仍作为兜底显示；未登录 / 非桌面端 / 取数失败时保持原有的星芒与已存用户名。账号信息以 **60 秒轮询**保持新鲜（登录、登出、换头像无需刷新页面）。
-- **账号抽屉接管宿主账号菜单**：抽屉按宿主菜单**动态镜像**条目（顺序、文案、图标、禁用态一致），点击**直连官方行为**——设置走宿主设置入口、意见反馈打开官方问卷、退出登录调 `remote.account.signOut()`、登录走 `startSignIn`；未知条目回退为驱动宿主菜单。宿主自己的账号触发器以 `visibility: hidden` 隐藏（保留盒子供转发），不会出现在界面上。
+[中文](#cn-0.5.1) | [English](#en-0.5.1)
 
-### Fixed
-- **0.1.7 设置页选项能显示但存不进去**：浏览器 boot 给每个插件条目生成的是**随机 loader id**（`dsh-client-modules` 的 `create` 只传 `name`），而设置命名空间是本插件 profile 条目 id——此前直接拿 `ctx.fiber.entry.id` 当命名空间，`configForms.get(随机 id)` 绑到一个没人拥有的命名空间上：读停在默认值、写被宿主拒（`No configurable plugin entry`），且因为 `prefsForm` 非空，读路径连自建路由都不再走。现在命名空间从 `configForms` **已服务的名单**里按候选挑（客户端条目 id / 包名 `dsh-claude-style` / patch 声明的 `ui-skin-claude-style`），挑不到就不绑；官方表单没 ready 或被拒时，读 / 写都回落自建 `/dsh-claude-style/prefs` 路由。
-- **斜杠命令 / @ 提及菜单打开时，回车直接把半截文字发了出去**：皮肤在 `document` 的捕获阶段拦截回车、阻止传播并直接点「发送」，宿主输入框（Lexical）的回车处理因此根本收不到这一键——而正是它负责先选中打开菜单的高亮项、照顾输入法（含 Safari 在 `compositionend` 之后才到的那次回车）、忽略按住不放的连发，最后才发送。所有受支持的宿主（0.1.5-rc.2 起）本来就是回车发送，这段拦截没有任何增益，已删除。**实测**：在模拟宿主键位的输入框里对打开的菜单按回车，旧版点了「发送」，新版由宿主选中了菜单项。
-- **关掉插件或热重载后，皮肤又把自己画了回来**：调度器的 teardown 既不取消已经排上的那一帧 pass，也不拦之后的 `schedule()`（例如账号资料请求晚到时）。teardown 发生在 pass 排上之后——流式输出期间几乎每帧都是——这一轮 pass 就会对已拆掉的特性再跑一遍，把账号行、页脚标记、输入框的 body 属性重新建出来，而且再没有人会清理它们。**实测**（冒烟测试在有 pass 排队时 dispose）：teardown 之后又冒出 11–38 个皮肤节点。现在 teardown 取消排队中的那一帧，之后的 `schedule()` 一律不生效。
-- **一个特性出错，整张皮就半挂在页面上**：`apply()` 依次装 14 个特性，却在最后才把 teardown 交给宿主；调度器每轮 pass 也不逐个兜底——一个 sync 抛错，排在它后面的全部跳过，而且每轮如此。**实测**：宿主的 `remote.account.getProfile()` 返回非 Promise 时 `apply()` 中途抛错，样式表与 body 属性留在页面上、调度器没装上、teardown 没注册，关掉插件也清不掉。现在 teardown 最先注册，每个特性单独安装、单独同步：装不上或连续 3 轮同步失败的特性在控制台报一次、跑自己的 teardown 退役，其余照常工作；页脚接管与输入框重绘这两处会隐藏宿主控件的接管，在对应特性退役时把宿主原来的界面还回去；只有调度器本身装不上时才整体回滚。模型选择器的 teardown 此前只清变量、不撤 DOM，现在会真正交还宿主的模型座位。**实测**（无头 Chrome）：同样的 `getProfile()` 故障下其余特性照常、页脚回到宿主原样；permissions 的 sync 持续抛错时 3 轮后报一次、输入框重绘关闭；teardown 后页面上不留任何皮肤节点、属性或样式表。
-- **调度器在空闲时也每帧跑一轮 pass**：三处自持循环——① 账号抽屉每轮 pass 都把镜像的宿主菜单行删掉重建，哪怕内容没变、哪怕抽屉开着；② 页脚插件条目有两个以上时，镜像条目的排序按正序逐个插到「设置」行前，每插一个都落在已排好的后面，于是每轮都把每个条目挪一遍；③ 对话页（行内输入框）的权限按钮每轮 pass 都把同一段标签文字重写一遍——同值写 `textContent` 照样替换文本节点。前两处只在登录的桌面端或页脚插件较多时出现，第三处在任何一个打开的对话里都会出现（由新增的冒烟测试发现）。而 `<body>` 下的任何 DOM 变动都会排下一轮 pass，所以永不停歇。**实测**（无头 Chrome，真实 `lib/client.js`）：空闲时约 160 passes/s（两处叠加约 320），在 2.2 万节点的模拟对话上每轮约 5.4 ms——60 Hz 下约三分之一的主线程在什么都没发生时被吃掉；抽屉开着时行被替换还会吞掉点击。现在账号行只在内容变化时重建、抽屉开着时不动（揭开前补一次同步），排序只挪真正错位的条目，空闲 pass 降为 0。顺带：账号资料晚到时直接请求一轮 pass（此前写一个 body 属性当「推一下」，但调度器的 `attributeFilter` 根本看不到它，一直靠上面的死循环掩盖；连带删掉从未被读取的头像探测图）；只在宿主账号触发器存在时才去读它的菜单，读空或失败后最多每 5 秒重读一次（此前每轮 pass 都开关一次宿主菜单）；登出后（`getProfile()` 返回 `null`）账号行回到本地用户名与星芒，不再停在旧昵称和头像上。
-- **非桌面端把「在应用中打开」菜单收进账号抽屉**：宿主账号行被皮肤替换后，其菜单锚点不在 DOM 里，而旧的「页脚里第一个非我们的锚点」兜底会挑中「在应用中打开」，把文件资源管理器 / Cursor / VS Code 等条目收进抽屉。现在**按账号标签匹配触发器**（`账号菜单` / account），匹配不到就只显示「设置」，不再混入别的菜单。
-- **「设置」行变成账号名、点击弹出账号菜单**：设置行的标签与点击目标此前兜底接受任意 button，桌面端该槽位上是宿主账号触发器。现在只接受 `aria-haspopup="dialog"` 的按钮，其次接受非 menu 锚点的按钮，**绝不接受 menu 锚点**。
-- **图标型登出按钮没被排除**：宿主登出按钮是纯图标（无文案），此前按文案判断会漏。现在同时读 `aria-label` / `title` / 类名，并跳过宿主账号区容器内的条目。
-- **设置存储误报「不可用」**：宿主注册命名空间晚于页面加载时，启动时的一次性判定会把设置页卡在「存储不可用」。现在读路径**不再做可用性判定**，控件保持可用；只有写入真的失败才提示。
+<h3 id="cn-0.5.1">新增功能</h3>
 
-### Fixed
-- **松开推条后旋钮会先弹回原档位、再跳回新档位**：宿主的目录快照**滞后于提交**——`selectModel` 往返按秒计（注册了联网供应商时实测 2–8s），在这段时间里快照的 `effective` 仍是**旧档位**；而 `update()` 无条件跟随快照（`selected = next.index; place(...)`），于是松手后第一次调度 pass 就把旋钮拽回起点，等 echo 落地再拉回新档位。这是推条自带的缺陷（不是本轮换脸引入的，只是胶囊旋钮 + 填充段让这段回弹更显眼）。现在提交时置 `pendingEcho` 并记下所提交档位的 id，`update()` 在等待期间不跟随快照；快照真的报出该档位（echo）、梯子换了（换模型，旧 echo 不会来）、或 12s 兜底超时后才恢复跟随。**实测**（无头 Chrome 驱动真实 `createEffortControl`，模拟「松手 → 5 次陈旧 pass → echo」）：把守卫摘掉的对照组旋钮轨迹是 `246 → 148 ×5 → 246`（148 即旧档位 High 的停靠位），守卫在场时全程 `246`，`onPick` 只发一次 `max`。另外 `commit()` 本就只在档位真的变化时才提交，所以「拖走又拖回原档」不会多发一次 RPC。
-- **松手瞬间档位名连跳两下、最高档点阵动画先中止再重播**：**主因在 picker 的渲染，不在推条自身**——`renderModelBody()` 每次渲染都先把整个 footer 清空（`while (modelFooter.firstChild) removeChild`）再 `appendChild` 推条，而 DOM 里「移除再插入」会**重启该子树内所有 CSS 动画**：档位名的模糊聚焦、最高档点阵的入场扫入与闪烁相位全部从头再播。渲染签名里带 `status`，一次选择至少触发两次渲染（`selecting` → 回声后的 `idle`），于是正好「跳两下」。现在 footer 的布局交给新的 `layoutModelFooter()`：它只移除**除推条以外**的节点，推条节点始终挂载、动画时间线不被碰；「加载中/空目录」那条分支显式调 `layoutModelFooter(false, false)` 收掉整块 footer，渲染函数本身不再直接动 footer。**次因**是 `settle()` 的作画顺序：先 `paintValue()`、再用 `commit()` 移动 `selected`、然后又补一次 `paintValue()`，而 `paintValue()` 读的是 `selected`——第一次画的是**手势开始前的旧档位**（名字退回旧名并重播模糊、`data-apex` 关掉使点阵入场中止），提交后再画一次才回到新档。现在改成**先 `commit()` 再只画一次**。顺带给 `place()` 加同值守卫：位移与填充宽度没变就完全不碰 DOM，避免每个调度 pass 的重写打断正在进行的 0.18s 滑行。**实测**（无头 Chrome，三套独立证据）：**(1) 机制**——把真实控件拆开再插入后 `animationstart` 计数为 名字 +1 / 入场 +2 / 闪烁 +1，证明「重插即重播」；**(2) 修复**——用真实抽出的 `layoutModelFooter` 源码连跑三次渲染，推条从未出现在 `removedNodes` 里（对照组：旧清空写法第一次渲染就把推条拆掉），且结构顺序为 `divider > effort > more`，同时对 `renderModelBody` 做结构断言（不再直接触碰 footer、必须经 `layoutModelFooter`）；**(3) 点击轨迹**——挂钩 `textContent` / `setAttribute` / `setProperty` 的写入点，修复前是 8 步（`text:Max → apex:on → text:High → blur → apex:off → text:Max → blur → apex:on`），修复后收敛为 `text:Max → apex:on`。
+- **冒烟测试 `npm run smoke`**：零依赖检查宿主路由栅栏与浏览器半边的启动、空闲、teardown 不变量。
+- **账号行显示真实头像与昵称**：桌面端登录后取官方资料，正圆头像与昵称以 60 秒轮询保持新鲜。
+- **账号抽屉接管宿主账号菜单**：动态镜像宿主菜单条目并直连官方行为。
 
-- **拖动时滑块冲出终点线、并与填充脱开**：上一轮给滑块加的拖动放大用的是独立属性 `scale`，而位移仍写在 `transform` 里——两者的合成顺序是 `translate → scale → transform`，也就是 **`scale` 会把 `transform` 里的位移一起放大**：1.1 倍下终点处的 246px 位移被渲染成 270px（滑块冲出轨道右端 24px），中途则整体超前约 10%，于是滑块跑到填充前面、看着像「脱离」。修法是把位移改用独立属性 `translate`（合成顺序在 `scale` 之前，不被放大），过渡列表里的 `transform` 也换成 `translate`。另外填充右端此前是 8px 圆角，它在滑块中心线处收边、上下两角向内退，即使位置正确也会在槽的上下沿露出缝——右端改为直角（左端仍保留圆角与滑槽对齐），而右端始终藏在 16px 宽的滑块之下。**实测**（无头 Chrome，DOM 量测）：修复前拖动到最右端 `knobRelLeft=270`（轨道宽 262，即冲出 25px），修复后为 `245`、`rightGap=-1`（仅放大本身的 0.8px），且 `fill→knobCentre=0`、填充右缘始终在滑块左缘之内 9px。
+### 体验优化
 
-- **点击两个档位正中间有概率让档位选择器「崩溃」**：宿主每提交一次档位都会**重新枚举整个目录**（实测 2–8s），这段窗口里快照可以既没有分组、也没有当前席位，`modelEffort()` 于是返回 null；而新拆出的档位碎片把「读不到档位」直接当成「这个模型没有档位」，于是**在提交后的 RPC 期间把触发器和已打开的卡片一起摘掉了**——看起来就是选择器崩掉。老 picker 早就踩过同一个坑（它曾在每次选择时把整个列表清空，见下方 [0.5.0] 的修复），这次是把那条纪律重新漏掉了一遍。修法两步：`ui.model` 新增 `settled()`（「目录现在能不能报出席位」，就是 picker 自己那条判据的唯一来源），碎片在**未 settle 期间既不摘触发器也不关卡片**，并保留最后一次读到的档位梯子（`lastEffort`）继续画，只有**已 settle 且确实没有档位**时才收掉触发器、让控件回到空态。**实测**（无头 Chrome 用 stub 的 `ui` 驱动真实 `installEffortPicker`，模拟「提交 → 目录空白 6 次 sync → 回声」）：触发器仍在、卡片仍开、滑块未进空态且档位名保持旧值，回声到达后更新为新档位；把 `settled()` 置真且梯子为空时触发器才被摘除。
-- **点击滑槽其他位置时滑块瞬移**：`onPointerDown` 里先置 `dragging = true` 再写位移，而 `place()` 在 `dragging` 时走「直写」分支（本意是拖动跟手），于是单击远处时滑块**直接跳过去**；即便改成先动画再置标志也不行——`data-dragging` 在同一个任务里就被设上，浏览器在下一帧做样式重算时过渡列表里已经没有 `translate`，动画根本没开始（实测同步读与 40ms 读都是终点值）。现在把「按下」与「拖动」拆成两个状态：**`pressed`** 从 pointerdown 起（此时过渡仍在，滑块 180ms 滑向按下位置，读数与填充一起动），**`dragging`** 从第一次 pointermove 起（此时才加 `data-dragging`、改为直写跟手）；`settle()` 与 `update()` 的守卫改看 `pressed`，`isDragging()` 也返回 `pressed`（悬停关闭的豁免要从按下就生效）。**实测**（无头 Chrome）：按下后 40ms 时 `getAnimations()` 里有一条 `translate` 过渡在跑（180ms），260ms 到达按下位置、松手精确落在最近档位；只点不动（不触发 pointermove）也能正常提交。
+- **档位名换档改成交换动画**：旧名向上模糊淡出、新名自下模糊淡入，拖动中也逐档滚动。
+- **档位两端文案随语境本地化**：中文显示「更快 / 更强」，英文仍是 `Faster` / `Smarter`。
+- **最高档的点阵动画改为纯哈希粒子**：无排序方向，羽流形状由逐块静态透明度承担。
+- **座位里模型与档位两枚触发器靠拢**：名字与档位之间只剩 4px。
+- **推理等级拆成独立触发器与弹层**：新碎片 `effort-picker.js` 只向 `ui.model` 要座位、档位与提交。
+- **推条手感三处打磨**：圆角收小、按住放大 10%、档位点加阻尼。
+- **推理推条换脸成 Claude Desktop 同款**：填充段 + 档位刻点 + 胶囊旋钮，最高档触发点阵动画。
+- **输入框底部阴影改由座位自绘横条与渐变**：座位高度即横条高度，不再逐态重写卡片阴影。
+- **模型介绍文案整体校订一轮**：修中英语义冲突与生硬措辞，统一单位与术语。
 
-### Changed
-- **档位名换档改成「交换」动画，不再生硬替换**：此前档位名只是重新赋值 + 一次模糊聚焦；现在旧名会先被复制到一个**绝对定位的 ghost**（位置取自 `valueEl.offsetLeft`，与名字原位精确重合，且不占布局），随后**旧名向上模糊淡出、新名自下模糊淡入**（`translateY(5px)` → 0，`blur(4px)` → 0，280ms）。两条动画都由 override 用 `!important` 内联重置来重播（样式表规则必须带 `!important` 才能压过宿主，普通内联 `none` 会在级联里输掉、重启变成空操作）。拖动中也照此执行：滑块每越过一个档位，名字就像滚动计数器一样换一次。**实测**（无头 Chrome 驱动真实控件）：换档瞬间 ghost 文本为旧名 `High`、value 为 `Low`、`ghost.style.left` 与 `value.offsetLeft` 一致（58px = 58px）、两条动画分别在 `running`、360ms 后 ghost 计算透明度为 `0`。
-- **档位两端文案随语境本地化（中文：更快 / 更强）**：此前 `effortFaster` / `effortSmarter` 的 `zh` 值刻意写的英文——按「它们说的是方向、不是档位名」的旧约定保持英文。现按用户要求改为中文语境下显示**更快 / 更强**，英文语境仍是 `Faster` / `Smarter`；只是文案表 `src/model-descriptions.json` 的数据改动，控件本身照旧走 `copyLabel()`，不需要改 JS。**实测**（把真实文案表注入预览页后读 DOM）：两端渲染为 `更快` / `更强`。
-- **最高档的点阵动画：纯哈希粒子**（这条改了四轮，最终回到第一版）：最终形态是每块方块按自己的**哈希相位**闪烁，周期长度也各自抖动 ±8%，色调从 8 档里哈希取一档——**没有任何排序或方向**，读起来是一片各自为政的粒子；羽流形状（右端实、向左渐隐）由**逐块静态透明度**承担，颜色闪烁从它中间穿过，两者互不干扰。中途试过三种「有方向」的版本并被逐一否掉：严格按距离排序的波（像一根横条扫过去）、流动项 + 随机项（刷新向左偏置）、以及整片持续左移的传送带（那是真的在动，不是刷新倾向）——用户最终确认第一版的纯随机粒子最好，故全部回退，只保留动画效果本身的回退，其余（档位独立弹层、圆角、拖动放大、阻尼、触发器间距）不变。**实测**（无头 Chrome 读真实方块）：无传送带节点、无滚动动画；260 块、相位散布 **1.37s**、周期 **1.334–1.565s**（抖动在）、**8** 种随机色调；列位置与平均延迟的相关系数 **-0.039**、左右三分之一落差 0.008s（即**没有方向偏置**）；逐块透明度左 1/3 均值 **0.101** / 右 1/3 **0.998**（羽流形状）；容器无 `mask-image`。
-- **座位里模型与档位两枚触发器靠拢**：拆成两枚按钮后，两边的对称内边距在名字和档位之间留了 16px 的空档，读起来像两个不相干的控件；现在档位触发器 `margin-left: -6px` + 左内边距 2px，实测**名字与档位之间只剩 4px**，两枚读作一句「Opus 5.5 High」。
-- **推理等级从模型弹层拆出来，成为独立的触发器与弹层**：此前模型选择器的 footer 里同时住着模型列表和档位推条——选模型和定思考力度是两件节奏完全不同的事（模型很少换、档位常微调），却共用一次开合与同一张卡片。现在座位上是**两枚并排触发器**：左边模型名（开模型弹层）、右边当前档位名（开档位弹层，用静音色，模型是主语、档位是修饰）；模型弹层里只剩模型列表 + 更多模型（分隔线仍按「有没有更多模型」决定画不画），档位推条搬进自己的卡片。**结构上按仓库的 750 行停止线拆出一个新碎片** `src/overrides/effort-picker.js`（199 行）：它持有档位触发器、档位卡片与开关/定位/清理，只向 `ui.model` 要三样东西——座位元素 `seat()`、档位描述 `effort()`、提交 `pickEffort()`；`model-picker.js` 相应摘掉推条、`effortSlider` 与 footer 里的滑块逻辑（`layoutModelFooter(showMore)` 现在只画分隔线 + 更多模型）。上一轮为「picker 重渲染拆节点导致动画重播」立的纪律跟着搬到新卡片：滑块节点建好后**永不重挂**，卡片每次 sync 只更新数值与位置。两枚触发器与两张卡片都遵守既有弹层纪律：`autoPopover === 'all'` 时悬停开、否则点击开，开一张关另一张，点击外部 / Esc 关闭（scheduler 新增 `ui.effort` 的 sync / owns / close 三处接线）。**实测**（无头 Chrome 用 stub 的 `ui` 驱动真实 `installEffortPicker`，16 项断言全过）：触发器落在模型按钮右侧且标签随席位回声更新、点击开卡片并把模型卡片关掉、连续 6 次 sync 后滑块**从未**出现在 `removedNodes` 里、拖到第二档会经 `pickEffort('low')` 提交、模型无档位时触发器摘除且卡片关闭、teardown 两个节点都清理；另用真实抽出的 `layoutModelFooter` 源码断言新 footer 形状为 `divider > more` / 空。
-- **推条手感三处打磨**：**(1) 圆角收小**——滑槽/填充/点阵从 999px 全圆改为 8px 圆角矩形，滑块从胶囊改为 5px 圆角矩形（录屏里滑槽端部约高度的 1/3、滑块顶边有明显平段，此前的全圆比 Claude 更圆）。**(2) 拖动放大 10%**——按住时滑块 `scale: 1.1`、松手回 1，0.12s 缓动；`translate` 被排除在过渡之外（拖动每帧写它），所以放大/缩回平滑而跟手不受影响。**(3) 档位点阻尼**——指针位移经阻尼曲线 `t − 0.8·sin(2πt)/2π` 映射到滑块：档位点附近滑块只走指针约**五分之一**的速度（斜率 1−D），段中点则以 1.8 倍速度反超（「离开档位点有阻尼」），段中点仍 1:1 跟手、后段略超前，视觉上像被吸向下一档；曲线在每个档位点与每个中点都精确不动且单调，所以「最近档位」的判定仍可用原始指针位置，松手也照旧精确落在档位上。**实测**（无头 Chrome 驱动真实控件）：f=0.125 时指针 6px / 滑块 2px（33%），f=0.25 时指针 12px / 滑块 6px（50%），f=0.5 时两者同为 25px，f=1.0 时同为 49px；四处圆角 computed 为 8/5/8/8px；拖动中 `scale=1.1`、松手后为 1。
-- **推理推条换脸成 Claude Desktop 同款：填充段 + 档位刻点 + 胶囊旋钮，最高档触发点阵动画**：对照 Claude 的真机录屏逐像素量过——滑槽不是此前的 14px 浅槽配圆珠，而是一条 **26px 的粗槽**，旋钮是 **16×30 的竖直圆角滑块**（上下各探出槽 2px；圆角随后又收小，见下方手感打磨一条）、两态都钉在纯白上（暗色里深旋钮会沉进槽里）；槽里**从左端到旋钮中心铺一段填充**（标签墨色 26% 透明度，一条规则同时喂亮暗两态），**每个档位在槽心留一枚 4px 刻点**，刻点与填充同色——划过的刻度被填充吞掉、当前档被旋钮盖住，刻点只在裸槽上露面。**最高档是整条的华彩**：到达最后一档（拖动中的实时位置也算）时填充与刻点退场，槽内浮起一片**点阵**——5 行约 4px 的方块按整设备像素解算网格（不出现 7/8px 交替缝），每块带着哈希撒开的相位在深紫与更亮的峰值色之间闪烁、左端按掩码淡出回槽色、进入时从右向左扫入，旋钮同时染上紫光晕、档位名变紫——这正是 Claude「Ultracode」那一档的招牌动效，且「最高档即特殊档」（点阵技法参考了社区插件 domitor-syh/dsh-ui-skin-switcher 的实现：整设备像素网格、雪崩哈希散相、右起扫入）。**紫色是对仓库「陶烬橙唯一强调色」的一次显式破例**（用户指定：最高档沿用 Claude 的 Ultracode 紫，不做橙色转译），色值从录屏里量出——方块深紫 ≈ rgb(150,127,200)、亮紫 ≈ rgb(208,203,228)、档位名 ink 更深，落在 --dsh-claude-apex / --dsh-claude-apex-flash / --dsh-claude-apex-ink 三个令牌上（亮暗各一套）。**方块的闪烁色一律写在样式表里**：override 只给每块挑一个色调档（`data-tone`，四档从深紫铺到浅紫），行内只留动画相位——这条是有代价换来的：早先把逐块峰值 rgb 写在行内 `--dsh-flash-light` 上，样式表一换代，旧一代 DOM 里的行内橙色值不会跟着变，于是出现「底色已经变紫、闪烁却还是橙色方块」的残留态（实测新构建全新加载为 90 种颜色、0 个橙色像素，问题只出在热替换残留的节点上）。颜色回到样式表后，任何一次换表都会把每个方块一起重染。档位名在**非拖动**的换档时重播一次 280ms 的模糊聚焦；拖动中跨档保持清晰不糊。无档位的模型行为不变（旋钮照拖、松手回右端、不铺填充）。键盘路径（方向键/Home/End）同样走完填充/刻点/点阵的全套状态。
-- **输入框底部的「背景色阴影」改成座位自己画的一条横条 + 一条渐变**：此前让消息在输入框一带淡出，靠的是在卡片（以及输入域）上刷三层 `--dsw-alias-bg-base` 阴影——亮/暗/聚焦/带附件每一态都要重写一遍（共 12 处），凡是重置卡片 `box-shadow` 的规则都得跟着重述（附件轨因此只能写成无阴影，hero 还得用四条规则把阴影剥掉）。现在由宿主那个 `[data-composer-seat]` 自己承担：座位整块刷成画布色，于是**横条高度就是座位高度**（卡片 + 工具行 + 统计句 + dock），不需要跟任何盒子对齐；座位顶边之上挂一条 `--dsh-composer-fade-h`（40px）的渐变，由画布色向上淡到透明。这也正是宿主自己的做法——它在 active 态本就给座位铺了一条 36px 的同款渐变，只是没盖住座位下半段，消息才从工具行后面透出来；皮肤现在只是把座位补满。`--dsh-composer-fade-h` 同时是消息区的底部留白（`viewArea` 的 `padding-bottom`），所以最后一轮永远停在渐变带的上沿，不会半行被吃掉。
-- **模型介绍文案整体校订一轮**：事实未动，只修写法。**(1) 一处中英语义冲突**——`kimi-for-coding-highspeed` 中文括号读作「常规版约 180 token/s」、英文却说高速版自己跑 180 tokens/s，两句相反；现统一为「高速版约 180 tokens/s，为常规版的 5–6 倍」。**(2) 单句措辞**——`doubao-seed-2.1` 补上缺的「以」并消去重复的「智能体」、mercury「快达同类的 10 倍」、doubao「多模态可用」、hunyuan「中文与 Agent 场景均衡」等生硬或中英夹杂的句子改写通顺；`gpt-5.4` 的「原生电脑操作」改为「原生 computer use（电脑操控）」。**(3) 全文统一**——速度一律 `tokens/s`（TPS、token/s 不再混用）、上下文一律大写 `K`（256k/128k 消除）、价格英文一律 `per MTok`、「开放权重」取代混用的「开源权重 / open / open-source」、「编程」取代混用的「编码」、「图像」取代「图片」、「智能体」取代残留的英文 Agent 与「代理式」。**(4) 向仓库约定收口**——celeris 家族规则里钉死的 Celeris-1 数字（1,664 tokens/s、MMLU-Pro 75.9%）挪进新增的 `celeris-1` 精确条目，家族文案改为版本无关的「扩散架构大语言模型」，下一代 Celeris 不再继承过时数字；gpt 兜底删去「最新模型均」的时效断言。另修正两处中英不对齐：deepseek 兜底的「普惠」英文实为 affordable 而非 efficient、doubao 的「千亿级」英文实漏两个数量级。deepseek pro「比肩顶级闭源模型」（官方标题）与 mistral「前沿模型」两处擦边最高级保留不动。
+### 问题修复
+
+- 修复 **0.1.7 设置页选项能显示但存不进去**：命名空间改从 `configForms` 已服务的名单挑选，失败回落自建路由。
+- 修复 **斜杠命令 / @ 提及菜单打开时回车直接发送**：删除皮肤对回车的拦截，交给宿主处理。
+- 修复 **关掉插件或热重载后皮肤又画了回来**：teardown 取消排队中的那一帧，之后的 `schedule()` 一律不生效。
+- 修复 **一个特性出错导致整张皮半挂**：teardown 最先注册，每个特性单独安装与同步、失败即退役。
+- 修复 **调度器空闲时仍每帧跑 pass**：账号行按需重建、排序只挪错位项，空闲 pass 降为 0。
+- 修复 **非桌面端把「在应用中打开」菜单收进抽屉**：改按账号标签匹配触发器。
+- 修复 **「设置」行变成账号名并弹出账号菜单**：只接受带 `aria-haspopup="dialog"` 的按钮。
+- 修复 **图标型登出按钮没被排除**：同时读 `aria-label` / `title` / 类名，并跳过宿主账号区。
+- 修复 **设置存储误报不可用**：读路径不再做可用性判定，仅写入失败才提示。
+- 修复 **松开推条后旋钮弹回原档位再跳回**：等待回声期间不跟随滞后快照，超时或换梯后恢复。
+- 修复 **松手瞬间档位名连跳两下**：footer 只换推条以外的节点，且先提交再只画一次。
+- 修复 **拖动时滑块冲出终点线并与填充脱开**：位移改用独立 `translate` 属性，填充右端改为直角。
+- 修复 **点击两档之间可能让档位选择器崩溃**：目录未 settle 期间不摘触发器也不关卡片。
+- 修复 **点击滑槽其他位置时滑块瞬移**：把按下与拖动拆成两个状态，按下时仍有过渡动画。
+
+### 安全
+
+- **用户名、昵称、头像与插件条目不再拼进 HTML**：一律以文本写入，头像改用真正的 `<img>`。
+- **设置与用户名路由不再对任何人敞开**：先过宿主请求栅栏，并限制内容类型、体积与数组长度。
+
+<h3 id="en-0.5.1">New Features</h3>
+
+- **Smoke test `npm run smoke`**: a dependency-free check of the host route fence and the browser half's boot, idle and teardown invariants.
+- **The account row shows the real avatar and nickname**: on desktop sign-in it reads the official profile and keeps the round avatar and nickname fresh by polling every 60s.
+- **The account drawer takes over the host account menu**: it mirrors the host menu's entries and drives the official actions directly.
+
+### Improvements
+
+- **Effort-name changes now swap**: the old name blurs upward while the new one blurs in from below, scrolling step by step while dragging.
+- **Effort end labels are localized**: Chinese now shows localized labels, English stays `Faster` / `Smarter`.
+- **The apex dot animation is now pure hashed particles**: no ordering or direction, with the plume shape carried by per-block static opacity.
+- **The model and effort triggers in the seat move closer**: only 4px is left between the model name and the effort name.
+- **Reasoning effort splits into its own trigger and popover**: the new `effort-picker.js` asks `ui.model` only for the seat, effort and commit.
+- **Three slider feel tweaks**: smaller corners, a 10% scale-up while held, and damping around each step.
+- **The effort slider is restyled to match Claude Desktop**: fill, step ticks and a capsule knob, with the apex step triggering the dot animation.
+- **The composer's bottom shadow now comes from the seat's own bar and gradient**: the seat height is the bar height, no per-state card shadows.
+- **The model descriptions got a full copy-editing pass**: fixing CN/EN conflicts and awkward wording, unifying units and terms.
+
+### Bug Fixes
+
+- Fix **settings showing but not saving on 0.1.7**: the namespace is now picked from the namespaces `configForms` serves, falling back to the plugin route.
+- Fix **Enter sending half-typed text while the slash or @ menu is open**: the skin's Enter interception is removed and the host handles it.
+- Fix **the skin repainting itself after disable or hot reload**: teardown cancels the queued frame and later `schedule()` calls no longer take effect.
+- Fix **one failing feature leaving the whole skin half-mounted**: teardown registers first, and each feature installs and syncs alone, retiring on failure.
+- Fix **the scheduler running a pass every frame while idle**: the account row rebuilds only on change and sorting moves only misplaced entries, so idle passes drop to 0.
+- Fix **the "Open in app" menu being pulled into the drawer on non-desktop**: triggers are now matched by the account label.
+- Fix **the settings row turning into the account name and opening the account menu**: it now accepts only buttons with `aria-haspopup="dialog"`.
+- Fix **icon-only sign-out buttons not being excluded**: it now reads `aria-label` / `title` / class names and skips the host account area.
+- Fix **settings storage falsely reporting unavailable**: the read path no longer judges availability, only a failed write warns.
+- Fix **the knob snapping back to the old step after release**: it no longer follows the lagging snapshot while waiting for the echo, resuming on echo, ladder change or timeout.
+- Fix **the effort name jumping twice on release**: the footer now replaces only non-slider nodes, and commit happens before a single paint.
+- Fix **the knob overshooting the track end and detaching from the fill while dragging**: position now uses the standalone `translate` property and the fill's right end is square.
+- Fix **clicking between two steps sometimes crashing the effort picker**: while the catalog has not settled it no longer removes the trigger or closes the card.
+- Fix **the knob teleporting when clicking elsewhere on the track**: press and drag are split into two states, so a press still animates.
 
 ### Security
-- **用户名、账号昵称、头像地址与页脚插件条目不再拼进 HTML**：账号行、封号彩蛋的提示条、账号抽屉镜像的页脚插件条目，此前把这些字符串直接拼进 `innerHTML`——用户名来自设置（任何能写入设置的人都能改它），昵称和头像地址来自账号服务，条目文案与角标来自第三方插件。**实测**：把用户名设成 `<img src=x onerror=…>` 后，在无头 Chrome 里加载真实的 `lib/client.js`，这段脚本在 GUI 页面里执行了——而 GUI 页面能驱动会执行 shell 命令的智能体。现在这些值一律以文本写入（`textContent`），图标改为复制宿主/插件自己的节点、不再重新解析 markup。头像改为一个真正的 `<img>`（`referrerPolicy="no-referrer"`，与宿主自己的头像一致），只接受 http(s) 地址并以属性写入。顺带修好了**头像从未显示**：旧代码用 `JSON.stringify` 把地址拼进 `style="…"`，双引号提前截断了属性（实测解析结果只剩 `--dsh-claude-account-photo:url(`，地址碎成几个无意义的属性名）；而且头像只在账号行首次创建时写入，账号信息晚到一步就再也不画。现在每次 pass 同步，加载失败时图片自行隐藏、露出下面的星芒。镜像条目的角标后来才出现时也会补上（此前只在建条目那一刻读一次）。
-- **设置与用户名路由不再对任何人敞开**：宿主半边的 `/dsh-claude-style/prefs`（读写设置）与 `/dsh-claude-style/username`（系统用户名）挂在宿主 web server 上，而插件路由不经过宿主给 `/api` 的鉴权。**实测**：一个带陌生 Host / Origin、`Content-Type: text/plain`、不带 cookie 的 POST（跨站页面无需预检就能发出，局域网里也能直接 curl）返回 200 并写入了用户名；同样的请求还能读到全部设置命名空间与系统用户名，且请求体与快捷供应商数组不设上限（2 万条照单全收）。现在这两条路由先过宿主自己的请求栅栏（`connection.requestRejection()`：Host/Origin 校验 + 浏览器会话 cookie，与 `/api` 同一套，0.1.5-rc.2 起即有），写入还要求 JSON 内容类型、请求体不超过 16 KiB、快捷供应商至多 64 个；宿主没有该服务时退回只服务回环的本地栅栏。已核对浏览器同源请求与桌面壳转发的请求都能通过宿主真实的栅栏，跨站与 DNS 重绑定的请求被拒绝。模型文案与字体仍公开。
+
+- **Usernames, nicknames, avatars and plugin entries are no longer spliced into HTML**: all are written as text and the avatar uses a real `<img>`.
+- **The settings and username routes are no longer open to anyone**: they pass the host request fence and cap content type, body size and array length.
+
+**Full Changelog**: [v0.5.0...v0.5.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.5.0...v0.5.1)
 
 ## [0.5.0] - 2026-09-22
 
-### Added
-- **插件页有了自己的图标（DSH 0.1.7）**：0.1.7 的插件清单会读 `package.json` 的 `icon`——必须是**相对清单的路径**、SVG/PNG/JPEG/WebP、realpath 后仍留在包目录内、且不超过 256 KiB（绝对路径与 URL 一律拒绝）；宿主把文件读成 base64 data URI 交给插件卡片与详情页上的 `<img>`，失败只在这张卡片上留一条 `meta.error`，不影响插件本身。这里填的是**陶烬橙的 Claude 星芒**：源文件 `src/assets/brand/claude-mark-clay.svg`，构建期复制到 `lib/claude-mark.svg`（与模型文案同一套「源在 `src/`、`lib/` 是产物」的做法，`files` 里的 `lib` 已覆盖它，无需新增条目）。选 clay 版而不是纯黑版是有原因的：图标以 `<img>` 渲染、拿不到 `currentColor`，纯黑星芒在暖黑画布上会消失，陶烬橙两态都读得出。
-- **插件卡片有了本地化的标题与描述（DSH 0.1.7）**：同一套元数据读取还会解析 `<包>/locale/en.json`，并以它所在目录为锚点枚举其余 `<语言>.json`，每个文件取 `meta.title` / `meta.description`（必须是非空字符串，文件名必须是语言 id），最后交给客户端一个 `{ en, zh, … }` 记录——`en` 永远兜底到 `package.json` 的 name/description，其余语言按 shell 语言取。此前卡片上显示的是包名 `dsh-claude-style`，现在 `locale/en.json` 给 `Claude Code Style`、`locale/zh.json` 给 `Claude Code 风格`，描述也一并本地化，`locale` 加进 `files`。**这里有个必须避开的陷阱**：宿主是逐个文件走包 `exports` 解析的，任何一个 locale 文件没被导出都会在枚举目录时抛错，而这个错会被外层捕获、把**整份元数据（含图标与两段文案）一起降级成 `meta.error`**——所以 `exports` 加的是通配 `"./locale/*": "./locale/*"` 而不是逐文件列举，以后新增语言文件不会漏。
+[中文](#cn-0.5.0) | [English](#en-0.5.0)
 
-### Added
-- **侧栏「工作区」标题改成 进行中 / 已归档 分段控件**：宿主本来就带这个筛选（视图选项 → 显示已归档 / 仅显示已归档），它的树会自己把已归档对话连同标题、时间一起渲染出来——所以这里没有再写一份归档列表，而是**去驱动宿主那个筛选**：分段控件替掉原来的「工作区」文字，点「已归档」时打开宿主的视图选项菜单、把筛选切到「仅显示已归档」再关掉菜单，点「进行中」时切回默认；控件的选中态则**从树里读回来**（树的会话行里出现已归档 id 就算已归档），因此从宿主菜单里手动改筛选，控件也跟着变。归档 id 由归档插件的 remote 提供（`ctx.get('remote.workspaceRegistry')`，按名字宽松取用，不声明别的插件的命名空间）。另外**给已归档的会话行挂一个 SVG 删除按钮**：绝对定位挂在宿主行右侧（不改宿主行布局），静止透明、指针落到行上才浮现，行上的时间戳同时淡出给它让位；点击直接调 `deleteSession`，成功后立刻把按钮摘掉。实测（0.1.7-alpha.1 真实 GUI）：分段控件文字与选中态随点击翻转、「进行中」时树里 0 行已归档且无删除按钮、宿主筛选被切到「仅显示已归档」后树只列已归档分组、点回「进行中」树恢复 6 行活跃会话；删除请求以**打桩的传输**验证——请求带着正确的 sessionId 发出，随后按钮从行上摘除，真实会话未被删除。**注意**：宿主在已归档态按「分组方式」分组（当前是「按工作区」），组是折叠的，所以要先展开某个工作区才能看到里面的已归档对话与删除按钮；想要一进来就平铺，把分组方式切成「单列表」即可（这一条未做自动切换，见下方待办）。
+<h3 id="cn-0.5.0">新增功能</h3>
 
-### Removed
-- **模型行的厂商字体（Google Sans Flex）整块移除**：此前只有 Gemini 行会把名称换成 Google Sans Flex（一枚自子集化的拉丁字体），其余行都是界面字体——一个厂商有字体、别的厂商没有，这不是「厂商标记」而是一个特例，何况模型行已经在用厂商锁定标表达同一件事。现在模型行一律用界面字体：字体资产（`fonts/GoogleSansFlexPicker.woff2` 与它的 OFL 文本）、子集化脚本 `scripts/slim-google-sans.py`、`--dsw-font-brand-gemini` 令牌与对应的 `@font-face`、宿主字体白名单里的那一条，以及 package.json 的 `files` 条目一并删除，npm 包小约 9 KB。
+- **插件页有了自己的图标**：`package.json` 填陶烬橙星芒的相对路径，构建期复制到 `lib/`。
+- **插件卡片有了本地化的标题与描述**：`locale/*.json` 提供 `meta.title` 与描述，`exports` 用通配避免降级。
+- **侧栏「工作区」改成进行中 / 已归档分段控件**：驱动宿主筛选并从树里读回选中态，归档行挂删除按钮。
 
-### Changed
-- **推理等级从二级弹层改成一级弹层底部的推条**：此前「推理等级」是一行下钻，点开二级弹层再从列表里选档；现在它是一条推条——标签后面跟着当前档位名，两端写 `Faster` / `Smarter`（这两个词在任何界面语言下都保持英文：它们说的是方向，不是档位名，档位名就在标签旁边）。推条是**无极滑动**的：拖动时旋钮跟手走，松手或指针离开控件时才对齐到**最近的档位**，所以从一档到另一档不会像开关那样硬切。模型没有任何档位时推条照样显示——旋钮能拖、不改变任何值、松手回到右端，一级弹层底部因此永远长成同一个形状。键盘同样可用：方向键逐档、`Home` / `End` 到两端，推条带 `role="slider"` 与完整 aria 值。二级弹层此后只剩「更多模型」。
-- **`model-picker.js` 拆出两块，回到仓库的 750 行停止线内**：推条控件进新碎片 `src/overrides/model-effort.js`（它只吃一个 `read()` 回调，自己把目录的档位表映射成推条的刻度），模型文案解析（精确条目 → 家族规则 → 档位规则 → 目录自带文本）进新碎片 `src/overrides/model-copy-lookup.js`（纯查表，不碰 picker 闭包）。拆完 `model-picker.js` 791 → 720 行；随二级档位列表一起消失的还有 `modelSubKind` 那套「二级弹层当前是哪一种」的状态与 `noEffort` 文案。
-- **推条的滑槽与旋钮几乎等高**：滑槽从 6px 细线改为 14px 圆角槽，旋钮 16px 不变，对齐 Claude 真机 Effort 推条的比例——6px 的槽配 16px 的旋钮，控件读成「细线上骑着一颗珠子」；等高之后整条才读作一个滑杆，旋钮是嵌在槽里而不是浮在线上。纯样式改动：拖拽几何读的是轨道宽度与旋钮直径，不随槽高变化。
-- **弹层悬停时间统一：停留 50ms 打开、离开 100ms 关闭**：此前打开一律是**即时**的（指针扫过触发器就展开），关闭各有各的延迟（账户抽屉与权限弹层 150ms、模型选择器 180ms、首页 hero 菜单与统计卡片 160ms）。现在 `createHoverIntent` 两侧都可调度：`scheduleOpen` 先等 50ms 的停留（扫过的指针不再展开任何东西），`scheduleClose` 等 100ms（够指针跨过触发器与卡片之间那道缝，且 `scheduleClose` 会顺手撤掉未到期的打开，所以离开只需要调一次）；两个值作为 `POPOVER_OPEN_DELAY` / `POPOVER_CLOSE_DELAY` 放在共享碎片 `popover-utils.js`，模型选择器（含「更多模型」二级弹层，指针扫过 cell 也会撤销待打开的二级）、权限弹层、账户抽屉、首页 hero 菜单（它的悬停是委托 `mouseover` 去点宿主触发器，停留同样加在这一步）全部改用它。统计卡片的**关闭**并入 100ms；它的**打开停留**仍是你上一轮定的 300ms（触发区在工具栏行正中、是指针过路的必经之地，50ms 挡不住误触）。实测（0.1.7-alpha.1 真实 GUI，页面内时间戳，并按同环境 `setTimeout` 校准）：模型选择器 104ms / 权限 101ms / 账户 128ms / 二级弹层 117ms（该次校准下裸 `setTimeout(50)` 就要 101ms），关闭 134–154ms（裸 `setTimeout(100)` 为 135ms）——即两侧都落在配置值上，多出来的部分是 headless 的定时器对齐。
-- **「更多模型」二级弹层收口，模型不支持思考时不再画推条**：四处调整。**(1) 底对齐**——二级此前与一级**顶部对齐**，内容少时它吊在一级上半部、下方空出一段，指针从「更多模型」那一行挪过去要穿过这段空白；现在二级的**底边与一级底边对齐**（内容比一级还高时仍保留自己的顶边，免得被推出屏幕上沿）。**(2) 不重复供应商**——二级此前列**全部**供应商，一级已经露过面的会再出现一次；现在只列一级**没有**以分组形式显示的（官方服务 + 设置页勾选的快捷供应商）。只以**当前席位**一行出现的供应商**不算**「已显示」——那一行只有一个模型，把它的其余模型藏到二级之外就再也够不着了。**(3) 没得列就整行去掉**——一级的分组已经把全部供应商显示出来时，二级只会是一张空卡，于是「更多模型」这一行不再画。**(4) 不支持思考就不画推条**——目录里没有 reasoning 元数据的模型，此前照画一条无档位可停的推条（旋钮能拖、松手回右端），现在底部只剩分隔线。**(5) 底行空了连分隔线一起收掉**——分隔线的作用是把模型列表和它下面的东西分开；推条与「更多模型」都不画时，列表下面没有任何东西可分，一条孤零零的线只会读成多余的横线，于是整块底行（分隔线 + 两行）一起不画。实测（0.1.7-alpha.1 真实 GUI）：二级底边与一级底边差 **0px**（顶边差 96px，即短的一级二级确实按底对齐）；当前席位是 `r4-code/deepseek-v4.1-flash`（一级 = 官方分组 + 它的席位行）时二级只剩 `R4 Code` 一个分组、`DeepSeek` 不再重复出现；当前模型 `r4-code/deepseek-v4.1-flash`（无 reasoning，二级非空）底行为 `[分隔线, 更多模型]`，切到 `deepseek-official/deepseek-flash`（有 reasoning）底行为 `[分隔线, 推条, 更多模型]`。「推条与更多模型都不画」这一态需要一级已列全部供应商，本机实例的皮肤偏好写不进去（0.1.7 下 `settings.register` 缺失导致命名空间未注册，属另一处在办的事），所以这一态由条件本身保证（`if (showEffort || showMore)`）而未做现场对照。
+### 体验优化
 
-### Fixed
-- **真圆被画成鹅卵石：`corner-shape` 是继承的**：页面从 `<html>` 继承 `corner-shape: superellipse(1.5)`（超椭圆 = 鹅卵石），于是任何 `border-radius: 50%` 的盒子都渲染成鹅卵石 —— 新会话行那枚圆形 chip 就是这样。宿主自己的圆形元素（spinner / dot / tag / toggle / thumb）都**显式**写了 `corner-shape: round`，皮肤照同一做法给六处真圆与滑槽补上声明：新会话 chip、会话行空槽圆点、进行中状态环、封禁页步骤序号、设置页开关钮、推条滑槽与旋钮。实测 chip 的 computed `corner-shape` 从 `superellipse(1.5)` 变为 `superellipse(1)`（Chrome 把 `round` 序列化成一阶超椭圆，即正圆）。**圆角矩形不受影响**：卡片与弹层的 6px / 12px / 18px 圆角仍按宿主的超椭圆语言渲染，只是「真圆」不再被拉成鹅卵石。
-- **右侧边栏全屏展开时，对话区顶栏的 preset 标签与「N 个后台任务」会浮在面板之上**：`chrome.css` 给 `[data-slot="conversation.session.header.actions"] > *` 写了 `z-index: 100 !important`，本意是「压过消息层」，但它与同一段里的三个 composer overlay 处境不同——队列 dock、目标条、输入 dock 都长在 `.composerSeat` 内部（`position: sticky` + `z-index: 7`，自成一个层叠上下文），100 只在这个上下文内部排序，对整页没有影响；顶栏动作不在任何层叠上下文里，100 直接对整页生效。而全屏面板的覆盖靠 ui-dockkit 的 dock 层（`--dsh-dockkit-dock-layer`：普通 10、全屏 40），40 < 100，于是这一行穿过面板露出来。现在把这条规则降到 **9**：高于消息层（置顶消息头 7、回到底部控件 8），低于面板的 10 / 40，规则本意保留、穿透消失。宿主（DSH 本体）无需改动——它的对话区自身层高不超过 10。
-- **热重载后模型选择器会失去点击效果**：HMR（及任何「清扫上一代而不销毁本代」的路径）会把上一代留下的弹层节点从 DOM 里拿掉，而新一代闭包里的 `modelPop` / `modelSubPop` 引用还指着那个已被摘除的节点——重建条件只写了 `=== null`，引用非空就不会重建，于是点触发器时 `data-open` 被写在一个不在文档里的节点上，弹层永远不出现，也就是「点击没效果」。本次把 `ensureModelChrome()` 的判空改成「为空**或已脱离文档**」（与账户区同款幂等护栏），重建时同时重置渲染签名让下一轮 pass 把内容画进新节点；触发器本就有同样的护栏，两级弹层补齐后选择器在双代并存期间也能自我修复。
-- **宿主半边的资产路由在热重链后整代失联，选择器整代渲染成「无锁定标、英文标签」的降级态**：`lib/index.js` 原本在 `ctx.get('webServer')` 已就绪时直接 `registerRoutes(ctx)`，而 `ctx.webServer` 属性访问受 fiber 的 inject 声明门控——启动时 webServer 往往尚未挂载，走 inject 分支一直正常；但客户端 bundle 重建触发 generation 重链后，宿主半边会在 webServer 已运行时重挂，`ctx.get('webServer')` 宽松读到服务、`else` 分支被选中，三处注册全部抛 `cannot get property "webServer" without inject`（宿主日志可见成串告警），模型文案/偏好/用户名三条路由整代没有注册。浏览器半边每代只拉一次文案、失败不重试，于是那一代的选择器没有厂商锁定标、标签回退英文常量、简介降级到目录自带的英文文本，直到下一次重挂/HMR 重新拉到文档才恢复。现在无条件经 `ctx.inject(['webServer'], registerRoutes)` 注册：注入作用域带声明，启动与热重链两条时序都落在能工作的路径上；没有 webServer 的宿主只是等待，防御性契约（无 webServer 也照常激活）不变。
-- **推条拖动掉帧、不跟手**：拖动路径在每个 pointermove 上都做一次强制回流——`place()` 先写 `transition: none`、再写位移、`void offsetWidth` 强制同步排版、最后把过渡还回去，可这套舞步是多余的：拖动期间 `data-dragging` 本就让样式表用 `!important` 关掉过渡。pointermove 的触发频率高于帧率，等于每秒上百次强制排版；每次 move 还无条件重写档位名的 `textContent`（同值写入也是一次 DOM 变更），喂给调度器的 MutationObserver；而调度器的 pass 自身又在无差别重写触发器 aria-label（正落在观察器过滤名单里）、模型名与档位两个 textContent、以及开着时弹层的 left/top——同值写入照样排队，pass 于是每帧自续一轮，弹层每次重定位都把排版弄脏，拖动的下一次几何读取只能强制重排。现在拖动位移并入每帧一次的 rAF（先读边界与几何、后写位移，松手前先落未决帧再结算档位），`place()` 在拖动期直写 transform，档位名/触发器标签/弹层定位全部加同值护栏——空闲时的 pass 循环随之断开，拖动每帧只剩一次 transform 写入。
-- **二级弹层悬停打开后不随指针移开而收起**：「更多模型」的二级弹层是 hover 打开的，但它的归属判定缺了半边——`modelSubPop.mouseleave` 只负责排队全关，而指针一进一级弹层 `modelPop.mouseenter` 就无条件取消定时器，没有「收起二级」的动作；于是从二级弹层移到滑块（一级弹层 footer 内）时，定时器被取消、二级弹层保持打开，挡在旁边。更隐蔽的是另一条路径：hover cell 打开二级后，指针在一级弹层**内部**移到滑块——全程不穿越弹层边界，连 `mouseenter` 都不会触发，二级永远不收。而「指针回到一级、二级该收」本就是既有语义（`openModelPopover()` 打开一级时就显式关二级），只是 hover 路径漏了这一步。现在在一级弹层上委托 `mouseover`：二级开着时，指针落到入口 cell 以外的任何位置（滑块、模型行、卡片空白）即收起二级，一级保持打开；用委托而非 `mouseenter` 正是为了覆盖「cell → 滑块」这种纯内部移动。cell ↔ 二级弹层之间的往返不受影响（悬在入口上不收，跨过间隙进二级照常保持）。
-- **切换推理档位后模型选择器会「一段时间不可用」**：推条每次落档都走宿主同一条 `selectModel` RPC，而宿主在整个往返期间把目录标记为 `selecting`——我们把这个状态当成「没有数据」，于是把整张卡片清空成一行「正在加载模型…」，分隔线、推条和「更多模型」一并被摘掉，要等宿主应答才重建。问题在于这个往返在插件注册的供应商上要**按秒计**：实测 `antigravity/gemini-3.8-flash`（用户当时的默认模型）2.0–3.2s，`kimi-code` 最高 7.7s，`deepseek-official` 也要 2.0–2.5s，所以每推一次档位，选择器就空转同样长时间。根因不在某个插件抢 DOM，而是我们的渲染判据错了：一次进行中的选择**不改变目录里有什么**，模型列表与档位表都还有效。现在 `renderModelBody()` 只在「解析不出当前席位且没有任何分组」时才显示加载行；已有列表时 `selecting` / `loading` / `idle` 一律继续画列表与 footer（进行中的选择在触发器上也不再置灰——置灰只留给「连席位都叫不出名字」的状态）。顺带说明慢的来历：宿主把每次选择（含纯档位切换）写进 `agent-default-model` 设置，广播 `settings/document-updated` 后重新枚举整个目录——实测每次选择触发 2–3 次 `modelCatalog`，每次 1.8–6.4s，而枚举会对每个供应商调用 `listModels()` 与逐模型 `resolveModelInfo()`，`@eddyskywalker/dsh-chatgpt-subscription` 注册的几个供应商在这里联网抓目录，这就是 RPC 慢的主因（宿主与对方插件的行为，本插件侧无法消除，只是不再被它冻住）。
-- **composer 获焦时 `ui.heroMenu.close is not a function` 每次必抛**：`hero-menu.js` 只导出 `sync` 与 `reposition`（首页菜单的生死归宿主悬停状态管，`syncHeroMenu` 负责发现它消失），调度器的 `onComposerFocusIn` 却无条件调用 `close()`——于是每次焦点落进对话卡片都抛一次 TypeError，该处理器余下的收起动作也随之中断。改为与上一行 `closeStats` 同样的存在性护栏。
-- **上下文标记在 DSH 0.1.7 上被落在「第二层」，现在归位到模型触发器右侧**：0.1.7 把输入条的 composer 重构成「卡片 + dock 行」两层——**上下文占用表（`ContextMeter`）从卡片内 `trailing` 组（0.1.5 里它挨着发送键）搬到了卡片下方新的 dock 行**，和会话统计药丸同一个 `conversation.composer.dock` 槽；本皮肤只把统计药丸搬进工具栏行（`mergeStatsIntoRow`），没人管那颗环，于是它独自留在 dock 里、按宿主的 `justify-content:center` 居中成卡片下方**单独一行**（截图里「◯ 42%」那条）。现在新增 `mergeContextMeterIntoRow()`：识别方式是它那颗触发按钮——`button[aria-haspopup="dialog"]` 且**整个标签就是占用读数**（`42%`，统计药丸永远不会是），因此不依赖宿主按构建哈希的类名；找到后插进 `trailing` 里**模型触发器所在簇的右侧**（触发器右侧、发送键之前），并打上 `data-dsh-claude-context-meter` 供样式表挂钩。旧宿主把环留在卡片里，这里找不到可搬的东西、不做任何事；皮肤关闭 composer 重绘时按统计药丸同样的路径把它放回 dock。实测（0.1.7-alpha.1 真实 GUI）：`trailing` 子节点顺序为 `standardControls → 环 → activity → primary`，即环在模型触发器右侧；植入标签为 `95% Cache` 的假药丸原地不动（负对照）。
-- **composer 底行三种控件统一字型**：环、模型触发器、统计句原本各带一套字（宿主环用 `--dsh-content-font-size-secondary`、统计 12px/400 tertiary、模型触发器 13px/500 secondary），挤在同一行里读起来像三种控件；现在统一为**同一字体、13px、500 字重、20px 行高、`--dsw-alias-label-secondary` 同色**（统计的内层按钮经既有的 `font: inherit` 继承，环的触发按钮因宿主自带颜色与字号而单独点名）。实测三者 computed style 完全一致（13px / 500 / 20px / `rgb(110,106,96)`）。
-- **统计句改为自适应宽度**：此前 `flex: 1 1 auto` 让统计**盒子**填满左右两组控件之间的全部空隙（文字居中，但 hover 底板横跨半个行）；现在 `flex: 0 1 auto` + `margin: 0 auto` —— 盒子贴合文字、由自动外边距在空隙里居中。实测文字中心与改动前一致（788px），盒子从整段空隙收窄到 259px（文字宽），底板只覆盖文字本身。
-- **DSH 0.1.7 上设置静默失效：偏好改走官方 Config 表单，并按宿主世代分流**：0.1.7 删掉了 `settings.register(ns, schema)`——命名空间不再是插件自取的名字，而是 profile entry id，schema 就是插件导出的 `Config`，且只有 `.volatile()` 字段进表单、值写进 profile 的 Cordis patch。旧代码在 0.1.7 上抛 `register is not a function`（被 try/catch 吞成一条 warn），于是 `claude-style` 命名空间从未存在：`/dsh-claude-style/prefs` 永远返回默认值，写入抛 `No configurable plugin entry "claude-style"` 又被路由当成冲突，设置页还在但开关点了不生效、重启即丢。现在宿主半边导出 `Config`（八个偏好字段，`volatileField()` 逐字段探测 `.volatile()` 存在才加标记——桌面端内置的 schemastery 3.18.2 没有它，硬加会直接抛错；schemastery 本身用顶层 await 守卫导入，解析不到就让 `Config` 为 `undefined`，皮肤照常加载），新宿主把命名空间取成 `ctx.fiber.entry.id`（读不到回落 patch 里的 `ui-skin-claude-style`）并只调 `settings.configure({ auto: false }, ctx.fiber)` 声明自带页面，旧宿主仍走注册制；客户端有 `ctx.configForms` 就用官方表单（值 + 写队列 + revision 栅栏，一次 `set()` 一个字段串行提交），没有就回落到自建路由。设置界面同样分流：0.1.7 注册成 `plugins.bundle.config`（键 = 包名 `dsh-claude-style`，渲染在「设置 → 插件 → dsh-claude-style」页上），旧宿主注册成 `settings.section` 整页——靠 `slots.inject` 的「槽被声明才触发」天然分流，再用 `configForms` 是否存在否决整页在 0.1.7 上的重复注册。
+- **推理等级改成一级弹层底部的推条**：无极滑动、松手对齐最近档位，键盘可用，二级弹层只剩「更多模型」。
+- **`model-picker.js` 拆出两块回到停止线内**：推条与文案解析各成新碎片，二级档位状态一并删除。
+- **推条的滑槽与旋钮几乎等高**：滑槽从 6px 细线改为 14px 圆角槽，对齐 Claude 真机比例。
+- **弹层悬停时间统一**：停留 50ms 打开、离开 100ms 关闭，统计卡片仍 300ms 打开。
+- **「更多模型」二级弹层收口**：底对齐、不重复供应商、没得列就整行去掉，不支持思考时不画推条。
 
-- **统计卡片：内容会缺一块、卡片关不掉、还容易被误触发**：三个毛病同源，都在「统计卡片」这一处。**(1) 内容缺块**——卡片的两节（会话统计 / Token 用量）是**点开宿主那两个药丸、读出它们的弹层**再拼出来的，而给卡片新加的「点击打开」监听挂在统计句的根上：采集时那些**合成点击会冒泡回这个监听**，于是采集在自身内部又触发一次采集，两次读取互相打架——实测同一张卡在「会话统计 + Token 用量」与只剩「Token 用量」之间来回变，看起来就像**两个不同的弹层**（用户报的「一个是会话统计，一个是会话统计+Token 用量」）。现在只认**真实点击**（`event.isTrusted`），合成点击不再回灌。**(2) 关不掉**——同一条回灌路径每次都取消掉待执行的隐藏定时器，所以指针离开后卡片留在原地；回灌修掉后实测每轮都能收起。**(3) 误触发**——统计句横在工具栏行中间，指针从权限控件移向模型触发器时会经过它，于是卡片随机弹出；现在**悬停需停留 300ms** 才打开（快速划过不再触发），并且**点击也能打开**（宿主自己的两个弹层被样式表藏住，点击必须落在某处）。另外补上**热重载遗留卡片的清扫**与**按世代重新绑定**：宿主拥有统计节点并在客户端 HMR 重载后复用，原先的布尔标记让新一代**完全不绑定**，于是上一代的闭包继续供着那张内容陈旧的卡；现在标记改为按世代取值，每轮 pass 顺带清掉不属于本代的 `.dsh-claude-stats-popover`（模型选择器与账户区早就这么做，统计卡是漏掉的那个）。实测（0.1.7-alpha.1 真实 GUI，连续 5 轮开合）：每轮都是两节齐全（8 项）且离开即收起；快速划过 100ms 不弹、停留 1.2s 弹、点击弹。
+### 问题修复
 
-- **0.1.7 上设置仍然存不进去：软链安装下 schemastery 解析不到，Config 建不出来**：宿主半边导出 `Config` 需要 schemastery，而本仓库是 `link:D:/Build/dsh-claude-style` 装进 profile 的——Node 按**真实路径**（仓库目录）向上找 `node_modules`，永远走不到 profile 的拦截层，`import('@deepseek-ai/schemastery')` 直接 ERR_MODULE_NOT_FOUND（宿主日志里那条「schemastery did not resolve」就是它）；而拦截层里那份指向的是**桌面端的 3.18.2**，本来也没有 `.volatile()`。于是 `Config` 为 undefined、条目没有可编辑字段，`configForms` 那边一写就被拒，设置页显示「设置存储不可用，改动不会被保存」。现在先按 **harness 自己的解析基准**取 schemastery——`createRequire(process.argv[1])`，也就是 `dsh` 的 `lib/bin.js`——那正是设置域自己校验表单用的同一份实例，0.1.7 上就是带 `.volatile()` 的 3.18.3；取不到才回落到普通 import。回归脚本 `.debug/schema-resolution-check.cjs` 用替身 harness 目录跑真实子进程验证：锚点在时 `Config` 八个字段全部 volatile，锚点不在时 `Config` 为 undefined（负对照）。
-- **输入框下面的「＋」在 0.1.7 上失去皮肤的样式与位置**：0.1.7 把「添加附件」与「指令」两个按钮合并成一个「＋」，它的 `aria-label` 也从 `添加附件` / `Add attachment` 变成 `添加文件或调用指令` / `Add files or run commands` —— 皮肤的规则是按**精确标签**匹配的，于是它整条退回宿主默认：28px 圆、hover 变成 `rgb(46,44,41)` 的近黑板、并按宿主顺序排到权限控件**前面**。现在标签列表补上两个子串匹配（`*="添加文件"` / `*="Add files"`），「＋」回到 24px、透明底、浅色 hover 板，并回到权限控件之后（`order: 3`）—— 即 0.1.7 之前的样式与位置。实测：hover 底色从 `rgb(46,44,41)` 变回 `rgba(0,0,0,0.08)`，盒子 28×28 → **24×24**、`order` 3。
-- **侧栏两行改成 Claude 真机的形状：默认无底色、hover 才有底色、「＋」套一枚圆形底**：0.1.7 在新会话按钮下新增了一个 panel row（`插件`），宿主给它 36px 高 / 14px / 12px 圆角，而新会话行是 28px / 13px / 6px —— 两行叠在一起却像两份不同的列表；而且两行都常驻一块灰色底板，Claude 真机的侧栏是**平的**，底色只在指针落上去时出现。现在两行取同一套度量（**含 `min-height`**：宿主用 min-height 把面板行顶在 36px，只写 `height` 压不住）、**静止透明 / hover 才铺底板**，并且图标盒统一成 **20px**：新会话那颗「＋」不再只是一枚字形，而是一枚 **20px 圆形底 + 12px 加号**的 chip（Claude 用它标记主操作行），插件行的 13px 四角星居中放进同样的 20px 盒。实测两行 computed 逐项一致（`28px / 256px / x=12 / 6px / 13px 500 / padding 0 8px / gap 6px`），**两行文字都从 x=46 起排**（此前 45 / 39，差 6px —— 旧写法给字形又加了 6px 外边距，与行自身的 gap 叠在一起）。chip 用 `border-radius: 50%` + 一张内联 SVG 加号做 `background-image`：mask 做不到——它会把元素裁成字形，圆形底一起被裁掉；代价是加号颜色不能再用 `currentColor`，因此亮/暗各一条规则。
-- **侧栏两行的图标 hover 转 90°**：新会话的「＋」与插件行那颗四角星都是四重对称图形，转 90° 落回原形，读起来是一次旋转而不是状态变化；`transition: transform .25s` 让指针离开时自动转回去。实测（0.1.7-alpha.1 真实 GUI）：两行 hover 时 `transform: matrix(0, 1, -1, 0, 0, 0)`（即 `rotate(90deg)`），指针离开回到 `none`。
+- 修复 **真圆被画成鹅卵石**：给六处真圆与滑槽补上 `corner-shape: round`。
+- 修复 **全屏面板下顶栏标签与后台任务数浮在面板之上**：该行 `z-index` 从 100 降到 9。
+- 修复 **热重载后模型选择器失去点击效果**：弹层节点重建判据改为「为空或已脱离文档」，并重置渲染签名。
+- 修复 **热重链后宿主半边资产路由整代失联**：改为无条件经 `ctx.inject(['webServer'])` 注册路由。
+- 修复 **推条拖动掉帧、不跟手**：拖动位移并入每帧一次 rAF，并对同值写入加护栏。
+- 修复 **二级弹层悬停打开后不随指针移开收起**：一级弹层委托 `mouseover`，指针离开入口即收起。
+- 修复 **切换档位后模型选择器一段时间不可用**：只在解析不出席位且无分组时才显示加载行。
+- 修复 **composer 获焦时 `ui.heroMenu.close` 抛错**：调用前补存在性护栏。
+- 修复 **0.1.7 上上下文标记被落在第二层**：新增 `mergeContextMeterIntoRow()` 归位到模型触发器右侧。
+- 修复 **composer 底行三种控件字型不一**：统一为同一字体、13px、500 字重、20px 行高。
+- 修复 **统计句盒子横跨半个行**：改用 `flex: 0 1 auto` 与自动外边距，盒子贴合文字。
+- 修复 **0.1.7 上设置静默失效**：宿主半边导出 `Config`，设置按宿主世代分流到官方表单或旧注册制。
+- 修复 **统计卡片内容缺块、关不掉、易误触发**：只认真实点击，悬停需停留 300ms，并按世代清扫遗留卡片。
+- 修复 **软链安装下 schemastery 解析不到**：改按 harness 自己的解析基准取 schemastery。
+- 修复 **0.1.7 上输入框的「＋」失去皮肤样式与位置**：标签列表补子串匹配，恢复 24px 与顺序。
+- 修复 **侧栏两行形状不一致**：统一度量、静止透明 / hover 才铺底色，图标盒统一为 20px。
+- 修复 **侧栏两行图标 hover 转 90°**：加 `transition: transform .25s`，指针离开自动转回。
+
+### 移除
+
+- **模型行的厂商字体整块移除**：字体资产、子集化脚本、令牌与 `@font-face` 一并删除。
+
+<h3 id="en-0.5.0">New Features</h3>
+
+- **The plugins page gets its own icon**: `package.json` points at the clay starburst's relative path, copied into `lib/` at build time.
+- **The plugin card gets localized title and description**: `locale/*.json` supplies `meta.title` and description, exported via a wildcard to avoid a downgrade.
+- **The sidebar "Workspaces" title becomes an Active / Archived segmented control**: it drives the host filter and reads selection back from the tree, with a delete button on archived rows.
+
+### Improvements
+
+- **Reasoning effort becomes a slider at the bottom of the first-level popover**: it slides freely and snaps on release, is keyboard-accessible, and the submenu holds only "More models".
+- **`model-picker.js` splits into two fragments and returns under the stop line**: the slider and copy lookup become new fragments, and the submenu effort state is removed.
+- **The slider track and knob are now nearly the same height**: the track goes from a 6px line to a 14px rounded groove, matching Claude's real proportions.
+- **Popover hover timing is unified**: 50ms dwell to open and 100ms to close, while the stats card keeps its 300ms open dwell.
+- **The "More models" submenu is tightened up**: bottom-aligned, no repeated providers, hidden when empty, and no slider when the model lacks reasoning.
+
+### Bug Fixes
+
+- Fix **circles rendering as pebbles**: six true circles and the slider track now declare `corner-shape: round`.
+- Fix **the header preset label and background-task count floating above a fullscreen panel**: that row's `z-index` drops from 100 to 9.
+- Fix **the model picker losing its click effect after hot reload**: popover nodes now rebuild when null or detached, and the render signature is reset.
+- Fix **host-side asset routes losing a whole generation after a hot re-chain**: routes now always register through `ctx.inject(['webServer'])`.
+- Fix **the effort slider dropping frames and lagging while dragging**: moves are batched into one rAF per frame and same-value writes are guarded.
+- Fix **the submenu staying open after the pointer moves away**: the first-level popover delegates `mouseover` and closes it once the pointer leaves the entry.
+- Fix **the model picker being unusable for a while after an effort change**: the loading row shows only when no seat and no groups can be resolved.
+- Fix **`ui.heroMenu.close` throwing on every composer focus**: an existence guard now precedes the call.
+- Fix **the context meter dropping to a second layer on 0.1.7**: a new `mergeContextMeterIntoRow()` returns it to the model trigger's right.
+- Fix **the composer's bottom-row controls using different type**: they now share one font at 13px / 500 / 20px line height.
+- Fix **the stats sentence box spanning half the row**: `flex: 0 1 auto` with auto margins now shrink-wraps it to the text.
+- Fix **settings silently failing on 0.1.7**: the host half exports `Config` and splits settings by host generation between the official form and the old registry.
+- Fix **the stats card missing content, refusing to close and misfiring**: it now accepts only trusted clicks, needs a 300ms dwell, and sweeps stale cards per generation.
+- Fix **schemastery not resolving under a symlinked install**: it is now resolved from the harness's own resolution base.
+- Fix **the composer "+" losing its skin styling and position on 0.1.7**: substring label matches restore its 24px size and order.
+- Fix **the sidebar's two rows not matching**: shared metrics, transparent until hover, and a uniform 20px icon box.
+- Fix **the sidebar rows' icons rotating 90° on hover**: add `transition: transform .25s` so they turn back on pointer leave.
+
+### Removals
+
+- **The model row's vendor font is removed entirely**: the font asset, subsetting script, token and `@font-face` are all deleted.
+
+**Full Changelog**: [v0.4.0...v0.5.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.4.0...v0.5.0)
 
 ## [0.4.0] - 2026-09-21
 
-### Added
-- **设置页新增「快捷供应商」多选弹层，一级弹层改按供应商分组**：勾选的供应商，其模型会直接列在模型选择器的一级弹层里；不同供应商之间一条横线，供应商名以 11px 小字**领在横线前面**（同一行，线被名字挤短——不是另加一条整行横线，也不是名字压在线上），官方来源不标名字、第一组前面也不画线。名字用 `--dsw-alias-label-caption`，比横线本身的 `--dsw-alias-border-l1` 深一档——那个色当文字读不出来。新碎片 `src/overrides/quick-providers.js` 负责那个多选弹层——它复用权限弹层的卡片与行样式，但因为是设置控件而非接管，所以只点击展开（悬停设置行不该弹出菜单）、勾选后不关闭。卡片挂到 `<body>` 而不是设置行里：对话框会裁剪并可能 transform 自己的子树，`position: fixed` 的卡片在里头会以对话框为参照系。
-- **当前席位那行不再把供应商写在括号里**：供应商改由它自己的一条横线承载（与分组同一套语汇）；当前席位不在已列出的供应商里时，会在列表末尾（分隔线**之上**，分隔线只负责把模型列表与推理等级/更多模型分开）补一条横线加它那一行。二级弹层的高度也从写死的 540px 上限改成只受视口约束，随内容自适应。
-- **设置页新增「重做模型选择器」开关（默认开）**：关掉后不再接管输入框的模型席位与两级弹层，交回宿主自己的模型菜单——只影响弹层，输入区其余改动照旧。它与「对话框样式改动范围」是两个独立开关。
-- **首页对话框的目录选择器与预设弹层改用皮肤自己的弹层样式**：这两个控件由宿主共享的菜单原语渲染，卡片 portal 到 `<body>` 且自身没有任何标记，CSS 无法把它与宿主其它菜单区分开。所以新增 `src/overrides/hero-menu.js`：hero 行的触发器（工作区 chip / 预设 seat，含无会话时由卡片自身当触发器的那种）报告 `aria-expanded="true"` 时，给 `<body>` 里那张卡片打上 `data-dsh-claude-hero-menu`；新增的 `components/hero-menu.css`（composer 门控）据此把它重绘成皮肤的弹层语言——12px 卡片、32px 行、6px 行圆角、hover 面、陶烬橙选中勾。宿主其它菜单（侧栏行菜单、设置页权限行、子菜单）保持原样。
-- **`docs/STYLE.md` 新增「Popovers · 多选一弹层」规范**：把这类弹层的卡片 / 行 / 标题 / 分隔 / 页脚度量列成表，并记下宿主两族类名的哈希方向相反（原语是 `_<local>_<hash>_<n>`，client-ui 包是 `<hash>_<local>`，子串匹配要各取最长稳定片段），以及四处既有弹层尚未对齐的具体位置。
-- **hero 弹层的位置改为从按钮旁边弹出**：宿主把卡片放在触发器**下方**，而那正是输入框所在的位置——弹层会盖住输入区和里面的控件。现在由 `src/overrides/hero-menu.js` 把它挪到触发器**旁边**：底边与触发器对齐、向上生长进 hero 的空白区，视口不够时翻到左侧，两边都按 12px 边距夹紧；定位用 `important` 内联写入盖过宿主自己的那一次写入，并在滚动/缩放时经 scheduler 的视口钩子重算。卡片是宿主挂载而非切 `data-open`，所以规范里的展开过渡在这里落成一次性的 0.15s 动画。
+[中文](#cn-0.4.0) | [English](#en-0.4.0)
 
-- **首页的目录/预设弹层现在也受「自动弹出弹层」管辖**：这两个是宿主自己的菜单，只会点击打开；现在 `hero-menu.js` 用委托的 `mouseover`/`mouseout` 驱动宿主那个点击处理器——`全部` 档下悬停触发器即展开、移开即收起（跨过触发器与卡片之间那 6px 间隙不会误关），点击打开的菜单则不受悬停影响。悬停只在「对话框重绘」对该页面生效时启用，与样式门控一致。
-- **设置里的「快捷供应商」清单排除官方服务，已下线的供应商也能清掉**：官方服务**始终**列在一级弹层最前面，不在多选清单里——它出现在清单里只会让人以为它能被「取消」，读取时也会把存储里残留的官方 id 归一掉（宿主与浏览器半边各一次）。反过来，一个曾经勾选、后来从目录消失的供应商 id 会带着「已移除」的弱化标记留在清单里——它还是「勾选」状态，取消勾选即从存储清除，否则那种残留 id 会永远隐形地躺在存储里、既看不见也删不掉。
-- **对话框获得焦点时收起对话区的弹层**：`focusin` 一旦落在对话卡片里，权限、模型（两级）、会话统计、账户抽屉、首页 hero 菜单与设置里的快捷供应商弹层全部关闭——一个弹层悬在刚点进来的输入区上方会很碍事，而焦点的语义正好是「用户开始在这里干活」。注册在调度器的 document 级监听器上，随其它监听器一起装卸。
+<h3 id="cn-0.4.0">新增功能</h3>
 
-### Changed
-- **一级弹层的滚动区只剩模型列表，分隔线与「推理程度 / 更多模型」钉在滚动区外**：此前整个一级弹层共用一个滚动容器，模型很多时「推理程度」「更多模型」两行会跟着滚出视野——现在弹层拆成上下两段：模型列表在上段滚动，分隔线、推理程度、更多模型在下段**不进滚动区**，始终停在卡片底部。一级弹层的高度也改成随内容自适应（只受视口约束，与二级弹层同一上限），短列表不再撑出一张空高卡片。
-- **「自动弹出弹层」从开关改成三档（关闭 / 仅账号区 / 全部，默认全部）**：原来只有开与关，也没说清范围；现在三档把它写明——「仅账号区」只让侧栏账户弹层悬停展开，「全部」再加上权限、模型、会话统计与首页的目录/预设。旧的布尔值在读取时归一到新档位（`true` → 全部，`false` → 关闭），浏览器半边与宿主半边各做一次归一，宿主写路径的白名单也接受新的字符串值。
-- **四处弹层的度量统一到规范**：账户抽屉与会话统计此前是 8px 行圆角、2px / 4px 卡片间距、8px 内边距、260px 最小宽度、z-index 1000 / 100000，权限弹层是 220px 最小宽度——现在全部对齐「Popovers · 多选一弹层」：6px 内边距、6px 间距、`min-height: 32px` 的行、`2px 7px` 行内边距、6px 行圆角、248px 最小宽度、z-index 99999。顺带修掉权限弹层把行高写死成 `height: 32px` 而内容本就是两行的隐患（改 `min-height`），并给会话统计补上缺失的 `transform-origin`。
-- **清掉一批开发期痕迹，行为无变化**：删除从未被调用的 `applyBrand`（它连同注释一直被打进 bundle）、`modelBrand` 一个未使用的参数、`model-brand.js` 开头讲文件来历的注释，以及架构文档里指向某次提交与某个已删除计划文档的引用；`docs/STYLE.md` 中与 `AGENTS.md` 重复的模型文案规则与选择器纪律改为指向后者，并修掉那里一处断了主语的句子、README 里过期的锁定标数量与 Star History 图。
+- **快捷供应商多选弹层**：设置页新增多选弹层，勾选者的模型直接列进一级弹层，按供应商分组、组名领在分隔线前。
+- **当前模型行**：供应商改由自己的分隔线承载，席位不在已列供应商时在列表末尾补一行；二级弹层高度随内容自适应。
+- **重做模型选择器开关**：设置页新增开关（默认开），关掉后交回宿主自己的模型菜单，只影响弹层。
+- **首页目录与预设弹层**：改用皮肤弹层样式，触发器展开时给卡片打标记并重绘。
+- **Popovers 规范**：`docs/STYLE.md` 新增「多选一弹层」的卡片、行、分隔与页脚度量表及类名匹配纪律。
+- **hero 弹层位置**：改从触发器旁边弹出、底边对齐并向上生长，视口不够时翻到左侧，滚动缩放时重算。
+- **首页弹层纳入自动弹出**：悬停触发器即展开、移开即收起，与对话框重绘门控一致。
+- **快捷供应商清单**：官方服务始终不列入，残留的已下线供应商带「已移除」标记，取消勾选即从存储清除。
+- **焦点收起弹层**：`focusin` 落进对话卡片时关闭权限、模型、会话统计、账户抽屉、hero 菜单与快捷供应商弹层。
 
-### Fixed
-- **开发时热重载会让账号区和模型席位重复渲染**：客户端的 HMR 在刷新时丢掉旧 fiber 的清理（不执行 dispose），于是前一代渲染的账户按钮/模型席位和它们的弹层还留在 DOM 里，新一代从零开始又插了一份——账户区因此出现过两次（且旧的那份带着过期的用户名）。权限弹层没这个问题，因为它是 DOM 幂等的：每次先清掉同名节点再造。修复方式是把账户区与模型席位也改成 DOM 幂等：更新前先清扫上一代的同名节点（`body > .dsh-claude-model-popover` 与 `.dsh-claude-account-*` 各自的清扫在各自的 update 里），旧闭包泄漏的监听器/观察器/定时器无法从插件侧释放，只在开发模式下有成本，属可接受的余量。
+### 体验优化
+
+- **一级弹层滚动区**：只滚动模型列表，分隔线与「推理程度 / 更多模型」钉在卡片底部，高度随内容自适应。
+- **自动弹出三档**：关闭 / 仅账号区 / 全部（默认全部），旧布尔值读取时归一。
+- **弹层度量统一**：账户抽屉、会话统计与权限弹层对齐规范的行高、圆角、间距、最小宽度与 `z-index`。
+
+### 问题修复
+
+- 修复 **热重载重复渲染**：账户区与模型席位改为 DOM 幂等，更新前清扫上一代同名节点。
+
+### 其他变更
+
+- **清理开发期痕迹**：删除未调用的 `applyBrand`、未用参数与过时注释，行为无变化。
+
+<h3 id="en-0.4.0">New Features</h3>
+
+- **Quick-provider multi-select popover**: pick providers in settings and their models list directly in the first-level popover, grouped with the provider name leading each divider.
+- **The current-model row**: the provider now rides its own divider; a seat outside the listed providers gets one appended at the end.
+- **Redo model picker toggle**: a new setting (on by default) hands the model seat and both popovers back to the host's own menu.
+- **Hero directory and preset popovers**: restyled to the skin's popover language via a marker set when the trigger reports `aria-expanded="true"`.
+- **Popover spec**: `docs/STYLE.md` gained card, row, divider and footer metrics plus the class-name matching rules.
+- **Hero popover placement**: it now opens beside the trigger, growing upward, flipping left when space is short, and repositions on scroll or zoom.
+- **Hero popovers follow auto-popover**: hovering the trigger opens them and leaving closes them, gated like the composer restyle.
+- **Quick-provider list**: official services never appear, and a removed provider stays flagged until unchecked and cleared from storage.
+- **Focus closes popovers**: a `focusin` inside the chat card dismisses the permission, model, stats, account, hero-menu and quick-provider popovers.
+
+### Improvements
+
+- **First-level popover scroll region**: only the model list scrolls while the divider, reasoning effort and "More models" stay pinned at the card bottom.
+- **Auto-popover has three levels**: Off / Account area only / All (default All), with old booleans normalized on read.
+- **Popover metrics unified**: the account drawer, session stats and permission popover now share the spec's row height, radius, spacing, min width and `z-index`.
+
+### Bug Fixes
+
+- Fix **Duplicate renders on HMR**: the account area and model seat are now DOM-idempotent, sweeping the previous generation's nodes before updating.
+
+### Chores
+
+- **Dev leftovers removed**: deleted the unused `applyBrand`, an unused parameter and stale comments, with no behavior change.
+
+**Full Changelog**: [v0.3.2...v0.4.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.3.2...v0.4.0)
 
 ## [0.3.2] - 2026-09-21
 
-### Added
-- **会话统计弹层现在跟随「自动弹出弹层」设置**：账户、模型、权限三个弹层都检查了 `readPrefs().autoPopover`，只有会话统计那个漏了——`bindStatsHover` 无条件在 `mouseenter` 打开弹层，于是它无视开关、永远悬停即弹。现在与那三个对齐：关掉开关后悬停不再弹出，点击仍可打开宿主自己的统计对话框。
-- **「更多模型」弹层再收紧**：列间距 6 → 4px、分组间距 6 → 4px、分组标题上边距 6 → 4px（上一轮已把行内边距 4 → 3px）。
-- **锁定标不再回退到供应商，用不到的标一并删掉**：此前「没有规则认领的模型」会退回它所在 provider 的锁定标，于是 OpenCode 转售的 `LongCat-2.0` 戴上 OpenCode 自己的标——那不是缺一个标，而是给了一个错的标。现在没有规则命中就不画标（`modelBrand` 不再回退），`brands.providers` 随之清空，vendoring 的品牌集合只剩规则真正用到的那些：**43 → 25 个锁定标**，产物 **756 KB → 649 KB**（−107 KB）。
-- **新增 `longcat` 品牌与 `mimo` → `xiaomimimo` 规则**：OpenCode 转售的 `MiMo V2.5 Pro` 此前解析不到（没有 `mimo` 规则，于是落到 provider），现在命中；LongCat 用 Lobe 的 `longcat` 图标。
-- **OpenAI 的标在暖黑画布上不可见**：手工提供的 ChatGPT SVG 把颜色写在 `style="fill:#000000"` 里，而内联 style **优先于**呈现属性，所以 `fill="currentColor"` 的包装不生效——标是黑的，暖黑上等于没有。现在 vendoring 会清掉本地资产里带 fill 的内联 style，再补 `currentColor`。
-- **「更多模型」弹层收紧、同供应商内按 id 升序**：行内边距 4px → 3px；每个 provider 的模型按 id 升序排（目录自己的顺序是 provider 返回的顺序，不可预期），排序在副本上做，不动宿主的快照。
-- **锁定标的七处修正**：(1) **Meta 的锁定标向左漂移**——`compose_lockup` 的 viewBox 左右边界只取了字标簇，而图标画在字标左侧，于是它落到元素框外、压向前一列；现在边界取整件墨迹，只有大写带仍取自字标簇（viewBox 左边界 38.3 → 2.0）。(2) **混元标的一部分被染黑**——`recolour_illegible` 会把任何在象牙白上读不出的填充换成 `currentColor`，而混元图标里那块浅色高光并非主导色，因此被误伤；现在只换**按墨迹面积加权的主导色**（Kimi 的白 K 是主导 → 仍换 ✓，它的蓝点保留 ✓，混元的 `#ECECEE` 保留 ✓）。(3) **`hy-mt2-*` 三个混元模型解析不到品牌**——规则 `hy\d` 不匹配 `hy-mt2`，放宽为 `hy(\d|-?mt)`。(4) **新增 Gemma 品牌**（Lobe 有 `gemma` 图标）：Gemma 是 Google 的开放模型线，此前落到 `google`，而 Google 没有锁定标、行里就是空的；现在有自己的 ✓。(5) **Gemini 标与字标之间空隙过大**——字标定位改用**图标墨迹**的右边缘；Lobe 的 24 单位盒子里留白很多（Gemini 星芒远窄于盒子），按盒子定位就多出一大截空隙。(6) **新增 Nano Banana 品牌**（Lobe 的 id 是 `nanobanana`，词覆写为 `Nano Banana` 才与目录名对得上）。(7) **Claude 行改用 Anthropic Serif 排其余文字**——那枚锁定标本身是衬线体，标签此前是无衬线，两截字形不同；`@font-face` 与宿主路由白名单本就存在，所以只加了一个字体 token 与一条 `[data-brand='claude']` 规则。
-- **模型行改用厂商锁定标：图标与字标合成一件图形，随包的自建字标全部删掉**：起因是「引入自建字体」这条路——每接一个厂商的字标都要单独弄一枚资产、自己裁 viewBox 对齐大写带。Lobe 的 React 包有一个 `Combine` 变体（`<Qwen.Combine/>`），但**静态资产包里没有 `-combine` 文件**：它是运行时把「图标」和「文字变体」拼起来的，所以合成得自己做，而**规则不用自己发明**——每个图标 `es/<Icon>/style.js` 里的 `TEXT_MULTIPLE`（字标 ÷ 图标）与 `SPACE_MULTIPLE`（间距）就是 Lobe 自己发布的合成比例，`es/toc.js` 给品牌色与变体清单。产出 `src/assets/icons/combine/<厂商>.svg`：viewBox 高度归一化为「字标的大写带」（所以样式表一条 `height: 1cap` 管住全部 43 个），内部三组——亮色画布显彩色图标、暗色画布显单色图标（`currentColor`；Lobe 自己用品牌色染，但 `#000` 在暖黑上会消失）、字标两份共用。厂商自己的词也由 Lobe 的 `TITLE` 带出（`moonshot` 画的是 `MoonshotAI`、`zai` 是 `zai`，从品牌 id 推不出来）。渲染规则：名称里以该厂商词开头就替换掉那个词（连分隔符一起），名称里没有该词（Kimi 官方目录只叫 `K3`）就把锁定标领在开头；该行不再另起前置图标。
-  **顺带瘦身**：删掉 `assets/icons/lobe/`（41 个厂商标）、`assets/icons/wordmarks/`（3 个自建字标）、`fetch-lobe-icons.mjs`，以及 `PROVIDER_ICONS`（157 KB 的供应商图标 markup）与 `PROVIDER_ICON_URL_KEYS`——供应商行不再显示图标后，最大的一块正好变成死重量；`providerIconName()` 改为只吃 id 集合 `PROVIDER_ICON_KEYS`，元数据保留（品牌解析靠它）。产物 711 KB → 739 KB（锁定标本身 235 KB，净 +28 KB）。
-- **Claude 行改画 Claude 自己的锁定标**：原先 `claude` 规则指向 `anthropic`，行里画的是「Anthropic」字标，而名称里那个词是「Claude」——字标必须和它替换的词对得上（Grok 行画 Grok 而不是 xAI，同一个道理）。`anthropic` 仍留作 `anthropic` 路由的兜底。
-- **新增 `gemma` 与 `nano-?banana` 两条家族规则**：这两个品牌在 `brands.models` 里有锁定标，`families` 里却没有文案规则，于是模型行一路掉到档位规则上（Gemma 会显示成「轻量档…」这类通用话术）。现在两条各有官网口径的一行。
-- **新增 Claude Fable 与 Mythos 两条家族规则**：Anthropic 的模型线现在是 Mythos / Fable / Opus / Sonnet / Haiku，而 `families` 里只有 opus / sonnet / haiku 三条，Fable 与 Mythos 会掉到兜底的「Anthropic Claude 模型。」。两条各用官网自己的定位句（Fable 用 anthropic.com/claude/fable 的 tagline，Mythos 用它的受众与访问限制）。
+[中文](#cn-0.3.2) | [English](#en-0.3.2)
 
-### Changed
-- **抽出 `model-brand.js`**：`model-picker.js` 已达 737/750 行，撞上仓库的体量停止线，所以先把「这一行/这个分组属于哪个厂商」整块（含共用的元素工厂 `modelEl` 与五个品牌函数）搬进新碎片，再落上面的字标功能。产物侧用行多重集比对证明这是纯搬移——旧 `lib/client.js` 8717 个非空行 vs 新 8729，差异只有新碎片的横幅与构建的碎片清单；`model-picker.js` 737 → 636 行。
-- **厂商字标扫描改为预置数组，并补上分项计时探针**：`.debug/wordmark-cost.cjs` 量出每行标签构建里扫描词表约占 0.5µs（50 行一次渲染约 25ms），改为加载时构建成数组后整行成本从约 0.78µs 降到约 0.72µs。同一批量具还带出 `scripts/probe-timing.cjs`：在真实浏览器里分项计时——启动长任务与插件资源、模型目录就绪、选择器打开延迟、行构成、锁定标 markup 的 `innerHTML` 解析成本、JS 堆——把「哪一段慢」从推测变成测量。
-- **模型简介全部按厂商官网口径重写**：19 条精确条目与 54 条家族规则的文案此前多为转述与推测，现逐条对着官网的发布页 / 模型文档页 / 价格页重写（DeepSeek、Anthropic、OpenAI、Google、Z.ai、Moonshot、阿里、阶跃、MiniMax、xAI、字节、百度、Mistral，以及 Meta、Inception、Cohere、微软、AWS、Perplexity、Motif、Apodex 等十余家），把可核对的事实写进文案——参数量与激活参数、上下文与输出上限、许可证、吞吐与单价。家族规则照旧不写最高级、不写版本相关数字：调研素材里带进来的「1M 上下文」这类数字已从家族文案剔除，否则会把同一家族的旧版一起误标。
-- **文案改为「按线映射」，不再按版本钉死**：DeepSeek 的三条旧版精确条目（V4 Flash、V4 Flash Vision Exp、V4 Pro）与 V3.2 条目一并删除，改为按名字模式映射——所有 Flash 共用一句、所有 Pro 共用一句（官网小标题「性能比肩顶级闭源模型」）、其余共用一句（V4.1 发布标题「更强、更快、更普惠」）。理由是模型会迭代：给某个版本写的描述会被下一代继承，给「已退场版本」写的描述又会挂在当前版本上，而线级文案没有这个问题（已记入 `docs/architecture.md` D5）。
-- **去掉我们自己加的档位前缀**：此前多条家族与档位文案以「旗舰档：」「主力档：」「轻量档：」「高能力档：」「中端档：」开头——那是我们的定位话术，不是模型自己的说法。现在要么用厂商自己的定位句，要么直接说它做什么。例：Claude Fable 线写官网 tagline「新一代智能，专为解决最艰深的知识工作和编程难题」，而不是「顶级档位：新一代智能，专为解决最艰深的知识工作和编程难题」。
-- **描述不再重复模型名与产品线名**：行里已经写着模型名，文案再以「X 系列：」「X 档：」「模型名：」开头就是同一句话说两遍。共改 50 条——16 条精确条目 + 32 条家族规则 + 2 条档位规则。例：GLM 家族规则从「智谱的开源大模型系列：覆盖对话、编程与智能体，支持思考模式与函数调用。」改成「覆盖对话、编程与智能体，支持思考模式与函数调用。」；Kimi K3 从「全球首个开源 3T 级模型：2.8T 参数、1M 上下文、原生多模态。」改成官网模型页标题去掉模型名之后的那半句「面向编程与知识工作的 2.8T 开源模型。」；Mistral Large 3、文心 5.0、ERNIE 等条目的「…：」结构改为逗号并列，事实一个不丢。DeepSeek 的三条线级文案按指定保持不变（DeepSeek 官网没有 per-model 模型页，`/news/*` 的标题是动词句，形状对不上）。
-- **只剩规格的条目补上用途**：删掉标签后有几条只剩参数与价格（`gpt-5.4` 一度只剩「105 万 token 上下文、原生电脑操作。」），读起来不知道它是干什么用的。这些条目按 Kimi 那种「面向…的…」形状，把官网模型卡的用途句并回句首，共 10 条：`gpt-5.4`、`gemini-3.8-flash`、`glm-5.3`、`glm-5.3-flash`、`glm-5.3-flashx`、`kimi-for-coding-highspeed`、`qwen3.8-max`、`step-5-preview`、`step-3.7-flash`、`gpt-oss`。官网 tagline 不如现有事实句的（Codex「The same powerful coding agent—now in ChatGPT」、Gemma、Nano Banana）没有替换。
+<h3 id="cn-0.3.2">新增功能</h3>
 
-### Fixed
-- **几处已经过时或张冠李戴的模型说法**：(1) DeepSeek V4 Flash 与 V4 Flash Vision Exp 已下线、V4 Pro 已公告退场（旧模型名现由 V4.1 Flash 提供服务并按 Flash 价计费），这三条不再逐版本描述，改由线级映射给出文案；(2) Grok 4.5 的「最强」在 4.6 发布后已不成立，改为它自身的事实并注明有更新版本；(3) 文心 5.0 的「预训练成本极低」实为 ERNIE 5.1 的说法，换成官网确有的 2.4 万亿参数 / 每 token 激活约 3% / 128K 上下文；(4) `kimi-for-coding` 的官方名是 Kimi K2.7 Code，文案改按官方命名。
-- **插件加载即崩（皮肤全崩）**：上一版把 `WORDMARK_SVGS` 从产物里删了，却没删 `model-brand.js` 里读它的那个**加载期 IIFE** → `ReferenceError: WORDMARK_SVGS is not defined` → 客户端半边整个加载失败。构建的语法门禁抓不到这类「引用一个已不存在的全局」——语法完全合法，跑起来才抛。补了 `.debug/bundle-load-check.cjs`：用桩跑一遍产物工厂，正反两次对照都验过（把引用注回去即 `FAIL factory runs`）。
-- **锁定标占位但不显示**：源文件把 `fill="currentColor"` 与 `fill-rule="evenodd"` 放在**根 `<svg>` 上**、内部路径靠继承，而 vendoring 只取了内部内容 → 属性丢失、形状无填充（彩色层因为 `fill` 写在每条路径上反而正常，于是现象是「彩色图标在、字标不在」）。现在把根的绘制属性重新包一层 `<g>`，并去掉会变成 hover 提示的 `<title>`。
-- **一级弹层「当前模型」那行的供应商、以及两级都显示模型描述**：三处相关调整。(1) 那行原先显示 `供应商id/模型id`，上一版按「外显名而非 id」改成了只显示模型名，把供应商整个丢了——现在格式定为 `模型 (供应商)`，两侧都是外显名（模型取目录里的 name，供应商取 `group.name`，目录没给名字时退回 id）。**带字标的模型同样带供应商**：字标只说明厂商，没说明这个席位由哪个 provider 提供，所以 `[KiMi]K3 (opencode)` 才是完整信息；供应商放在模型之后而不是之前，因为字标正站在标签开头。(2) 「更多模型」是每个 provider 的完整目录，描述行在那里只是噪声，改为只在第一级显示。(3) 一级那行补上描述——它和官方列表里的行一样是「读」的行，描述正是把模型区分开的东西。
-- **冷启动后模型选择器要等几秒才有内容**：宿主的模型目录是每个 Host generation 一次 RPC（`remote.session.modelCatalog()`），而它**只在宿主自己菜单的 `show()` 里发起**——本皮肤把宿主的模型席位藏了起来，那个菜单永远不会打开，于是整趟往返都压在第一次打开选择器上（冷启动时是数秒的「正在加载模型…」）。现在插件在会话一解析出来就 `load()` 预热（`warmModelCatalog()`，每次安装只发一次、失败交给 store 的错误面），把这趟等待挪进用户本来就在等的启动过程；触发器的模型名标签读的也是同一份目录，所以它一起提前出来了。目录的 load 是共享在途且宿主侧缓存的，因此选择器自己那次 `load()` 变成空操作，而不是第二个请求。
-- **Grok 行显示的是 xAI 的标识**：`brands.models` 里的 `{ "match": "grok", "brand": "xai" }` 把模型行指到了公司标识上——xAI 是公司、Grok 是模型线，所以 Grok 行该显示 Grok 自己的标记（provider 分组标题仍显示 xAI 的，因为 provider 只从 `providers` 解析，与模型行互不影响）。标识本来就在仓库里：`src/assets/icons/providers/grok.svg`（cc-switch 供应商集，路径数据与 Lobe 的 `grok.svg` 完全一致，只是带着 `<title>`/`style`/em 宽高），而选择器优先用 cc-switch 图标、缺失才回退 Lobe，所以这一处不必重新抓图，改映射即可。规则补了一条 note 说明这个分工。
-- **一级弹层里「当前模型」那行显示的是 `供应商id/模型id`**：当选中模型不在官方服务上时，一级弹层会在官方列表下面补一行显示当前席位——但它直接把 `group.id + '/' + model.id` 当标签写了出来，于是那一行是 `openrouter/anthropic-claude-4.5` 这种 id 串，而它上下每一行都是模型的外显名。现在这行与其他行同一套标签逻辑（`buildModelName`，含厂商字标），只在目录没给名字时才退回 id；同时补上了行的 `data-brand`，所以它和列表里对应的那一行穿同一件厂商标记与字体。变更签名（判断是否需要重绘）仍然只比对 id——那是每轮 pass 都要算的热路径，而目录的名字在一次会话内是稳定的。
+- **会话统计跟随自动弹出**：与账户、模型、权限三个弹层对齐，关闭开关后悬停不再弹出。
+- **更多模型弹层收紧**：列间距、分组间距与分组标题上边距各收到 4px。
+- **锁定标不再回退**：没有规则命中的模型不画标，未用到的品牌一并删除。
+- **新增 `longcat` 品牌**：补 `mimo` → `xiaomimimo` 规则，OpenCode 的 MiMo 与 LongCat 现在命中。
+- **OpenAI 标不可见**：vendoring 清掉本地资产里带 `fill` 的内联 style，再补 `currentColor`。
+- **更多模型排序**：行内边距收到 3px，同供应商模型按 id 升序排列。
+- **锁定标多处修正**：Meta 漂移、混元高光与 `hy-mt2` 解析，新增 Gemma / Nano Banana 两个品牌。
+- **厂商锁定标合成**：按 Lobe 的合成比例生成 `combine/<厂商>.svg`，图标与字标合为一件图形，自建字标与供应商图标删除。
+- **Claude 行锁定标**：改画 Claude 自己的字标，`anthropic` 仍作 `anthropic` 路由兜底。
+- **新增家族规则**：`gemma` 与 `nano-?banana` 各补一条官网口径文案，不再掉到档位规则。
+- **Fable 与 Mythos 规则**：两条各用官网定位句，不再掉到兜底文案。
+
+### 问题修复
+
+- 修复 **过时模型说法**：修正 DeepSeek 下线版本、Grok 4.5、文心 5.0 与 `kimi-for-coding` 的过时文案。
+- 修复 **插件加载即崩**：清掉对已删除 `WORDMARK_SVGS` 的加载期引用，并补一条加载校验脚本。
+- 修复 **锁定标占位不显示**：把根的绘制属性重新包一层 `<g>`，并去掉会变提示的 `<title>`。
+- 修复 **当前模型行丢供应商**：格式定为 `模型 (供应商)`，描述只在第一级显示，一级那行补上描述。
+- 修复 **冷启动后选择器空等**：会话一解析出来就预热模型目录，把等待挪进启动过程。
+- 修复 **Grok 行显示 xAI 标识**：`brands.models` 改指 Grok 自己的标记，provider 分组标题仍用 xAI。
+- 修复 **当前模型行显示 id 串**：改用与其他行同一套外显名与厂商标记逻辑，无名字才退回 id。
+
+### 其他变更
+
+- **抽出 `model-brand.js`**：把品牌判定整块搬进新碎片，`model-picker.js` 回落到停止线以内。
+- **字标扫描改预置数组**：加载时构建词表，并新增 `scripts/probe-timing.cjs` 分项计时。
+- **模型简介按官网重写**：19 条精确条目与 54 条家族规则逐条对齐官网，家族文案不写最高级与版本数字。
+- **文案改按线映射**：DeepSeek 删除旧版精确条目，改为 Flash / Pro / 其余三条线级文案。
+- **去掉档位前缀**：不再用「旗舰档：」等自家定位话术，改用厂商自己的定位句。
+- **描述不再重复模型名**：共 50 条去掉「X 系列：」式开头。
+- **规格条目补用途**：10 条只剩参数与价格的条目按「面向…的…」形状并回官网用途句。
+
+<h3 id="en-0.3.2">New Features</h3>
+
+- **Session stats follow auto-popover**: it now matches the account, model and permission popovers, so with the setting off hover no longer opens it.
+- **More-models popover tightened**: column, group and group-title spacing all reduced to 4px.
+- **No lockup fallback**: a model with no matching rule draws no mark, and unused brands are dropped.
+- **New `longcat` brand**: plus a `mimo` → `xiaomimimo` rule, so OpenCode's MiMo and LongCat now resolve.
+- **Invisible OpenAI mark**: vendoring now strips inline `fill` styles from local assets and adds `currentColor`.
+- **More-models ordering**: row padding reduced to 3px and each provider's models sort by id.
+- **Multiple lockup fixes**: Meta drift, Hunyuan highlight and `hy-mt2` lookup, plus the Gemma and Nano Banana brands.
+- **Combined vendor lockups**: `combine/<vendor>.svg` is generated from Lobe's own ratios, merging icon and wordmark; hand-built wordmarks and provider icons are gone.
+- **Claude row lockup**: it now draws Claude's own wordmark, with `anthropic` kept as the fallback for the `anthropic` route.
+- **New family rules**: `gemma` and `nano-?banana` each get an official one-liner instead of falling through to tier rules.
+- **Fable and Mythos rules**: each uses its official positioning line instead of the generic fallback.
+
+### Bug Fixes
+
+- Fix **Stale model claims corrected**: retired DeepSeek versions move to line mapping, and Grok 4.5, ERNIE 5.0 and `kimi-for-coding` follow official naming.
+- Fix **the plugin crashing on load**: the load-time reference to the removed `WORDMARK_SVGS` is gone, with a load-check script added to catch it.
+- Fix **lockups reserving space but not showing**: root paint attributes are re-wrapped in a `<g>` and the tooltip-making `<title>` is dropped.
+- Fix **the current-model row losing its provider**: the label is now `model (provider)`, descriptions show only at the first level, and that row gained one.
+- Fix **the model picker waiting seconds after a cold start**: the catalog is warmed as soon as a session resolves, folding the wait into startup.
+- Fix **the Grok row showing xAI's mark**: `brands.models` now points at Grok's own, while provider group headers still use xAI.
+- Fix **the current-model row showing an id string**: it now uses the same display-name and brand logic as other rows, falling back to the id only when unnamed.
+
+### Chores
+
+- **`model-brand.js` extracted**: the whole brand-resolution block moved into a new fragment, bringing `model-picker.js` back under the size limit.
+- **Wordmark scan prebuilt into an array**: the word list is built at load time, plus a new `scripts/probe-timing.cjs` for per-stage timings.
+- **Model blurbs rewritten from vendor sites**: 19 exact entries and 54 family rules now match official pages, with no superlatives or version numbers in family copy.
+- **Copy mapped by line, not version**: DeepSeek's old exact entries are gone, replaced by Flash, Pro and a shared line-level blurb.
+- **Tier prefixes removed**: our own "flagship tier:" framing is gone in favour of vendor positioning.
+- **Blurbs no longer repeat the model name**: 50 entries dropped the "X series:" prefix.
+- **Spec-only blurbs gained a purpose**: 10 entries that had only specs now lead with the official use case.
+
+**Full Changelog**: [v0.3.1...v0.3.2](https://github.com/Nwflower/dsh-claude-style/compare/v0.3.1...v0.3.2)
 
 ## [0.3.1] - 2026-09-21
 
-### Added
-- **声明最低运行时与商店截图清单**：`package.json` 的 `dsh` 对象新增 `engines.dsh: ">=0.1.5-rc.2"`（README 标注的实测版本），dsh-market.com 的插件卡片、插件管理器的更新检查与 awesome-dsh-plugin 商店的 host-aware 过滤都会读取它，避免在不满足条件的宿主上被安装或被误判不兼容；仓库根新增 `screenshots.json` 指向 `docs/light.png` 与 `docs/dark.png`，供 dsh-market 等商店以 App Store 式截图展示——截图随仓库推送更新、商店夜间构建自动拾取，之后换图不必再提任何 PR。
-- **模型选择器里 Gemini 行的名称改用 Google Sans Flex**：模型行自 0.2.7 起带厂商标识，但名称仍与其他行同一字体——「这是 Google 的模型」这个信号只给了一半，同一行里标识说厂商、字体说本主题。现在 Gemini 行的名称用上游 Google Sans Flex 的标准字重正体绘制，与标识构成同一个信号。字体由 `scripts/slim-google-sans.py`（手工工具，不进构建——它需要 Python 与 fontTools，而本仓库的 Node 构建必须保持零依赖）从 4.2 MB 的六轴可变字体得到：6 个轴全部钉在**字体自身的默认值**（wght 400 / slnt 0 / wdth 100 / GRAD 0 / ROND 0 / opsz 18，默认值读自 `fvar` 而非写死，上游改默认值时这里不会静默改变「标准」的含义），只保留拉丁字母、数字与标签用得到的标点（ASCII 可打印、不换行空格、间隔号、长/短破折号、弯引号、省略号），并且只保留 `kern` 特性——标签里不该发生连字替换。产物 9 KB，随 npm 包分发，采用 SIL OFL 1.1（`fonts/OFL-GoogleSansFlex.txt` 带上游版权声明与许可证全文）。家族名改为 `Google Sans Flex Picker`：上游没有声明 Reserved Font Name，子集沿用原名并不违规，但一个只含拉丁字符的同名字体会在页面上盖掉用户系统里安装的完整版。样式表的挂载点是行上的 `data-brand`（厂商标识 id）：今天只有 Gemini 解析到字体，其他厂商的行保持界面字体，将来给别的厂商加字体是加一行 CSS 的事；字体栈把界面字体留在后面，子集覆盖不到的字符逐个回落而不是变豆腐块。
+[中文](#cn-0.3.1) | [English](#en-0.3.1)
 
-### Changed
-- **亮暗切换时输入框一带「先色后样」已修复**：皮肤为 hover/focus 调的 0.12s 边框/阴影过渡（composer 卡、输入域、附件轨、hero 托盘）在主题翻转时被重放——画布随 CSS 变量一帧重绘，输入框的边框与 halo 却慢半拍缓入，亮暗切换的瞬间输入区一带肉眼可见分两步换。现在翻转瞬间在 `<html>`/`<body>` 上挂一个只存活约 0.3s 的抑制属性（`html[data-dsh-theme-transitioning] body[data-dsh-claude-style][data-dsh-theme-transitioning] * { transition: none !important }`），并在同一微任务里强制刷一次样式后取消所有进行中的绘制类过渡（`getAnimations()` 里 `transitionProperty` 属于边框/阴影/颜色/背景的 `cancel()`）——属性当帧跳到终值，盖住抑制规则特异性够不着的几条高优先级规则（输入域 (0,6,1)、附件轨 (0,7,1)）。窗口结束即恢复，日常 hover/focus 的 0.12s 手感不受影响；只取消主题会改的绘制属性，transform/opacity 过渡（悬停、菜单反馈）照常运行。
-- **composer 形态判断从 CSS 结构感知的 `:has()` 改为 JS 写属性，降低流式输出期间的样式重算开销**：皮肤原先用约 60 处 `[class*="composerStack"]` 上的 hero/inline 分支（`[class*="composerStack"]:has([class*="heroWorkspaceRow"])` 及其 `:not()` 形式）在 CSS 里判断输入卡处于主屏 hero 形态还是会话内联形态。流式输出时每秒几十次 DOM 变更，每次都要重算这些昂贵的选择器，是渲染压力的主要来源。现在 `syncSegments()` 在每轮 pass 里把同一个 `data-composer-variant="hero|inline"` 属性镜像写到卡片所属的 `composerStack` 祖先上（写前比对旧值避免同值重复写触发无谓的样式失效，同轮去重避免多卡命中同一栈反复写），CSS 改为直接读属性：hero 分支读 `[class*="composerStack"][data-composer-variant="hero"]`，inline 分支读 `[class*="composerStack"]:not([data-composer-variant="hero"])`。属性缺席时按 inline 渲染——inline 是流式高频路径，首帧不闪；hero 屏无流式，属性在首个 pass 补上即可。交互驱动与低频的 `:has()`（`:hover`、`:focus-within`、弹窗、placeholder）按原样保留。
-- **设置页 Claude Style 导航 Tab 图标替换为 Claude 标识**：设置弹窗内「Claude Style」Tab 默认由宿主回退为通用的齿轮图标（`IconSettingsOutline16`）。现通过 CSS 蒙版与调度器轻量属性标记，将其替换为黑色的 Claude 经典星芒图标（亮色模式下为纯正墨黑，暗色模式下随文字主色白亮），与左侧导航栏其他选项的视觉语汇保持一致。
-- **亮色模式背景层级色调调优**：为解决浅色界面在纯白控件反衬下局部偏黄的问题，将亮色模式的背景层级收敛至更清爽中性的象牙白阶梯：一级层级（`--dsw-alias-bg-layer-1`）对齐主画布采用 `#FCFCFB`，二级层级（`--dsw-alias-bg-layer-2`）调整为 `#FBFBF9`，三级层级（`--dsw-alias-bg-layer-3`）调整为 `#F9F9F6`；设置弹窗面板亦对齐主画布底色（`#FCFCFB`），保持整体视觉明净统一。
-- **去 AI 化与精简**：清理 `.debug/` 临时调试日志与历史规划文档；移除 `src/overrides/` 拆分残留的旧章节编号与重复注释；精简 README 冗余功能表格并修正更新日志中对内部开发路径的提及。
+<h3 id="cn-0.3.1">新增功能</h3>
 
-### Fixed
-- **新对话页只贴图不打字时 hint 发黑、位置跑到输入框外**：宿主只在「草稿为空**且**没有附件」时才渲染自己的 placeholder（`draft === "" && attachments.length === 0`），所以在新对话页贴一张图、不打字，它会把自己的 hint 摘掉，改由皮肤的兜底节点接手——可那个节点身上没有任何宿主类名，而皮肤原有的 hint 规则只覆盖对话里的单行输入框（`data-composer-variant="inline"`），于是它退回成普通块级元素：用卡片正文的墨色（看着发黑），并且排在输入框**下面**而不是里面。现在给 hero 变体的兜底节点补上宿主那套定位与墨色（`position: absolute` + 宿主自己的 `inset: 4px 8px auto 14px`，caption 灰、单行省略），hint 回到输入框首行。验证时把宿主 composer 的样式表与构建产物里的皮肤样式表拼成 mock，逐项对照兜底节点与宿主自带 placeholder 的计算样式（8 项检查，含「修复前不成立」的反证）。
-- **inline 输入框聚焦时的底纹把输入框刷成了另一种颜色**：会话内单行输入框聚焦时，画布色的三层底纹（`box-shadow`）原本挂在 rail 上，而 rail 是 `z-index: 4`、输入框本体是 `z-index: 2`——底纹于是刷在输入框**上面**：盖住输入框自己的背景（两个盒子读起来不同色），也盖住草稿第一行。现在底纹移到卡片（`[data-composer-card]`）身上，与 hero 卡片同一位置，所有子元素共用一个底纹，谁也压不住谁；rail 那份去掉，亮暗两态的 rail 规则只保留描边色。
-- **封号彩蛋语言选不动**：设置里选「中文」立刻弹回英文，且没有任何提示。根因是宿主半边（`lib/index.js`）只在 app 启动时被 import 一次，而它是后来才认识 `banLocale` 这个字段的——旧宿主半边的写入口不认这个键，把它丢掉之后按「没有可写字段」当成一次读取返回，客户端拿到原值就把刚做的选择覆盖回去了（浏览器半边每次刷新都是新的，宿主半边不是，两边版本就此错位）。现在 `banLocale` 与用户名走同一套浏览器本地兜底：宿主不认这个键时把选择存在本地（`localStorage`）并立刻按它渲染，页面刷新后仍在；等宿主半边重启、第一次读取时自动把待写入的值补写一次，宿主回显确认后本地兜底才清除——所以选择既不会丢，也不会和宿主长期打架。
+- **声明最低运行时**：`package.json` 新增最低宿主版本，仓库根新增 `screenshots.json` 供商店取图。
+- **Gemini 行改用 Google Sans Flex**：子集随包分发，家族名改为 `Google Sans Flex Picker`，按 `data-brand` 挂载。
+
+### 问题修复
+
+- 修复 **贴图时 hint 发黑跑位**：给 hero 兜底节点补上宿主的定位与墨色，hint 回到输入框首行。
+- 修复 **聚焦底纹盖住输入框**：底纹从 rail 移到卡片，与 hero 卡片同一位置。
+- 修复 **封号彩蛋语言选不动**：`banLocale` 走浏览器本地兜底，宿主不认该键时先本地保存渲染，待其重启后补写。
+
+### 其他变更
+
+- **亮暗切换先色后样**：翻转瞬间抑制过渡并取消进行中的绘制动画，约 0.3s 后恢复。
+- **composer 形态改属性**：由 JS 写 `data-composer-variant`，CSS 直接读，降低流式重算开销。
+- **设置页 Tab 图标**：用 CSS 蒙版把通用齿轮换成 Claude 星芒，亮暗各自取色。
+- **亮色背景层级调优**：一级 `#FCFCFB`、二级 `#FBFBF9`、三级 `#F9F9F6`，设置面板对齐画布。
+- **去 AI 化与精简**：清理临时调试日志与历史规划文档，移除残留编号与重复注释，精简 README。
+
+<h3 id="en-0.3.1">New Features</h3>
+
+- **Minimum runtime declared**: `package.json` gained `engines.dsh: ">=0.1.5-rc.2"`, and a root `screenshots.json` feeds store screenshots.
+- **Gemini row set in Google Sans Flex**: a subset ships with the package under the family name `Google Sans Flex Picker`, mounted by `data-brand`.
+
+### Bug Fixes
+
+- Fix **the hint turning dark and escaping the box on image-only drafts**: the hero fallback node gets the host's positioning and ink, returning the hint to the first line.
+- Fix **the focus underlay painting over the inline input**: the underlay moves from the rail to the card, matching the hero card.
+- Fix **the ban-page language refusing to change**: `banLocale` falls back to `localStorage`, renders locally, and is written back once the host half restarts.
+
+### Chores
+
+- **Theme-flip colour-before-style**: transitions are suppressed during the flip and running paint animations cancelled, restoring after about 0.3s.
+- **Composer variant via attribute**: JS writes `data-composer-variant` for CSS to read, cutting restyle cost during streaming.
+- **Settings tab icon**: a CSS mask swaps the generic gear for Claude's starburst, coloured per theme.
+- **Light-theme layer tones tuned**: layers are `#FCFCFB`, `#FBFBF9` and `#F9F9F6`, with the settings panel matching the canvas.
+- **AI-tells and cruft removed**: temporary debug logs and old planning docs are gone, along with stale numbering and duplicated comments.
+
+**Full Changelog**: [v0.3.0...v0.3.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.3.0...v0.3.1)
 
 ## [0.3.0] - 2026-09-20
 
-### Added
-- **账户横条彩蛋：Claude 封号页**：侧栏底栏账户弹层顶部那条用户名横条现在可以点，点开是 Claude 官方「Your account is on hold」封号页的完整复刻（手绘锁形图标、`account_banned` 提示条、三步复核流程卡片、申请复核按钮、导出数据/删除账户两条操作）。它只是彩蛋——不改宿主状态、不碰会话与设置，只是一个挂在 `<body>` 上、退出时移除的全窗口浮层，因此能盖住标题栏、侧栏与输入区，也不会被侧栏列宽裁掉。退出全是明确动作：页面上的每个按钮（退出登录、申请复核、两条操作、提示条、窗口控制）都能关掉它，`Esc` 也能；点页面空白处不会关。**切走窗口不会关**——这页是用来读的，读者很可能要切出去查点东西，一失焦就消失比多留一会儿更糟，所以窗口失焦那条退出路径已经拿掉。品牌偏好同样生效——选 Anthropic 时页头换成 `A\` + ANTHROPIC 字标，选「关闭」时只留 Claude 字标。
-- **`封号彩蛋语言` 设置**：彩蛋那页的语言由设置（`Ctrl+,` → Claude Style）单独决定，可选中文/英文，默认英文；文案仍走 `model-descriptions.json` 的 `ban` 块。之所以不让它跟随界面语言：那页复刻的是 Claude 的真实界面，按它本来的语言读才对。改语言会立刻重建已打开的那一页，时间戳的时钟也跟着换（英文 AM/PM、中文 24 小时制）；该值存在宿主设置命名空间的 `banLocale` 字段，读取端对未知值一律回落到英文，手改配置不会把页面变成空白。
+[中文](#cn-0.3.0) | [English](#en-0.3.0)
 
-### Changed
-- **封号页的锁改为手绘描摹**：那页顶部的锁此前是 `rect` + `circle` 拼出来的标准图标，跟参考草图的手绘气质不搭。现在整把锁按参考图（89×92px）的墨迹中心线逐锚点描摹成三条三次贝塞尔路径——方框的每条「直」边都带一点自己的倾斜与漂移（顶边右低、底边微垂、左边下行时外移、右边绕过锁孔处外鼓再收回），四角用一小段斜线收口，锁梁里外两拱不同心、两条腿停在方框顶边上而不穿过它，锁孔的头部比正圆扁、腰身偏右、底座比头更宽。手绘感来自锚点本身，不是滤镜也不是随机抖动，所以缩放到任何尺寸都成立；锚点数值整体映射到图标集统一的 24 单位格（墨迹 15.3×20 单位居中），图标框 58px → 75px（墨迹 47.5px → 62.8px，约 +32%），描边 0.5 单位。选这两个数是量出来的：参考页里「锁的墨迹高 ÷ 标题墨迹高」是 3.08，改完是 2.70（此前 2.05）；参考页的「线宽 ÷ 锁高」是 0.025，改完实测 0.0250（此前 0.075，粗了近三倍）。
-- **修掉 `banSvg` 的重复属性**：图标助手此前把 `stroke-width` 追加在 `<svg>` 已有的一条之后，形成重复属性——HTML 解析器只认第一条，于是覆盖静默失效，锁实际按图标集的 1.6 画（在 58px 框里近 3.9px），这正是它看起来「线条太粗」的原因。现在粗细是 `banSvg(body, strokeWidth)` 的形参，只发一条属性，杜绝属性覆盖失效。
-- **点击展开的账户弹层不再被鼠标移出关掉**：此前点账户按钮展开弹层后，指针一离开按钮（弹层挂在按钮下方，指针必须离开）就被 `mouseleave` 关掉，等于点开即关、弹层里的条目够不着；现在点击展开的弹层改为由「点击别处」或「移出整个底栏」关闭，悬停展开仍按原来的延迟关闭逻辑。
-- **账户弹层：账号名下的横线移出 hover 区**：弹层顶部原来是「整块（含横线）在 hover 时整体铺底」，指针扫过横线也会亮；现在横线是账号行的兄弟节点、归弹层所有（左右通栏到弹层内边距边缘），hover 底板只覆盖账号名那一行。
-- **封号页排版**：内容列由靠左改为水平居中；页头（左上角品牌标 + 右上角 Sign out 与窗口控制）整体下移 30px。
-- **行内代码片收紧**：行内代码（`` `npm run build` ``）的圆角矩形此前继承正文行高（15px 代码字号配 23px 行盒），上下各空出约 5px 底纹，显得虚胖。现在代码片自带 `line-height: 1.2`，行盒收到 18px、整片高度 27px → 22px，1px 内边距成为唯一的可见内缩；再小就开始切字形下伸部。底纹、描边、圆角、字号不变，正文段落/表格/标题的行距不受影响。
+<h3 id="cn-0.3.0">新增功能</h3>
 
-### Fixed
-- **回退引用块的链接材质**：0.2.7 把 Markdown 引用块（`blockquote`）改成了链接材质（蓝字 + 蓝色下划线 + 蓝色底纹/竖条），但引用是**容器**而不是链接，这套样式会连同块内的行内代码、文件引用一起染蓝，等于让链接材质泄露进引用块。现回退为原来的中性灰：文字 `#B0AEA5`（亮色 `#6E6A60`）、灰底 + 灰竖条，块内的链接、行内代码片、文件引用各自保持自己的材质，互不串色。`padding` 也不再需要 `!important` 钉死。
-- **文件引用（行内文件名）颜色与超链接不一致**：聊天里的 `` `CHANGELOG.md` `` 这类**文件引用**是宿主把行内代码里的文件路径解析成按钮（`.fileMention`）后的产物，但皮肤的通配行内代码规则（`code:not(pre code)`，特异性 (0,2,1)）压过宿主自己的链接色类（(0,1,0)），于是同一段话里文件引用是代码片的暖红、真正的超链接是链接蓝。现在文件引用的文字改用链接色（亮 `#184F95` / 暗 `#8AB4F8`）、字重 500，下划线沿用超链接那一套（静止态实线、链接色调 60%、1.5px、offset 2px；hover/focus 同样实线、换成不透明的链接色，**线宽与线位不变**），**代码片本身完全不动**——底纹、描边、圆角、内边距与普通行内代码逐项相同，只有文字颜色不同。hover 规则只改颜色：先前用 `text-decoration` 简写会把 `text-decoration-thickness` 重置为 `auto`，导致 hover 时下划线反而变细。普通行内代码仍是暖红代码片；宿主类名带哈希，故按仓库纪律取最长稳定片段 `[class*="_fileMention"]`。
-- **修复 Markdown 表格左侧空隙**：删除旧的全局 `table { width:100% }`、`table th` 背景与 `td/th { padding: 0.6em 0.85em !important }` 规则，避免覆盖宿主 `th:first-child { padding-left: 0 }` 和 `width: max-content`，表格过宽时不再出现左侧空白与外部边框错位。 同时对全部 `.tableScroll` 包装器强制 table margin/padding/border-spacing 归零，首/末单元格恢复 16px 内边距，并把表头背景与行线覆盖到 `thead th/td` 和每行首末单元格（th 或 td），使首列的留白看起来是表格内部区域而不是空隙。 另外，窄表不再被宿主 `.tableFill` 拉满：`.tableScroll` 宽度限制到正文内容块 `--dsh-chat-content-width` 并居中，表格用 `min-width: 100%` 撑满内容块；宽表保持 `max-content` 并保留横向滚动。
+- **Claude 封号页彩蛋**：账户弹层顶部用户名横条可点开完整复刻页，全为明确退出动作，品牌偏好同样生效。
+- **封号彩蛋语言设置**：可选中/英（默认英文），改动立刻重建页面并切换时间戳制式。
+
+### 问题修复
+
+- 修复 **回退引用块材质**：引用块恢复中性灰文字、灰底灰条，块内链接与代码各自保持材质。
+- 修复 **文件引用颜色不一致**：文件引用改用链接色与同款下划线，代码片本身不动。
+- 修复 **Markdown 表格左侧空隙**：删掉全局表格覆盖，首末单元格恢复内边距，窄表不再被拉满。
+
+### 其他变更
+
+- **封号页锁改手绘**：按参考图墨迹逐锚点描摹成三条贝塞尔路径，映射到 24 单位格。
+- **修掉 `banSvg` 重复属性**：粗细改为形参只发一条属性，覆盖不再静默失效。
+- **点击展开弹层不再即关**：改由点击别处或移出整个底栏关闭，悬停展开保持原逻辑。
+- **账号横线移出 hover 区**：横线改为账号行的兄弟节点，hover 底板只覆盖账号名那行。
+- **封号页排版**：内容列改为水平居中，页头整体下移 30px。
+- **行内代码片收紧**：自带 `line-height: 1.2`，行盒收到 18px，上下不再虚胖。
+
+<h3 id="en-0.3.0">New Features</h3>
+
+- **Claude account-hold page easter egg**: the username strip opens a full replica with explicit exits, honouring the brand preference.
+- **Ban-page language setting**: Chinese or English (default English), rebuilding the open page and timestamp format on change.
+
+### Bug Fixes
+
+- Fix **the blockquote material rolled back**: quotes return to neutral grey text, background and bar, leaving inner links and code untouched.
+- Fix **file mentions not matching hyperlinks**: they take the link colour and underline, while the code chip stays unchanged.
+- Fix **the left gap in Markdown tables**: global table overrides are gone, first and last cells regain padding, and narrow tables are no longer stretched.
+
+### Chores
+
+- **Ban-page lock redrawn by hand**: three Bézier paths traced from the reference ink and mapped to the 24-unit grid.
+- **`banSvg` duplicate attribute fixed**: stroke width is now a parameter emitted once, so the override no longer silently fails.
+- **Click-opened account popover no longer closes on mouse-out**: it closes on an outside click or leaving the footer, while hover keeps its old delay.
+- **Account divider out of the hover area**: it is now a sibling of the account row, so the hover surface covers only the name.
+- **Ban-page layout**: the content column is centred and the header drops 30px.
+- **Inline code chips tightened**: they carry `line-height: 1.2` and an 18px line box, removing the extra padding.
+
+**Full Changelog**: [v0.2.7...v0.3.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.7...v0.3.0)
 
 ## [0.2.7] - 2026-09-20
 
-### Added
-- **模型选择器厂商标识**：模型行显示**模型所属厂商**的标识（而非转售该模型的 provider），「更多模型」的 provider 分组标题显示该 provider 的标识。标识取自 [Lobe Icons](https://lobehub.com/icons) 的静态 SVG（`@lobehub/icons-static-svg`，MIT），按仓库既有架构在构建期内联进 bundle——`@lobehub/icons` 是 React 组件包，装它就要破坏「零依赖、零打包器、单文件产物」这条约束。用单色字形（`fill="currentColor"`）随主题文字色绘制，亮暗两画布都清晰，也不与「陶烬橙唯一强调色」冲突；彩色变体不做——OpenAI、Anthropic、xAI、Moonshot、Z.ai、Vercel、Groq 等 12 家上游本就没有彩色版，且部分厂商色在 `#141413` 画布上不可见。绑定关系仍是数据：`model-descriptions.json` 的 `brands.providers` / `brands.models`，构建期校验引用的标识都已 vendored，写错即构建失败。
+[中文](#cn-0.2.7) | [English](#en-0.2.7)
 
-### Changed
-- **Markdown 引用块改用超链接材质**：引用（`blockquote`）此前是中性灰文字 + 灰底灰条，与超链接毫无关联；现改为与 Markdown 链接同一套材质——链接蓝文字（亮 `#184F95` / 暗 `#8AB4F8`）、静止态同色下划线（1.5px、offset 2px，与链接逐项一致），底纹与左侧竖条取该蓝色的淡色（亮 `rgba(24,79,149,.08)` / `.45`，暗 `rgba(138,180,248,.12)` / `.55`）。引用与链接本就是同一类信号（「这段内容来自别处」），故共用一种材质；正文衬线字体不变。同时把引用块 `padding` 钉死，宿主 `.markdown blockquote` 的 `padding-left: 14px` 不再吃掉右侧内边距，底纹左右等宽。
-- **文本选区改为实色两态**：选中文字不再用半透明陶烬橙，改为平台式实色——窗口聚焦时蓝底白字（`#3366D0` / `#FFFFFF`），窗口失焦时灰底黑字（`#C7C7C6` / `#000000`），亮暗两画布一致。选区是瞬时操作而非界面表层，因此不跟随主题；两态都是实色且带 `!important`，覆盖底下的链接色、行内代码色与语法高亮色，避免"蓝底上保留原文字色"导致读不清。CSS 无法读取窗口焦点（Chromium 走内部 `-internal-inactive-selection-*`），故由新增的 `src/overrides/selection.js` 把焦点态镜像到文档属性上，样式表据此切换；失焦时选区本身保留，不消失。
-- **接入 cc-switch 全量供应商图标**：`src/assets/icons/providers` 引入其 107 个图标，build 解析 `index.ts` / `metadata.ts` 生成 `PROVIDER_ICONS` / `PROVIDER_ICON_METADATA`，宿主新增 `/dsh-claude-style/icons/providers/*` 路由；模型选择器优先用 cc-switch 图标，缺失时回退 Lobe。
-- **更多模型供应商标签改为推挤式 sticky**：每个供应商包成 section，滚动时上一个标签被下一个 section 往上推，而不是直接覆盖。
-- **附件输入框接缝优化**：移除附件轨 focus 时 1px 内圈阴影，消除图片区与文字区之间的分界线和阴影。
-- **更多模型子弹层**：适当提高弹层高度；供应商标签改为 sticky 顶部条，滚动时由下一个供应商标签替换。
-- **更多模型 provider 标签强化**：provider 分组标题改为黑底白字圆角矩形；深色模式为白底黑字。
-- **模型触发器 hover 去重**：删除 trailing 下针对 trigger/model 的额外 hover 规则，只保留模型触发器自身一层背景。
-- **标题中文回退改为黑体**：SERIF 栈移除 CJK 衬线回退，中文落到 Noto Sans SC / 微软雅黑等黑体；西文仍保持 Anthropic Serif / Georgia / Times。
-- **统计弹层合并**：统计行允许收缩省略（如 20轮...）；隐藏宿主两个独立弹层，改为一个自定义弹层：上下两个区块（会话统计 / Token 用量），每块 2×2 网格，无总标题，风格与权限弹层一致，内容字号加大。
-- **统计区交互**：统计弹层改为 hover 打开；统计控件仅在鼠标位于整个对话窗口内时显示。 统计行占据中间剩余空间并居中，使到左侧按钮组和右侧模型选择器的距离一致。
-- **输入区统计合并重绘**：会话统计与 token 统计合并为一条居中的紧凑文本（如 23轮439步 · 130tok/s · 125M tok · 99% Cache），隐藏宿主图标与原始标签，两个统计弹层同步重绘为同一套字体/圆角/边框。
-- **模型选择器补充当前非官方模型**：当前选中模型不属于 DeepSeek 官方服务时，在官方模型与更多模型之间用横线分隔并额外显示一行 provider/model。 触发器同时去掉向下箭头，hover 背景只保留在整个触发器上。
+<h3 id="cn-0.2.7">新增功能</h3>
+
+- **模型选择器厂商标识**：模型行显示所属厂商标识，`brands.providers` / `brands.models` 驱动，构建期校验。
+
+### 其他变更
+
+- **引用块改用链接材质**：引用共用链接蓝文字与下划线，底纹与竖条取淡色。
+- **文本选区实色两态**：聚焦蓝底白字、失焦灰底黑字，由 `selection.js` 镜像焦点态。
+- **接入 cc-switch 图标**：引入 107 个供应商图标并新增宿主路由，选择器优先用它们、缺失回退 Lobe。
+- **供应商标签推挤 sticky**：滚动时上一个标签被下一个 section 推上去。
+- **附件轨接缝优化**：移除 focus 时 1px 内圈阴影，消除图片区与文字区分界。
+- **更多模型子弹层**：提高弹层高度，供应商标签改为 sticky 顶部条。
+- **provider 标签强化**：分组标题改为黑底白字圆角矩形，暗色反相。
+- **模型触发器 hover 去重**：删掉 trailing 下的额外 hover 规则，只留一层背景。
+- **标题中文回退黑体**：SERIF 栈移除 CJK 衬线回退，西文仍用 Anthropic Serif。
+- **统计弹层合并**：两个宿主弹层合并为一个自定义弹层，上下两区块各 2×2 网格。
+- **统计区交互**：弹层改为 hover 打开，控件仅在指针位于对话窗口内时显示，统计行居中。
+- **输入区统计合并**：会话与 token 统计并成一条居中紧凑文本，隐藏宿主图标与标签。
+- **补充当前非官方模型**：非官方选中模型在官方与更多模型之间单独一行显示，触发器去掉箭头。
+
+<h3 id="en-0.2.7">New Features</h3>
+
+- **Vendor marks in the model picker**: rows show the model's vendor via `brands.providers` / `brands.models`, validated at build time.
+
+### Chores
+
+- **Blockquotes use the link material**: quotes share the link blue, underline, tinted background and bar.
+- **Text selection in two solid states**: blue-on-white focused, grey-on-black blurred, mirrored by `selection.js`.
+- **cc-switch provider icons wired in**: 107 icons plus a host route, preferred over Lobe with a fallback.
+- **Provider labels as push-sticky**: each scrolling section pushes the previous label up.
+- **Attachment rail seam fixed**: the 1px focus inset shadow is gone, removing the divider between image and text.
+- **More-models submenu**: taller popover with provider labels as sticky headers.
+- **Provider labels strengthened**: group headers become rounded black-on-white blocks, inverted in dark mode.
+- **Model trigger hover de-duplicated**: the extra trailing hover rule is gone, leaving one background.
+- **Heading CJK fallback to sans**: the serif stack drops its CJK fallback while Latin keeps Anthropic Serif.
+- **Stats popovers merged**: the host's two become one custom popover with two 2×2 blocks.
+- **Stats interaction**: the popover opens on hover, controls show only inside the chat window, and the row centres.
+- **Composer stats merged**: session and token stats become one centred compact line, hiding host icons and labels.
+- **Current non-official model added**: it gets its own row between official and more models, and the trigger loses its arrow.
+
+**Full Changelog**: [v0.2.6...v0.2.7](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.6...v0.2.7)
 
 ## [0.2.6] - 2026-09-20
 
-### Added
-- **JetBrains Mono 免安装生效**：代码字体此前虽随包分发，但只在用户把字体装进系统后才解析；现由宿主半边新增 `/dsh-claude-style/fonts/*` 路由直接随包提供字体文件，浏览器半边以 `@font-face`（`font-display: swap`）注册为 webfont——未安装 JetBrains Mono 的系统上代码字体也立即生效，路由缺失时静默回退原系统字体栈。
-- **Anthropic 字体可选免安装**：`fonts/*` 路由同时放行 `AnthropicSansWebText.ttf` / `AnthropicSerifWebText.ttf`（均不进 npm 包，版权仍属 Anthropic）。用户把这两个文件放进插件包的 `fonts/` 目录后，宿主即以 webfont 提供，与系统安装效果一致；文件缺失时路由 404，字体栈回退到系统安装的副本，不影响未放置字体的用户。
+[中文](#cn-0.2.6) | [English](#en-0.2.6)
 
-### Changed
-- **代码块与表格样式对齐 Claude**：行内代码与代码块字号 -1px；代码块边框移到外层容器，语言标签与代码共用同一圆角边框；Markdown 表格字号提升一档（13px → 14px）、表头 #F0F0EF 背景、12px 圆角，并使用与内部横线一致的 0.5px 线条加外边框。
-- **设置页支持自定义用户名**：新增用户名输入框，输入停顿后自动保存；默认用户名由宿主 OS 用户解析一次并缓存，不再解析工作区路径或轮询；宿主半边未重载时浏览器本地回退保留自定义值。
-- **链接与行内代码样式对齐 Claude**：Markdown 链接下划线静止态 60% 不透明度、hover/focus-visible 恢复 100%，下划线加粗到 1.5px 并保留下划线避让；行内代码与代码块均改用 JetBrains Mono、字号强制与正文一致，并 +1 字重；代码字体栈补上正文 CJK 回退。行内代码背景矩形 padding 缩到 1px、背景色进一步减淡，边框与 composer 输入卡片非焦点态一致（1px solid --dsw-alias-border-l1）；Markdown 正文行高 -1px、段落间距 -4px，代码块外边距与行高同步对齐正文。新对话页 composer 卡片保留纯白填充与真实投影，仅移除背景色光晕阴影。排队消息、后台任务、目标栏提升到消息层之上，避免被消息卡片遮挡；排队 dock 上移 3px，使其下沿对齐输入卡片边框。
-- **代码字体从 Anthropic Mono Variable 替换为 JetBrains Mono Variable**：选用 JetBrains Mono 可变字体（含 Italic）作为代码字体，随插件库一并分发，并保留 SIL OFL 许可证。
-- **权限弹层改为 hover 态打开**：权限分段按钮悬停时打开权限弹层，移入弹层取消关闭，移出后延迟关闭；`autoPopover` 关闭时仍保持点击打开/关闭。
+<h3 id="cn-0.2.6">新增功能</h3>
+
+- **JetBrains Mono 免安装**：宿主半边新增字体路由，以 `@font-face` 注册为 webfont，缺失时回退系统字体栈。
+- **Anthropic 字体可选免安装**：两个字体文件放进插件 `fonts/` 即以 webfont 提供，缺失时 404 回退。
+
+### 其他变更
+
+- **代码块与表格对齐 Claude**：行内代码与代码块字号 -1px，边框移到外层容器，表格字号与圆角上调。
+- **自定义用户名**：设置页新增输入框，输入停顿后自动保存，宿主未重载时本地兜底。
+- **链接与行内代码对齐 Claude**：链接下划线静止 60%、hover 100% 并加粗到 1.5px，代码改用 JetBrains Mono。
+- **代码字体换 JetBrains Mono**：改用 JetBrains Mono Variable（含 Italic），随插件分发并保留 SIL OFL。
+- **权限弹层 hover 打开**：悬停分段按钮即打开、移入取消关闭、移出延迟关闭，`autoPopover` 关闭时仍可点击。
+
+<h3 id="en-0.2.6">New Features</h3>
+
+- **JetBrains Mono without installing**: a host `/dsh-claude-style/fonts/*` route plus `@font-face`, falling back to the system stack when absent.
+- **Optional Anthropic fonts without installing**: dropping the two files into the plugin's `fonts/` serves them as webfonts, with a 404 fallback.
+
+### Chores
+
+- **Code blocks and tables aligned to Claude**: code shrinks 1px, borders move to the outer container, and tables gain a size and radius.
+- **Custom username**: a settings field autosaves after a pause, with a local fallback until the host half reloads.
+- **Links and inline code aligned to Claude**: link underlines go from 60% to 100% on hover and thicken to 1.5px, and code moves to JetBrains Mono.
+- **Code font switched to JetBrains Mono**: the variable font with italics ships with the plugin under SIL OFL.
+- **Permission popover opens on hover**: hovering opens it, moving in cancels closing and leaving delays it; clicking still works with `autoPopover` off.
+
+**Full Changelog**: [v0.2.5...v0.2.6](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.5...v0.2.6)
 
 ## [0.2.5] - 2026-09-20
 
-### Added
-- **模型文案改为运行时读取的数据文件**：文案表迁出 bundle，落到 `src/model-descriptions.json`（构建时校验后随包发布为 `lib/model-descriptions.json`）；宿主半边新增 `/dsh-claude-style/model-descriptions.json` 路由按请求读取该文件，浏览器半边在首次绘制模型选择器时 fetch 并按需缓存。此后扩充文案表无需重新构建、也不进 bundle（产物内已无任何模型文案）。解析按「精确条目 → 家族规则 → 档位规则 → 目录自带文本」逐级降级；精确条目按**归一化模型 id** 建键，同一模型被多个 provider 转售（`deepseek-v4-flash` 同时在 deepseek-official 与 opencode-go）折叠为一条；家族规则有序且锚定，且**一律不带最高级**——「最强/旗舰」只写在钉住版本的精确条目里，否则旧版本（如 `gemini-1.5-pro`）会被误称旗舰。取不到文档时静默回退目录自带文本，不影响选择器可用。
-- **补充新模型线文案**：为 Artificial Analysis 榜单上此前未收录的模型线补写家族规则——Meta Muse Spark（Agent 与编码线，与 Llama 开源线区分）、Celeris-1 与 Inception Labs Mercury 2（扩散式 LLM，措辞按延迟而非能力展开）、Apodex（复杂专业工作的 Agent）、Motif 3（韩国 Motif Technologies 全自研开源权重 MoE，314B 总参 / 13.2B 激活）。榜单头部 40 个模型现已 100% 命中；仍未收录的新模型线按设计回退到目录自带文本，不编造文案。
+[中文](#cn-0.2.5) | [English](#en-0.2.5)
 
-### Fixed
-- **模型文案的两处误判**：其一，参数量档位规则 `\d+b` 未锚定，把 MoE 命名里的激活参数当成总参——`qwen3.8-2.4t-a95b`（2.4T 总参）与 `k2-horizon-375b-a23b` 都被读成「小尺寸稠密模型」；现拆出 `a\d+b` 激活参数规则并让稠密规则要求数字前有分隔符。其二，provider 兜底对多产品线厂商过于宽松，`north-mini-code` 被按 provider 名匹配成 Cohere Command；现补 `north` 家族规则。另补 `gpt-oss` 开源权重系列规则，并去掉家族规则里的最高级表述（见上）。
+<h3 id="cn-0.2.5">新增功能</h3>
 
-### Changed
-- **源码按特性级分片重构**：`src/overrides.js` 拆为 `overrides/*.js`（copy / permissions / model-picker / account-footer / scheduler + 共享 popover-utils），`src/context.js` 拆为 `context/*.js`（host / prefs / model-copy / i18n），CSS 按 composer 与 components 拆为独立文件；build.mjs 改为清单驱动并新增碎片守门（禁 import/export、强制 4 空格缩进）。调度器不再读取特性闭包变量，改为通过 `ui` 句柄注册表调用各特性的 sync/close/owns/reposition/invalidateCopy 等接口；`settings.js` 不再重复调用 `loadPrefs()`。构建产物 `lib/client.js` 仍为单文件，不引入新依赖。
-- **模型文案跟随全局语言、单行显示**：描述按 shell 自身的 `locale` 服务取当前语言（`zh` / `en`），每行只渲染一条，不再中英两行叠加；并订阅 locale 变更，切换语言时已渲染的弹层即时重绘。选择器自身的 UI 文案（触发按钮 aria、加载中、空目录、推理等级、More models）走同一路径，bundle 内只保留取不到文档时的中性英文兜底。
+- **模型文案改为运行时读取的数据文件**：文案表迁出 bundle，宿主按请求读取、浏览器半边按需缓存。
+- **补充新模型线文案**：为榜单上未收录的模型线补写家族规则，未收录的仍回退目录文本。
 
-### Fixed
-- **塌缩态底栏插件控件压住 Claude 标**：皮肤把 `settingsArea` 压成零尺寸（保留 `overflow: visible` 让浮层可画），展开态下这足以把条目挤成 4px 细条；但设置插件带了自己的 rail 变体（`…_rail`），塌缩时拿到固定 36×36 并逃出零尺寸盒子，正好压在账户控件的 Claude 标上。现于塌缩态隐藏 `settingsArea` 内的按钮与 `triggerRow`；可达性不受影响——弹层镜像项用 `realTrigger.click()` 驱动真实触发器，`display:none` 不阻断。
-- **塌缩态账户弹层被侧栏容器裁掉**：侧栏列宽 56px 且 `overflow: hidden`，弹层原本 `position: absolute` 锚在轨道右侧，越过轨道边缘即被整块裁掉（同时基础规则的百分比 `max-width` 以 59px 页脚为基准把它压成 43px 宽）。现塌缩态改为 `position: fixed`（祖先链无 `transform`/`contain`，故不受该 `overflow` 裁剪），坐标由 `positionAccountPopover()` 解析（内联 `!important`，因为样式表侧同样用 `!important` 锚定）；过渡桥同步由「朝下」转为「朝侧」。
-- **修复设置页（含 SubAgent 分页）文字整页消失**：皮肤为隐藏侧栏底栏原按钮，把 `footArea` 下的 `settingsArea`/`footerActions` 容器压成零尺寸并写了 `font-size: 0 !important; line-height: 0 !important`（保留 `overflow: visible` 让浮层可画）。但宿主设置弹窗是**就地渲染**在 `settingsArea` 子树里的（弹窗 overlay 是触发行的兄弟节点，没有 portal），零字号/零行高沿子树继承——官方组件只给文本行设了 `font-size`、没设 `line-height`，继承到 0px 行高的行盒直接塌成 0 高，整页文字"消失"。现把两个容器的折叠拆开：`settingsArea` 只保留几何折叠（零宽高 + `overflow: visible`），字体度量恢复自然继承——它除了被 `display: none` 的触发行就只剩就地弹窗，无需零字号兜底；`footerActions` 仍托管着会被镜像改道的插件原始条目，散落的行内文字仍需零字号压住，维持完整折叠。
+### 体验优化
+
+- **模型文案跟随全局语言、单行显示**：按 shell locale 取语言，每行只渲染一条，切换语言即时重绘。
+
+### 问题修复
+
+- 修复 **模型文案的两处误判**：锚定激活参数与稠密规则，并补 `north`、`gpt-oss` 规则。
+- 修复 **塌缩态底栏插件控件压住 Claude 标**：塌缩时隐藏设置区内的按钮与触发器行。
+- 修复 **塌缩态账户弹层被侧栏容器裁掉**：弹层改 `position: fixed`，坐标由脚本解析。
+- 修复 **设置页文字整页消失**：折叠拆开，设置区不再继承零字号，文本恢复自然行高。
+
+### 其他变更
+
+- **源码按特性级分片重构**：`overrides`、`context` 与 CSS 拆成独立文件，调度器改走 `ui` 句柄。
+
+<h3 id="en-0.2.5">New Features</h3>
+
+- **Model copy is now a runtime data file**: the table left the bundle, is served by the host on request and cached on demand.
+- **Copy for newly added model lines**: family rules added for the leaderboard's missing lines; unknown lines fall back to catalog text.
+
+### Improvements
+
+- **Model copy follows the global language, one line per row**: the shell locale picks the language and a switch redraws instantly.
+
+### Bug Fixes
+
+- Fix **two model-copy misreads**: anchor the active-parameter and dense rules, and add `north` / `gpt-oss` rules.
+- Fix **a collapsed-sidebar plugin control covering the Claude mark**: hide the settings-area buttons and trigger row while collapsed.
+- Fix **the collapsed-sidebar account popover being clipped by the sidebar**: it is now `position: fixed` with script-resolved coordinates.
+- Fix **the whole settings page's text disappearing**: the collapse is split so the settings area no longer inherits zero font size.
+
+### Chores
+
+- **Source split into per-feature files**: `overrides`, `context` and CSS became separate files and the scheduler now uses the `ui` handle.
+
+**Full Changelog**: [v0.2.4...v0.2.5](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.4...v0.2.5)
 
 ## [0.2.4] - 2026-09-19
 
-### Changed
-- **深色模式输入框焦点由"加深"改为"提亮"**：近黑画布上黑边毫无辨识度，深色焦点描边与 1px 晕边从纯黑改为亮象牙（`#faf9f5`，描边 45% / 晕边 18%），输入框聚焦时明显亮起，底栏托盘与键盘 `:focus-visible` 外框同步改为亮象牙；暗色投影保留作真实阴影深度。
-- **权限弹层列表间距加宽**：Read / Edit / Auto 预设行为两行行（标签 + 说明），原先 2px 的行间距糊成整块；行间距加宽 4px 至 6px，弹层不再拥挤。
-- **会话统计并入输入框工具栏同一行**：轮次/速率与 token/缓存两组统计 pill 原先在输入框下方独占一行，现移入工具栏行、居于左侧控件与右侧模型/状态组之间（行布局 space-between 自然居中），输入框区域由三行压为两行；宿主把 pill 放回原位时每轮同步自动归位，窄屏（≤820px）仍整体隐藏；host 全宽行依赖的 width/padding/margin 在行内规则中全部重置。
-- **统计 pill 改为悬停出现**：两组统计平时隐藏（保留占位、无重排），鼠标移入对话窗口（composer）时淡入；pill 位于卡片内，悬停即保持可见可点。
-- **附件轨与输入框之间的分界线消除**：有图片时卡片 8px flex 间隙会把画布透成一条接缝线；以负外边距闭合间隙并把 8px 移入输入框顶部内边距——文字与图片的距离、卡片总高均不变；附件态聚焦环改由附件轨独自承载，接缝不再出现第二条线。
-- **非对话页隐藏整个底部输入区**：宿主把 composer 挂在会话根下、轨迹/上下文页同样渲染（还为其预留了底部空间）；现在仅对话页签激活时显示，其余页签隐藏整个 seat（宿主 `--dsh-composer-height` 随之归零，轨迹 ledger 的底部留白一起收起）。页签检测限定在会话根的 tablist（对话视图 order 0 恒为首个 tab，与语言无关）。
-- **模型选择控件按 Claude 效果重构**：触发器去掉数据库图标、只保留模型名（+ 推理等级）与箭头，整体单一 hover 背景（不再是多块背景矩形叠加）；弹层不再两段 drilling，一级直接列出 DeepSeek 官方服务模型（名 + 描述 + 勾选），其下分界线、推理等级行（如有）与 More models 行；后两者唤出二级弹层并排在一级旁侧（视口不够自动翻到左侧）。整弹层改为悬停即开（与账户控件一致，带 180ms 跨窗宽容），列表字体/行高/间距/圆角/悬停与权限弹层完全一致。数据与提交直连宿主 `ctx.modelDirectories` 的每会话 ModelDirectory（与宿主菜单、`/model` 命令同源），选中态、目录与错误实时同步；宿主原座椅节点标记隐藏，React 换节点后自动重标记。
+[中文](#cn-0.2.4) | [English](#en-0.2.4)
 
-### Fixed
-- **修复权限切换在 dsh 0.2+ 上完全失效**：当前会话选中态已移出 Session Controller（`sessions.list` 快照不再有 `current` 字段，改由 `uiSession` 服务以主视图绑定投影），`currentSession` 恒返回 null，点击权限菜单任意选项都静默无效、按钮标签永远停留在 `Accept edits`，而原生触发器被皮肤隐藏，GUI 内没有任何可用的切换入口。改为优先从 `uiSession` 主视图绑定读取当前会话 id，旧版宿主回退到 `list.current`；同时兼容 `permissions` 投影在 0.2+ 直接返回裸值（旧版包一层 `{ currentValue }`）的差异。
-- **亮色用户消息气泡由蓝改灰**：宿主亮色气泡底色 token（`--dsw-specific-bubble`）是 DeepSeek 蓝（`deepseek-50`），皮肤此前未覆盖，故亮色下用户消息呈蓝色；现改取皮肤的按钮悬停灰（`--dsh-claude-hover-bg`，亮色 `rgba(0,0,0,0.08)`）。深色气泡宿主本就是中性灰，保持不变。
-- **修复模型选择弹层永远停在「正在加载模型…」**：根因是把 store 的方法调在了实例上——宿主持有的每会话 `ModelDirectory` 实例只有 `load()` / `select()` 等，其响应式状态挂在它的 `.store`（快照 store）字段上（宿主给自家菜单注入的就是 `directory.store`）。皮肤却调用 `modelDir.subscribe()` / `modelDir.getSnapshot()`，前者抛 TypeError 被 catch 吞掉后还把刚取到的 directory 置回 null，后者恒失败 → 快照永远是 null → 触发器回落「选择模型」、弹层渲染 loading 行。现全部改走 `modelDir.store`；`load()`/`select()` 的异步 rejection 也按宿主做法补 `.catch()`。另外会话 id 读取改走 context.js 共享的 `currentSessionId()`（`uiSession` 投影优先、旧 `list.current` 回退），与权限切换同源、对新旧宿主都成立。
-- **深色强调色回到陶烬橙**：皮肤的深色 token 块声明在 `body[data-dsh-claude-style]` 上，与宿主的 `body[data-ds-dark-theme]` 同为 (0,1,1) 权重；宿主主题样式表若排在皮肤之后，其蓝色强调（`--dsw-alias-state-business-primary`、`--dsw-alias-button-info-fill`、`--dsw-alias-link` 与品牌 "new color"）就会盖掉暖色盘。现把深色盘限定到 `[data-ds-dark-theme]`（(0,2,1)，与样式表顺序无关），并补上此前缺失的 `--dsw-alias-link` 与品牌 "new color" 两个强调 token；亮色盘补齐原先从深色基块继承的四个 token，外观不变。
+<h3 id="cn-0.2.4">体验优化</h3>
+
+- **深色输入框焦点由「加深」改为「提亮」**：焦点描边与晕边改用亮象牙，聚焦时明显亮起。
+- **权限弹层列表间距加宽**：行间距由 2px 加宽到 6px，预设说明不再糊成整块。
+- **会话统计并入输入框工具栏同一行**：两组 pill 移入工具栏、居中排列，输入区由三行压为两行。
+- **统计 pill 改为悬停出现**：平时隐藏但保留占位，指针移入对话窗口时淡入。
+- **消除附件轨与输入框之间的分界线**：以负外边距闭合间隙，卡片总高不变。
+- **非对话页隐藏整个底部输入区**：仅对话页签激活时显示，宿主底部留白随之归零。
+- **模型选择控件按 Claude 效果重构**：触发器只留模型名，弹层一级直列官方模型、二级旁侧展开，悬停即开。
+
+### 问题修复
+
+- 修复 **权限切换在 dsh 0.2+ 上完全失效**：当前会话改从 `uiSession` 主视图读取，兼容裸值投影。
+- 修复 **亮色用户消息气泡由蓝改灰**：气泡底色改用皮肤的悬停灰，深色保持不变。
+- 修复 **模型选择弹层永远停在「正在加载模型…」**：改走 `modelDir.store` 读写快照，并补上 rejection 处理。
+- 修复 **深色强调色回到陶烬橙**：深色盘限定到 `[data-ds-dark-theme]`，不再被宿主蓝色盖掉。
+
+<h3 id="en-0.2.4">Improvements</h3>
+
+- **Dark-mode input focus now brightens instead of deepening**: the focus outline and halo use bright ivory and light up clearly.
+- **Wider rows in the permissions popover**: row spacing grew from 2px to 6px so the preset descriptions no longer blur together.
+- **Session stats merged into the composer toolbar row**: both pills moved into the toolbar, centered, cutting the composer to two rows.
+- **Stats pills appear on hover**: hidden by default with their space reserved, they fade in when the pointer enters the conversation.
+- **The seam between the attachment rail and the input is gone**: a negative margin closes the gap without changing the card height.
+- **Composer hidden off the conversation page**: it shows only on the active conversation tab, and the host's reserved bottom space goes.
+- **Model picker matches Claude**: the trigger keeps the model name, the first level lists official models and the second opens beside it.
+
+### Bug Fixes
+
+- Fix **permission switching broken on dsh 0.2+**: read the current session from the `uiSession` binding, tolerating bare-value projections.
+- Fix **the light-mode user bubble being blue**: its fill now uses the skin's hover grey; dark mode is unchanged.
+- Fix **the model popover stuck on "Loading models…"**: state now goes through `modelDir.store`, with rejection handling added.
+- Fix **the dark accent returning to clay orange**: scope the dark palette to `[data-ds-dark-theme]` so the host's blue no longer wins.
+
+**Full Changelog**: [v0.2.3...v0.2.4](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.3...v0.2.4)
 
 ## [0.2.3] - 2026-09-19
 
-### Fixed
-- 修复账户抽屉弹层在后台持续刷新时 hover / 点击失效的问题：弹层打开期间镜像内容保持静止，点击目标改为在点击瞬间实时解析。
+[中文](#cn-0.2.3) | [English](#en-0.2.3)
+
+<h3 id="cn-0.2.3">问题修复</h3>
+
+- 修复 **账户抽屉弹层刷新时 hover / 点击失效**：弹层打开期间镜像内容保持静止，点击目标在点击瞬间解析。
+
+<h3 id="en-0.2.3">Bug Fixes</h3>
+
+- Fix **account drawer popover losing hover / click**: mirrored content stays still while open and click targets resolve on click.
+
+**Full Changelog**: [v0.2.2...v0.2.3](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.2...v0.2.3)
 
 ## [0.2.2] - 2026-09-19
 
-### Added
-- **对话内输入框重设计**：在已有对话中，输入框压缩为紧凑的单行卡片，随内容自然向下撑高（支持平滑滚动）；右侧内置回车符号（`↵`）发送按钮，回车直接发送、Shift+Enter 换行，支持中文等 IME 正常选词；权限控制组件、指令 / 附件按钮与模型选择器合并到输入框下方同一行，自适应排列不重叠，权限弹出菜单支持 `Read only` / `Accept edits` / `Full access` 快捷切换与勾选；有附件时附件轨与输入框平滑连接为一体化卡片并撑高文本区，无附件时附件轨完全隐藏；宽度自适应，杜绝 Windows 系统及缩放比例下的异常横向滚动条；对话内占位符为 `Type / for commands`，点击卡片空白处即可聚焦。新会话页保持经典双层分段设计。
-- **输入框焦点样式**：获得焦点时描边转为与输入框自身阴影一致的中性色细线（亮色为暖黑，暗色为纯黑），外扩 1px 同色晕边并加深投影，形成发光感；底栏托盘同步跟随，整体轮廓一体。深浅主题分别调校。
-- **分时段首页欢迎语**：新会话页欢迎语随本地时间自动轮换——6–8 点 `Good morning, {用户名}!`（用户名取工作区路径，失败回退为 `User`）、8–9 点 `Happy {星期几}.`、9–12 点 `What are you working on?`、12–14 点 `What’s on the agenda today?`、14–18 点 `Coffee and Claude time?`、18–24 点 `Evening, how are things?`、0–6 点 `You are here!`；应用保持打开跨过整点时每 60 秒自动刷新手写欢迎语。
-- **模型思考状态重塑**：收录 Claude Code 的 185 种思考动词（如 `Smooshing...`、`Boogieing...`、`Clauding...`、`Noodling...`），每轮思考随机抽取一个动词稳定展示；扫光从 DeepSeek 蓝渐变换为陶土橙与蜜桃暖色高光。
-- **工作区运行中状态重塑**：会话运行时，侧栏会话状态加载动画从 DeepSeek 方形蓝色 LED 矩阵替换为 Windows 11 Fluent 风格的圆形圆弧旋转，深浅主题自适应。
-- **可切换品牌标识**：设置页新增「Claude Style」分区，用分段控件在 Claude（默认，官方星芒）与 Anthropic（`A\` + ANTHROPIC 字标）两套品牌标识间切换，新会话页品牌标识随之切换并保持陶烬橙填充；选择保存在本地，重启应用后保持。
+[中文](#cn-0.2.2) | [English](#en-0.2.2)
 
-### Changed
-- **源码拆分与构建化**：`lib/client.js` 改为构建产物（勿手改），源码拆分至 `src/`（五个 JS 片段 + `src/styles/` 六个纯 CSS 文件）；`npm run build` 内联拼装并做语法与令牌自检，发布前自动构建。新增 `scripts/probe.cjs` 无头浏览器回归探针，断言输入框吸底、单行起步、随内容增长等关键不变量（`npm run probe -- --token <launch-token>`）。
-- **Anthropic 字体入仓库**：`fonts/` 提供 Anthropic Sans Web Text / Serif Web Text / Mono Variable 三个字体文件，随 Git 仓库分发、**不随 npm 包分发**（`files` 白名单排除）；安装到系统后皮肤字体栈即可生效——版权归 Anthropic，仅供个人使用，不适用 MIT 许可（见 LICENSE 字体声明）。
+<h3 id="cn-0.2.2">新增功能</h3>
 
-### Fixed
-- 修复对话内输入框的多处布局问题：偏离底部不随消息流吸附、被固定为单行无法随内容增高、以及含图片附件时附件区出现双层边框。
-- 修复上下文用量弹层被误压缩导致排版错乱的问题。
-- 修复账户抽屉多项问题：侧栏底部非按钮控件未收纳进抽屉、插件条目被折叠成一项致按钮显示不全、条目图标与文本错位、条目随宿主重排后顺序错乱或点击错位、以及余额 / 配额等富控件型条目不显示或其内嵌按钮点击位置不符。
-- 修复 dsh-agy-link 的 run_code 工具卡片头部与代码预览排版异常的问题。
+- **对话内输入框重设计**：压缩为单行卡片、随内容增高，权限、附件与模型选择合并到下方同一行。
+- **输入框焦点样式**：聚焦时描边转为中性色细线，外扩 1px 同色晕边并加深投影。
+- **分时段首页欢迎语**：欢迎语随本地时间自动轮换，跨过整点时每 60 秒刷新。
+- **模型思考状态重塑**：收录 Claude Code 的 185 种思考动词，扫光改为陶土橙与蜜桃暖色。
+- **工作区运行中状态重塑**：侧栏加载动画改为 Windows 11 Fluent 风格的圆形圆弧旋转。
+- **可切换品牌标识**：设置页新增 Claude Style 分区，在 Claude 与 Anthropic 两套标识间切换并本地保存。
+
+### 问题修复
+
+- 修复 **对话内输入框的多处布局问题**：吸附底部、随内容增高，附件区不再出现双层边框。
+- 修复 **上下文用量弹层被误压缩**：弹层不再被挤扁，排版恢复正常。
+- 修复 **账户抽屉多项问题**：非按钮控件与富控件条目正常收纳，图标、顺序与点击位置对齐。
+- 修复 **`dsh-agy-link` 的 run_code 工具卡片排版异常**：卡片头部与代码预览恢复正常。
+
+### 其他变更
+
+- **源码拆分与构建化**：`lib/client.js` 改为构建产物，源码拆到 `src/`，新增无头回归探针。
+- **Anthropic 字体入仓库**：`fonts/` 提供三个字体文件，随 Git 分发但不随 npm 包分发。
+
+<h3 id="en-0.2.2">New Features</h3>
+
+- **In-conversation composer redesigned**: a single-line card that grows with content, permissions, attachments and the model picker below.
+- **Composer focus styling**: on focus the outline becomes a neutral hairline with a 1px same-color halo and a deeper shadow.
+- **Time-of-day home greetings**: the greeting rotates with local time and refreshes every 60 seconds across an hour boundary.
+- **Thinking status reshaped**: 185 Claude Code thinking verbs are included and the sweep turns clay-orange and peach.
+- **Running-session status reshaped**: the sidebar loading animation became a Windows 11 Fluent-style circular arc spinner.
+- **Switchable brand marks**: a Claude Style section switches between the Claude and Anthropic marks and saves the choice locally.
+
+### Bug Fixes
+
+- Fix **several composer layout issues**: it sticks to the bottom, grows with content, and the attachment area loses its double border.
+- Fix **the context-usage popover being wrongly compressed**: it is no longer squeezed and lays out correctly again.
+- Fix **several account drawer issues**: non-button and rich controls are collected properly, and icons, order and click targets line up.
+- Fix **broken `dsh-agy-link` run_code tool card layout**: the card header and code preview render correctly again.
+
+### Chores
+
+- **Source split and a build step**: `lib/client.js` became a build artifact, source moved to `src/`, and a headless probe was added.
+- **Anthropic fonts added to the repo**: `fonts/` ships three font files with Git but not with the npm package.
+
+**Full Changelog**: [v0.2.1...v0.2.2](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.1...v0.2.2)
 
 ## [0.2.1] - 2026-09-19
 
-### Added
-- 账户抽屉支持悬停展开与延迟关闭，移入弹层不打断浏览。
+[中文](#cn-0.2.1) | [English](#en-0.2.1)
 
-### Changed
-- 权限控制器首段从 Plan 改名为 Read，与它映射的只读预设（read-only）名称一致。
-- 新会话按钮改为与会话行同高的窄条：左对齐加号图标、常驻悬停底色。
-- 会话行标题默认为次级灰，悬停或选中时回到主文字色。
-- 账户底栏改为贯通侧栏的全宽分割线布局。
+<h3 id="cn-0.2.1">新增功能</h3>
 
-### Fixed
-- 补齐 LICENSE 版权署名；修正 README 中无效的手工 patch 配置示例。
+- **账户抽屉悬停展开**：支持悬停展开与延迟关闭，移入弹层不打断浏览。
+
+### 体验优化
+
+- **权限控制器首段由 Plan 改名为 Read**：与它映射的只读预设名称一致。
+- **新会话按钮改为与会话行同高的窄条**：左对齐加号图标、常驻悬停底色。
+- **会话行标题默认为次级灰**：悬停或选中时回到主文字色。
+- **账户底栏改为全宽分割线布局**：分割线贯通侧栏。
+
+### 问题修复
+
+- 修复 **LICENSE 版权署名缺失与 README 无效示例**：补齐署名并修正 patch 配置示例。
+
+<h3 id="en-0.2.1">New Features</h3>
+
+- **Account drawer hover opening**: it opens on hover and closes after a delay, and moving into the popover does not interrupt browsing.
+
+### Improvements
+
+- **The permissions control's first segment renamed from Plan to Read**: it now matches the read-only preset it maps to.
+- **The new-session button became a narrow bar matching the session-row height**: a left-aligned plus icon with a persistent hover fill.
+- **Session row titles default to secondary grey**: they return to the primary text color on hover or selection.
+- **The account footer became a full-width divider layout**: the divider spans the sidebar.
+
+### Bug Fixes
+
+- Fix **the missing LICENSE attribution and an invalid README example**: attribution added and the manual patch sample corrected.
+
+**Full Changelog**: [v0.2.0...v0.2.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.2.0...v0.2.1)
 
 ## [0.2.0] - 2026-09-19
 
-### Added
-- **Claude Code Desktop Theme**: 重构，从配色皮肤升级为完整的 Claude Code Desktop 视觉与交互复刻主题。
-- **Plan / Edit / Auto 分段权限控制**：行内三段式控制器，支持快捷切换会话权限（Plan 只读、Edit 写入、Auto 完全权限并带安全确认）。
-- **侧栏账户抽屉**：侧栏底部集成账户按钮与弹出菜单，支持一键打开设置（`Ctrl+,`）与管理插件。
+[中文](#cn-0.2.0) | [English](#en-0.2.0)
+
+<h3 id="cn-0.2.0">新增功能</h3>
+
+- **Claude Code Desktop Theme**：从配色皮肤升级为完整的 Claude Code Desktop 视觉与交互复刻主题。
+- **Plan / Edit / Auto 分段权限控制**：行内三段式控制器，支持快捷切换会话权限。
+- **侧栏账户抽屉**：侧栏底部集成账户按钮与弹出菜单，可打开设置与管理插件。
 - **视觉与文案重塑**：专属问候语、输入框引导文案与品牌星芒标识。
 
-### Changed
-- 项目重命名为 `dsh-claude-style`，与上游 `claude-style-skin` 区分。
-- 优化亮色画布色值（`#FCFCFB`）与侧栏色值（`#FBFBF9`）。
+### 体验优化
+
+- **优化亮色画布与侧栏色值**：画布取 `#FCFCFB`，侧栏取 `#FBFBF9`。
+
+### 其他变更
+
+- **项目重命名为 `dsh-claude-style`**：与上游 `claude-style-skin` 区分。
+
+<h3 id="en-0.2.0">New Features</h3>
+
+- **Claude Code Desktop Theme**: upgraded from a color skin into a full Claude Code Desktop visual and interaction replica.
+- **Plan / Edit / Auto segmented permission control**: an inline three-segment controller for quick session permission switching.
+- **Sidebar account drawer**: an account button and popup menu at the sidebar bottom, opening settings and plugin management.
+- **Visual and copy refresh**: dedicated greetings, composer placeholder copy and the brand star mark.
+
+### Improvements
+
+- **Light canvas and sidebar colors tuned**: the canvas uses `#FCFCFB` and the sidebar `#FBFBF9`.
+
+### Chores
+
+- **Project renamed to `dsh-claude-style`**: to distinguish it from the upstream `claude-style-skin`.
 
 ## [0.1.0] - 2026-08-22
 
-### Added
-- 初始版本：暖调象牙白/暖黑双画布与陶烬橙强调色。
+[中文](#cn-0.1.0) | [English](#en-0.1.0)
+
+<h3 id="cn-0.1.0">新增功能</h3>
+
+- **初始版本**：暖调象牙白 / 暖黑双画布与陶烬橙强调色。
+
+<h3 id="en-0.1.0">New Features</h3>
+
+- **Initial release**: warm ivory / warm black dual canvas with a clay-orange accent.
