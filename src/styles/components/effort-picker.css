@@ -366,9 +366,13 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   border-radius: 6px !important;
   background: transparent !important;
   color: var(--dsw-alias-label-secondary, #6e6a60) !important;
+  /* One set of metrics with the model trigger beside it: the row reads as one
+     line, so the two labels must not differ in line box or tracking. */
   font-family: var(--dsw-font-family) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
+  line-height: 20px !important;
+  letter-spacing: normal !important;
   white-space: nowrap !important;
   cursor: pointer !important;
   /* Above the composer's own layers. The seat (the input area's container) is
