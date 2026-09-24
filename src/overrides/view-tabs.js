@@ -15,6 +15,12 @@
      * the room above is real — the title and the actions both clear it, and the
      * header's top inset still holds.
      *
+     * Windows titlebar mode is the one case where no measurement is needed: the
+     * desktop shell marks <html> with `data-windows-titlebar` and the strip is
+     * placed fixed in the titlebar row, centred (chrome.css). This mirrors that
+     * marker onto <body> so the stylesheet can switch, and skips the measured
+     * shift entirely there.
+     *
      * @param ctx - client context.
      * @param ui - shared handle table.
      * @returns teardown.
@@ -39,6 +45,25 @@
       var last = null
       /** The element last was written to: a re-rendered strip must be told again. */
       var lastEl = null
+      /** The body marker the stylesheet reads for the fixed titlebar placement. */
+      var TITLEBAR_ATTR = 'data-dsh-titlebar-tabs'
+      /** Whether the last pass saw the host's Windows titlebar marker. */
+      var titlebar = false
+
+      /**
+       * Mirror the host's Windows titlebar marker onto <body>, the way D9 moves
+       * structure-sensitive branches from CSS to a JS-written attribute. The
+       * observer's attributeFilter is aria-* only, so this write cannot feed
+       * itself another pass; value-change only, so an unchanged mode writes
+       * nothing.
+       */
+      function syncTitlebar() {
+        var next = document.documentElement.hasAttribute('data-windows-titlebar')
+        if (next === titlebar) return
+        titlebar = next
+        if (next) document.body.setAttribute(TITLEBAR_ATTR, '')
+        else document.body.removeAttribute(TITLEBAR_ATTR)
+      }
 
       function rect(el) {
         if (el === null || el === undefined) return null
@@ -75,8 +100,12 @@
       }
 
       function sync() {
+        syncTitlebar()
         var header = document.querySelector(HEADER)
         if (header === null) return
+        // Windows titlebar mode places the strip itself (chrome.css): it is
+        // fixed there, so neither the measured shift nor the fallback applies.
+        if (titlebar) return
         var strip = header.querySelector('[class*="_tabs"]')
         var stripBox = rect(strip)
         if (stripBox === null) return
@@ -115,6 +144,10 @@
       ui.viewTabs = { sync: sync }
 
       return function () {
+        if (titlebar) {
+          document.body.removeAttribute(TITLEBAR_ATTR)
+          titlebar = false
+        }
         var header = document.querySelector(HEADER)
         var strip = header === null ? null : header.querySelector('[class*="_tabs"]')
         if (strip !== null) strip.style.removeProperty('--dsh-view-tabs-shift')

@@ -500,6 +500,9 @@ const PROBE = `(function () {
     var badge = mirrored ? mirrored.querySelector('.dsh-claude-popover-item-badge') : null
     r.mirroredBadge = badge ? badge.textContent : null
     r.stylesheet = !!document.getElementById('dsh-claude-style-style')
+    // This stand-in host never carries the Windows titlebar marker, so the
+    // skin must leave the body marker off and keep its measured placement.
+    r.titlebarTabs = document.body.hasAttribute('data-dsh-titlebar-tabs')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
     // The host's own account row, when the host has one: the skin marks it and
@@ -587,6 +590,8 @@ ${footer}
 /** Checks every case shares: a clean teardown and an idle scheduler. */
 function commonChecks(r) {
   check('scheduler idle once settled (0 passes in 1 s)', r.idlePasses === 0, `${r.idlePasses} passes`)
+  check('no Windows titlebar marker: the body carries no data-dsh-titlebar-tabs',
+    r.titlebarTabs === false, JSON.stringify(r.titlebarTabs))
   check('teardown registered with the host', r.teardownRegistered)
   if (!r.teardownRegistered) return
   check('teardown leaves no skin node, marker, body attribute or stylesheet',

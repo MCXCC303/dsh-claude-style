@@ -290,3 +290,33 @@ body[data-dsh-claude-style][data-ds-dark-theme] [class*="header"]:has([class*="_
 body[data-dsh-claude-style] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] > [class*="_tab"]::after {
   display: none !important;
 }
+
+/* ---------- Windows titlebar mode: the strip moves into the titlebar ---------- */
+/* The desktop shell marks <html> with data-windows-titlebar and draws the
+   titlebar strip with the frame's ::before; src/overrides/view-tabs.js mirrors
+   the marker onto <body>. There the strip leaves its own row and sits fixed in
+   the titlebar, horizontally centred in the window and always visible — the
+   same row the host gives the collapsed sidebar's new-session button. The
+   measured --dsh-view-tabs-shift is not written in this mode, so the base
+   transform gives way. */
+body[data-dsh-claude-style][data-dsh-titlebar-tabs] [class*="header"]:has([class*="_tabs"]) [class*="_tabs"] {
+  position: fixed !important;
+  top: calc(var(--dsh-windows-titlebar-height, 40px) / 2) !important;
+  left: 50% !important;
+  /* The host's own strip carries a top margin for its row; fixed placement
+     must not inherit it, or the translate would be off centre. */
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  justify-self: auto !important;
+  z-index: 30 !important;
+  /* The titlebar band is a drag region; the strip's tabs must stay clickable. */
+  -webkit-app-region: no-drag !important;
+  opacity: 1 !important;
+}
+/* The strip's row is gone from the flow, so the header takes the shape it has
+   when it owns no tab strip: no min-height, and the bottom padding the host
+   gives that shape. */
+body[data-dsh-claude-style][data-dsh-titlebar-tabs] [class*="header"]:has([class*="_tabs"]) {
+  min-height: 0 !important;
+  padding-bottom: 10px !important;
+}
