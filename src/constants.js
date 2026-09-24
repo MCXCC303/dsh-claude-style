@@ -123,7 +123,8 @@
     var PERMISSION_SEGMENTS = [
       { label: 'Read', preset: 'read-only' },
       { label: 'Edit', preset: 'workspace-write' },
-      { label: 'Auto', preset: 'danger-full-access' },
+      { label: 'Auto', preset: 'auto' },
+      { label: 'Yolo', preset: 'danger-full-access' },
     ]
 
     /** In-conversation permission popover options matching Claude Code desktop style. */
@@ -139,18 +140,26 @@
         desc: '允许编辑工作区文件'
       },
       {
+        preset: 'auto',
+        label: 'Auto review',
+        desc: '无沙箱运行，调用前由模型审查'
+      },
+      {
         preset: 'danger-full-access',
         label: 'Full access',
         desc: '自动执行，无需反复确认'
       }
     ]
 
-    /** The one preset the shipped UI gates behind its risk-confirmation dialog. */
+    /** The presets the shipped UI gates behind its risk-confirmation dialog. */
     var GATED_PRESET = 'danger-full-access'
-    /** Shipped full-access row labels, used to find that row in the shipped menu. */
+    var AUTO_REVIEW_PRESET = 'auto'
+    /** Shipped risk-gated row labels, used to find those rows in the shipped menu. */
     var FULL_ACCESS_LABELS = ['完全权限', 'Full access']
-    /** Fallback prompt, used only when the shipped menu cannot be reached. */
-    var GATED_PROMPT = '启用完全权限（Auto）？\n\n智能体将减少确认步骤，可直接执行敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。'
+    var AUTO_REVIEW_LABELS = ['Auto review', 'Auto review EXP']
+    /** Fallback prompts, used only when the shipped menu cannot be reached. */
+    var GATED_PROMPT = '启用完全权限（Yolo）？\n\n智能体将减少确认步骤，可直接执行敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。'
+    var AUTO_REVIEW_PROMPT = '启用 Auto review（实验）？\n\nAuto review 不使用沙箱。每次原生工具调用和 PTC 内层调用前，都会由与当前 agent 相同的模型进行审查。此功能仍属实验性，可能误放行或误拒绝，并会消耗额外 token。'
 
     /** Skin-owned class names, so nothing couples to hashed CSS-module classes. */
     var SEGMENTS_CLASS = 'dsh-claude-segments'
@@ -231,6 +240,14 @@
      * document and the stylesheet switches on this attribute.
      */
     var WINDOW_BLUR_ATTR = 'data-dsh-window-blur'
+    /**
+     * The host half's session-deletion route (lib/index.js, SESSION_DELETE_PATH).
+     * The harness gives the browser half no deletion API of its own, so the
+     * archived row's delete button posts the session id here and the host half
+     * removes the stored session directory. Keep the path in step with the host
+     * half.
+     */
+    var SESSION_DELETE_ROUTE = '/dsh-claude-style/session-delete'
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /**

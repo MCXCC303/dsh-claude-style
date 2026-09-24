@@ -2,6 +2,18 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
+## [Unreleased]
+
+[中文](#cn-unreleased) | [English](#en-unreleased)
+
+<h3 id="cn-unreleased">新增功能</h3>
+
+- **已归档会话的删除按钮恢复可用**：宿主没有给浏览器半边提供删除会话的接口（工作区控制器只有归档与取消归档，agent 协议里的会话删除由宿主委托给持有存储的 ACP agent），插件此前调用第三方插件的路由，该插件不在环境里时点下去没有任何反应。现在由插件的宿主半边新增私有路由 `POST /dsh-claude-style/session-delete` 删除本机会话目录：只接受 POST 与同源请求，id 必须匹配宿主自身的会话 id 形状，正在打开的会话拒绝删除，目录解析后必须留在会话根目录内。
+
+<h3 id="en-unreleased">New Features</h3>
+
+- **The archived rows' delete button works again**: the host gives the browser half no way to delete a session (the workspace controller only archives and unarchives, and the agent protocol's session delete is the host delegating to an ACP agent that owns the storage), so the skin used to call a third-party plugin's route and did nothing when that plugin was absent. The plugin's host half now serves a private route, `POST /dsh-claude-style/session-delete`, which removes the local session directory: POST and same-origin requests only, the id must match the host's own session id shape, an open session is refused, and the resolved directory must stay inside the sessions root.
+
 ## [0.6.0] - 2026-09-24
 
 [中文](#cn-0.6.0) | [English](#en-0.6.0)

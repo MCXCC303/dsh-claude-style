@@ -4,10 +4,12 @@
  * DSH instance is needed.
  *
  * Host half, in Node: `lib/index.js` is applied to a fake cordis context and the
- * username route gets the request shapes that matter (docs/architecture.md D11) —
- * a cross-site page, a LAN peer and the browser's own same-origin fetch — once
- * through a host that offers `connection.requestRejection()` and once through
- * the local stand-in.
+ * username and session-delete routes get the request shapes that matter
+ * (docs/architecture.md D11) — a cross-site page, a LAN peer and the browser's
+ * own same-origin fetch, plus the deletion route's own guards (POST only, the id
+ * shape, an open session, a path-shaped id) and a real deletion against a
+ * scratch harness home under .debug/ — once through a host that offers
+ * `connection.requestRejection()` and once through the local stand-in.
  *
  * Browser half, in headless Chrome/Edge over CDP: `lib/client.js` is loaded into
  * a page that stands in for the host (module loader, ctx, a sidebar footer with
@@ -57,8 +59,16 @@ function check(label, ok, detail) {
 // Host half
 // ---------------------------------------------------------------------------
 
-/** lib/index.js applied to a fake cordis context; `fenced` offers the host's own request check. */
-function fakeHost(mod, fenced) {
+/**
+ * lib/index.js applied to a fake cordis context.
+ *
+ * @param mod - the host-half module.
+ * @param options - `fenced` offers the host's own request check, `home` answers
+ *   `dshHomePath` with a scratch harness home, and `live` names the sessions the
+ *   fake `sessions` service reports as open.
+ */
+function fakeHost(mod, options = {}) {
+  const { fenced, home, live = [] } = options
   const routes = {}
   const settings = { configure: () => () => {} }
   // Modelled on the host's connection.requestRejection(): the Host/Origin fence
@@ -75,7 +85,12 @@ function fakeHost(mod, fenced) {
   const ctx = {
     fiber: { entry: { id: 'include:ui-skin-claude-style' } },
     logger: { warn() {} },
-    get: (name) => (name === 'connection' && fenced ? connection : undefined),
+    get: (name) => {
+      if (name === 'connection' && fenced) return connection
+      if (name === 'dshHomePath' && home !== undefined) return (sub) => path.join(home, sub)
+      if (name === 'sessions') return { get: (id) => (live.includes(id) ? {} : undefined) }
+      return undefined
+    },
     effect: (fn) => fn(),
     inject: (deps, cb) => cb({
       effect: (fn) => fn(),
@@ -111,16 +126,45 @@ async function hostHalf() {
   const lanPeer = { host: '192.168.1.23:43120' }
   const rebound = { host: 'attacker.example:43120', origin: 'http://attacker.example:43120', 'sec-fetch-site': 'same-origin' }
 
+  // Session deletion: the route removes one stored session directory. The root
+  // is a scratch harness home under .debug/, never the user's own.
+  const DELETE = '/dsh-claude-style/session-delete'
+  const scratchHome = path.join(ROOT, '.debug', 'smoke-home')
+  const scratchCwd = path.join(scratchHome, 'sessions', '--D-smoke--')
+  const scratchId = 'session-smoke-delete-0001'
+
   for (const fenced of [true, false]) {
     console.log(`\nhost half — ${fenced ? "through the host's connection.requestRejection()" : 'through the local stand-in (no connection service)'}`)
-    const host = fakeHost(mod, fenced)
+    const host = fakeHost(mod, { fenced, home: scratchHome })
     check('the preferences route is gone', host.routes[PREFS] === undefined)
+    check('the session delete route is registered', host.routes[DELETE] !== undefined)
     for (const [label, headers] of [['cross-site page', crossSite], ['LAN peer', lanPeer], ['DNS-rebound page', rebound]]) {
       const r = await request(host, USER, 'GET', '', headers)
       check(`${label}: username read refused`, r.status === 401 || r.status === 403, `HTTP ${r.status}`)
     }
     const r = await request(host, USER, 'GET', '', browser)
     check('browser username read answered', r.status === 200 && JSON.parse(r.body).ok === true, `HTTP ${r.status}`)
+
+    fs.rmSync(scratchHome, { recursive: true, force: true })
+    fs.mkdirSync(path.join(scratchCwd, scratchId), { recursive: true })
+    fs.writeFileSync(path.join(scratchCwd, scratchId, 'session.v4.jsonl.zstd'), 'x')
+    for (const [label, headers] of [['cross-site page', crossSite], ['LAN peer', lanPeer], ['DNS-rebound page', rebound]]) {
+      const refused = await request(host, DELETE, 'POST', JSON.stringify({ sessionId: scratchId }), headers)
+      check(`${label}: session delete refused`, refused.status === 401 || refused.status === 403, `HTTP ${refused.status}`)
+    }
+    const read = await request(host, DELETE, 'GET', '', browser)
+    check('session delete answers 405 to a read', read.status === 405, `HTTP ${read.status}`)
+    const traversal = await request(host, DELETE, 'POST', JSON.stringify({ sessionId: '../escape' }), browser)
+    check('a path-shaped id is refused', traversal.status === 400, `HTTP ${traversal.status}`)
+    const absent = await request(host, DELETE, 'POST', JSON.stringify({ sessionId: 'session-smoke-absent' }), browser)
+    check('an unknown session is not found', absent.status === 404, `HTTP ${absent.status}`)
+    const liveHost = fakeHost(mod, { fenced, home: scratchHome, live: [scratchId] })
+    const live = await request(liveHost, DELETE, 'POST', JSON.stringify({ sessionId: scratchId }), browser)
+    check('a live session is refused', live.status === 409, `HTTP ${live.status}`)
+    check('the refused session is still on disk', fs.existsSync(path.join(scratchCwd, scratchId)) === true)
+    const done = await request(host, DELETE, 'POST', JSON.stringify({ sessionId: scratchId }), browser)
+    check('a stored session is deleted', done.status === 200 && JSON.parse(done.body).ok === true, `HTTP ${done.status}`)
+    check('the session directory is gone', fs.existsSync(path.join(scratchCwd, scratchId)) === false)
   }
 }
 

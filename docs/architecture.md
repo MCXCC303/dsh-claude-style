@@ -84,7 +84,7 @@
 ## D11. 插件自有路由借宿主的请求栅栏；宿主/用户来源的字符串只以文本上屏
 
 - **背景**：`webServer.register()` 交给插件的是裸请求。宿主自己的 `/api` 挂在 Host/Origin 栅栏与浏览器会话 cookie 之后（`connection.requestRejection()`），插件路由不在其内。本插件的 `/username`（读系统用户名）因此曾经完全无鉴权：`dsh web` 绑定 `0.0.0.0` 时局域网里任何人都能直接读。读到的用户名又被客户端拼进 `innerHTML`——实测在 GUI 页面里执行了脚本，而这个页面能驱动执行 shell 命令的智能体。
-- **决定**：宿主半边 `/username` 处理前先调 `ctx.get('connection').requestRejection(req)`，拒绝即回 401/403。宿主没有该服务时，插件自带的替身只服务回环（回环 Host、无跨站标记、Origin 与 Host 一致）。模型文案与字体等静态资产保持公开。客户端：一切来自设置、账号服务、系统或第三方插件的字符串只用 `textContent` / 元素属性写入，图标复制节点而非重新解析 markup。
+- **决定**：宿主半边 `/username` 处理前先调 `ctx.get('connection').requestRejection(req)`，拒绝即回 401/403。宿主没有该服务时，插件自带的替身只服务回环（回环 Host、无跨站标记、Origin 与 Host 一致）。模型文案与字体等静态资产保持公开。删除会话的私有路由 `POST /dsh-claude-style/session-delete` 同样先过栅栏，另加四道：只接受 POST，id 必须匹配宿主自身的会话 id 形状，正在打开的会话拒绝，目录解析后必须留在会话根目录内（删除发生在宿主半边，浏览器半边只提交一个 id）。客户端：一切来自设置、账号服务、系统或第三方插件的字符串只用 `textContent` / 元素属性写入，图标复制节点而非重新解析 markup。
 - **代价**：路由依赖宿主的 connection 服务。已核对两种壳都能通过：浏览器同源请求带会话 cookie；0.1.7 桌面壳经 `forwardWebRequest` 转发到回环 Host、剥掉页面 Origin 并自带 cookie（宿主真实的 `isTrustedApiRequest` 对这两种请求放行，对跨站与 DNS 重绑定请求拒绝）。
 - **重审条件**：宿主为插件提供自带鉴权的路由注册（如 `connection.fetch.register`）时，迁移过去并删掉本地替身。
 
