@@ -1,4 +1,40 @@
     /**
+     * A feature's handle on the shared `ui` registry. The scheduler calls the
+     * hooks; every hook is optional, and a feature that does not implement one
+     * is simply skipped for that trigger. The scheduler reads nothing else from
+     * a handle except `sync`, which decides pass order.
+     *
+     * @typedef {Object} FeatureHandle
+     * @property {Function} [sync] Every scheduler pass. The one hook a pass
+     *     feature must have.
+     * @property {Function} [owns] `owns(target) → boolean`: whether the press
+     *     landed inside the feature's own DOM. A press the feature does not own
+     *     closes it through `close('outside')`.
+     * @property {Function} [onPointerDown] `onPointerDown(target)`: every
+     *     pointer press, owned or not. settingsNav uses this because its class
+     *     changes are outside the observer's attributeFilter, so no pass fires.
+     * @property {Function} [close] `close(reason)`: `'outside'` (press
+     *     outside), `'escape'` (Esc), or `'composer'` (focus moved into the
+     *     composer). Features ignore the reasons they do not act on, so each
+     *     keeps its exact shipped dismiss routes.
+     * @property {Function} [onInput] `onInput(target)`: an input or
+     *     compositionend event whose target is inside the composer input.
+     * @property {Function} [reposition] `reposition()`: a viewport scroll or
+     *     resize. The feature checks whether it is open.
+     * @property {Function} [onCopyChange] `onCopyChange()`: the locale, the
+     *     preferences or the model copy changed.
+     * @property {Function} [onKey] `onKey(event) → boolean`: a keydown, after
+     *     the scheduler's own Esc handling. The return value does not gate the
+     *     scheduler's unconditional Ctrl+, preventDefault.
+     *
+     * Cross-feature reads outside the scheduler stay direct handle reads:
+     *   effort → model.{effort, pickEffort, seat, settled, close}
+     *   model → effort.close, copy.isComposerActive
+     *   heroMenu, permissions → copy.*
+     *   quickProviders → model.{providers, onProviders}
+     *   footer → ban.open
+     */
+    /**
      * Say once, loudly, that a feature was switched off. The skin keeps running
      * without it, so the console line is the only trace — it names the feature.
      */
@@ -8,7 +44,7 @@
       } catch (ignored) { /* no console */ }
     }
 
-    function installScheduler(ctx, ui) {
+    function installScheduler(ctx, ui, passFeatures, hookFeatures) {
       function onGlobalPointerDown(e) {
         var target = e.target
         // The model picker is hover-driven; a press anywhere outside its
@@ -172,8 +208,14 @@
         })
       }
 
-      /** The features a pass syncs (their `ui` handle names), in pass order. */
-      var PASS_FEATURES = ['copy', 'permissions', 'model', 'effort', 'heroMenu', 'footer', 'workspace', 'viewTabs', 'settingsNav']
+      /**
+       * The features a pass syncs (their `ui` handle names), in pass order.
+       * entry.js passes them in FEATURES order, filtered to handles that exist
+       * and have a `sync`.
+       */
+      var PASS_FEATURES = passFeatures || []
+      /** Every installed feature handle, in install order, for the event hooks. */
+      var HOOK_FEATURES = hookFeatures || []
       /** Failed passes in a row after which a feature's sync is switched off. */
       var SYNC_FAILURE_LIMIT = 3
       var syncFailures = {}
