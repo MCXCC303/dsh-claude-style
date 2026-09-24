@@ -18,8 +18,9 @@
      *
      * @param ctx - the plugin context (unused; kept for the installer shape).
      * @param ui - the shared UI registry. `ui.model` provides the seat element
-     *   (`seat()`), the effort descriptor (`effort()`) and the commit call
-     *   (`pickEffort()`).
+     *   (`seat()`), the model trigger (`trigger()`), the catalog's state
+     *   (`effort()`, `named()`, `settled()`), the commit call (`pickEffort()`)
+     *   and `close()`.
      * @returns a teardown function.
      */
     function installEffortPicker(ctx, ui) {
@@ -70,6 +71,20 @@
         return ui.model && typeof ui.model.seat === 'function' ? ui.model.seat() : null
       }
 
+      /** The model trigger this one sits beside (owned by the model picker), or null. */
+      function modelTrigger() {
+        return ui.model && typeof ui.model.trigger === 'function' ? ui.model.trigger() : null
+      }
+
+      /**
+       * Hand back the room this trigger reserves on the model trigger's right
+       * edge (see positionEffortTrigger), or the gap outlives the trigger.
+       */
+      function releaseModelMargin() {
+        var modelBtn = modelTrigger()
+        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
+      }
+
       function cancelCloseEffort() {
         effortHoverIntent.cancel()
       }
@@ -99,7 +114,7 @@
        * seat moves with the window and the composer's own growth). */
       function positionEffortTrigger() {
         if (effortBtn === null) return
-        var modelBtn = document.querySelector('.dsh-claude-model-btn')
+        var modelBtn = modelTrigger()
         if (modelBtn === null) {
           effortBtn.style.display = 'none'
           return
@@ -167,16 +182,8 @@
        */
       function ensureEffortChrome() {
         var slot = seat()
-        if (slot !== null) {
-          var strayBtns = slot.querySelectorAll('.dsh-claude-effort-btn')
-          for (var i = 0; i < strayBtns.length; i++) {
-            if (strayBtns[i] !== effortBtn) strayBtns[i].parentElement.removeChild(strayBtns[i])
-          }
-        }
-        var strayPops = document.querySelectorAll('body > .dsh-claude-effort-popover')
-        for (var p = 0; p < strayPops.length; p++) {
-          if (strayPops[p] !== effortPop) strayPops[p].parentElement.removeChild(strayPops[p])
-        }
+        if (slot !== null) removeStrayNodes(slot, '.dsh-claude-effort-btn', [effortBtn])
+        removeStrayNodes(document, 'body > .dsh-claude-effort-popover', [effortPop])
         if (effortPop === null || effortPop.parentElement === null) {
           if (effortPop !== null && effortPop.parentElement !== null) effortPop.parentElement.removeChild(effortPop)
           effortPop = document.createElement('div')
@@ -213,8 +220,7 @@
           if (effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
           effortBtn = null
         }
-        var modelBtn = document.querySelector('.dsh-claude-model-btn')
-        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
+        releaseModelMargin()
         closeEffortPopover()
       }
 
@@ -223,7 +229,7 @@
         var slot = seat()
         // No seat to sit beside, or no model trigger to attach to: the trigger
         // comes down (see hideEffortTrigger).
-        if (slot === null || document.querySelector('.dsh-claude-model-btn') === null) {
+        if (slot === null || modelTrigger() === null) {
           hideEffortTrigger()
           return
         }
@@ -242,13 +248,8 @@
           // Only a named model without a ladder takes it away.
           if (ui.model && typeof ui.model.named === 'function' && !ui.model.named()) return
           // No ladder on this seat: the trigger goes away with it, exactly as the
-          // model card drew no effort row for such a model. The margin the
-          // trigger reserved on the model button goes with it, or the gap
-          // outlives the trigger.
-          if (effortBtn !== null && effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
-          var idleModelBtn = document.querySelector('.dsh-claude-model-btn')
-          if (idleModelBtn !== null && idleModelBtn.style.marginRight !== '') idleModelBtn.style.marginRight = ''
-          closeEffortPopover()
+          // model card drew no effort row for such a model.
+          hideEffortTrigger()
           return
         }
         ensureEffortChrome()
@@ -304,9 +305,7 @@
         effortBtn = null
         effortPop = null
         effortSlider = null
-        // Hand the reserved margin on the model trigger back too.
-        var modelBtn = document.querySelector('.dsh-claude-model-btn')
-        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
+        releaseModelMargin()
       }
 
       ui.effort = {

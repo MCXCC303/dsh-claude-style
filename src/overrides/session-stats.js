@@ -135,10 +135,7 @@
          * the one that did not.
          */
         function sweepStrayStatsPopovers() {
-          var strays = document.querySelectorAll('body > .dsh-claude-stats-popover')
-          for (var i = 0; i < strays.length; i++) {
-            if (strays[i] !== statsPopover) strays[i].parentElement.removeChild(strays[i])
-          }
+          removeStrayNodes(document, 'body > .dsh-claude-stats-popover', [statsPopover])
         }
 
         function scheduleHideStatsPopover() {

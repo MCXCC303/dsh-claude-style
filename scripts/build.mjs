@@ -16,6 +16,7 @@
  *   src/overrides/session-stats.js  the permissions feature's split factory
  *   src/overrides/account/*.js   the account footer's split factories
  *   src/overrides/model/*.js     the model picker's split factories
+ *   src/overrides/effort/*.js    the effort picker's split factories
  *   src/settings.js              settings section (brand)
  *   src/entry.js                 apply() + exports
  *
@@ -78,15 +79,17 @@ const FRAGMENTS = [
   'overrides/permissions.js',
   'overrides/model-brand.js',
   'overrides/model-copy-lookup.js',
-  'overrides/model-effort.js',
   'overrides/model/catalog.js',
   'overrides/model/rows.js',
   'overrides/model-picker.js',
+  'overrides/effort/matrix.js',
+  'overrides/effort/control.js',
   'overrides/effort-picker.js',
   'overrides/hero-menu.js',
   'overrides/quick-providers.js',
   'overrides/account/profile.js',
   'overrides/account/host-menu.js',
+  'overrides/account/rows.js',
   'overrides/account/footer-mirror.js',
   'overrides/account/surface.js',
   'overrides/account-footer.js',

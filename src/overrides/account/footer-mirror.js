@@ -404,7 +404,7 @@
                   // stored node was detached by a host re-render while the
                   // popover was open.
                   try {
-                    var fa = document.querySelector('[class*="footArea"]')
+                    var fa = findFootArea()
                     var actions = fa ? fa.querySelector('[class*="footerActions"]') : null
                     var liveEntries = actions ? footerEntriesOf(actions) : []
                     var liveEntry = liveEntries[idx] || null

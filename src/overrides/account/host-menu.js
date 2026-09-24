@@ -35,7 +35,7 @@
        * itself ("账号菜单" / "Account menu"), so the label is matched first.
        */
       function hostAccountTrigger() {
-        var foot = document.querySelector('[class*="footArea"]')
+        var foot = findFootArea()
         var scopes = [foot, document]
         for (var s = 0; s < scopes.length; s++) {
           if (scopes[s] === null || scopes[s] === undefined) continue
@@ -59,7 +59,8 @@
        * pill beside it — the settings row read "Retry update" and clicked it.
        */
       function hostSettingsTrigger() {
-        return document.querySelector('[class*="footArea"] [class*="settingsArea"] button[aria-haspopup="dialog"]')
+        var foot = findFootArea()
+        return foot === null ? null : foot.querySelector('[class*="settingsArea"] button[aria-haspopup="dialog"]')
       }
 
       var SETTINGS_LABEL = /^(设置|settings)$/i

@@ -52,8 +52,8 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
      rule: Claude's own "Ultracode" rung is violet, and the user asked for that
      violet rather than a clay translation of it. Values measured off Claude's
      recorded slider (block ≈ rgb(150,127,200), name ink darker still); the
-     matrix block colours are computed in model-effort.js against the same
-     ramp, so this token and those constants move together. */
+     matrix's eight tone buckets (components/effort-picker.css) are mixed from
+     these tokens, so they follow any change made here. */
   --dsh-claude-apex: #9d8ce0;
   --dsh-claude-apex-flash: #e6e0fb;
   --dsh-claude-apex-ink: #b9adf0;

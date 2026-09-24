@@ -10,6 +10,11 @@
       return null
     }
 
+    /** The sidebar footer, where the account row and the plugin footer entries live. */
+    function findFootArea() {
+      return document.querySelector('[class*="footArea"]')
+    }
+
     /**
      * The current-session selection left the Session Controller in dsh 0.2:
      * the list snapshot no longer carries `current`, and the main-view

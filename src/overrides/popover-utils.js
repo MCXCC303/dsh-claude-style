@@ -105,3 +105,24 @@
         },
       }
     }
+
+    /**
+     * Remove the skin's own nodes that no live reference holds.
+     *
+     * Client HMR drops the previous generation's disposals instead of running
+     * them, so its triggers, cards and lists are still in the document while a
+     * fresh scope starts from null; a host re-render can also strand a copy in
+     * a container React replaced. Every node matching `selector` under `scope`
+     * goes, except the ones in `keep` — an empty `keep` removes them all.
+     *
+     * @param scope - the element or document to search.
+     * @param selector - the nodes to sweep.
+     * @param keep - the live nodes this generation holds (null entries match nothing).
+     */
+    function removeStrayNodes(scope, selector, keep) {
+      var nodes = scope.querySelectorAll(selector)
+      for (var i = 0; i < nodes.length; i++) {
+        if (keep.indexOf(nodes[i]) !== -1) continue
+        if (nodes[i].parentElement !== null) nodes[i].parentElement.removeChild(nodes[i])
+      }
+    }

@@ -177,18 +177,6 @@
       }
 
       /**
-       * Lay the footer out as divider → effort slider → More models, KEEPING the
-       * slider node attached when it is already there.
-       *
-       * The obvious clear-and-rebuild detaches and re-inserts the slider, and a
-       * re-insertion restarts every CSS animation inside it: the level name's
-       * blur-in and the apex matrix's entrance sweep both replay. The picker
-       * re-renders on every host round-trip — the signature carries `status`, so
-       * a selection renders once for `selecting` and once for the echo back —
-       * which made the control visibly double-take on every pick. Removing only
-       * the nodes that are NOT the slider leaves its animation timeline alone.
-       */
-      /**
        * The footer holds the divider and the More-models row, and nothing else:
        * the effort slider moved to its own card (src/overrides/effort-picker.js).
        * Rebuilt only when the row set changes — the divider exists to close the
@@ -396,11 +384,11 @@
           modelPop.appendChild(modelFooter)
           modelPop.addEventListener('mouseenter', cancelCloseModel)
           // The second level belongs to its More-models cell: while it is open,
-          // the pointer landing anywhere else on the first level (the effort
-          // slider, a model row, bare card) folds it — the first level itself
-          // stays open, it is the hover-intent host. Delegated mouseover, not
-          // mouseenter: moving from the cell to the slider never crosses the
-          // popover's boundary, so a boundary event would never fire.
+          // the pointer landing anywhere else on the first level (a model row,
+          // bare card) folds it — the first level itself stays open, it is the
+          // hover-intent host. Delegated mouseover, not mouseenter: moving from
+          // the cell to a model row never crosses the popover's boundary, so a
+          // boundary event would never fire.
           modelPop.addEventListener('mouseover', function (e) {
             if (modelSubPop === null || modelSubPop.getAttribute('data-open') !== 'true') return
             var target = e.target
@@ -446,15 +434,9 @@
         for (var h = 0; h < allHosts.length; h++) {
           allHosts[h].removeAttribute('data-dsh-claude-model-host')
         }
-        var allModelBtns = document.querySelectorAll('.dsh-claude-model-btn')
-        for (var mb = 0; mb < allModelBtns.length; mb++) {
-          allModelBtns[mb].remove()
-        }
+        removeStrayNodes(document, '.dsh-claude-model-btn', [])
         modelBtn = null
-        var allModelPops = document.querySelectorAll('.dsh-claude-model-popover')
-        for (var mp = 0; mp < allModelPops.length; mp++) {
-          allModelPops[mp].remove()
-        }
+        removeStrayNodes(document, '.dsh-claude-model-popover', [])
         modelPop = null
         modelSubPop = null
         modelBody = null
@@ -489,14 +471,8 @@
         // client HMR drops the old fiber's disposals, so a previous generation's
         // trigger and popovers are still in the DOM while this fresh scope starts
         // from null. Sweep the strays, or the seat renders twice.
-        var strayBtns = slot.querySelectorAll('.dsh-claude-model-btn')
-        for (var sb = 0; sb < strayBtns.length; sb++) {
-          if (strayBtns[sb] !== modelBtn) strayBtns[sb].parentElement.removeChild(strayBtns[sb])
-        }
-        var strayPops = document.querySelectorAll('body > .dsh-claude-model-popover')
-        for (var sp = 0; sp < strayPops.length; sp++) {
-          if (strayPops[sp] !== modelPop && strayPops[sp] !== modelSubPop) strayPops[sp].parentElement.removeChild(strayPops[sp])
-        }
+        removeStrayNodes(slot, '.dsh-claude-model-btn', [modelBtn])
+        removeStrayNodes(document, 'body > .dsh-claude-model-popover', [modelPop, modelSubPop])
         var hostRoot = slot.firstElementChild
         if (hostRoot !== null && !hostRoot.hasAttribute('data-dsh-claude-model-host')) {
           hostRoot.setAttribute('data-dsh-claude-model-host', '')
@@ -575,13 +551,15 @@
          */
         close: function () { closeModelPopovers() },
         /**
-         * The seat slot, the effort descriptor and the commit call: the effort
-         * picker (a separate fragment) owns the level's trigger and card, and
-         * these three are all it needs from this one. `effort()` re-reads the
-         * catalog every call, so a level the host echoes back lands on the knob
-         * without either fragment pushing it.
+         * What the effort picker (a separate fragment that owns the level's
+         * trigger and card) reads from this one: the seat slot, the model
+         * trigger it sits beside, the effort descriptor and the commit call.
+         * `effort()` re-reads the catalog every call, so a level the host echoes
+         * back lands on the knob without either fragment pushing it.
          */
         seat: function () { return modelSlot },
+        /** The skin's model trigger while it is in the document, else null. */
+        trigger: function () { return modelBtn !== null && modelBtn.isConnected ? modelBtn : null },
         effort: function () { return modelCatalog.effort(modelCatalog.snapshot()) },
         /**
          * Whether the catalog can match the current selection to a group and

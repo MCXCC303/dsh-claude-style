@@ -403,11 +403,7 @@
         // that held the list, the old copy can stay in the document while a new
         // one is built elsewhere. Sweep every copy but the live one, the same way
         // the stats popover sweeps its strays.
-        var strays = document.querySelectorAll('.dsh-claude-archive-list')
-        for (var k = 0; k < strays.length; k++) {
-          if (strays[k] === listHost) continue
-          if (strays[k].parentElement !== null) strays[k].parentElement.removeChild(strays[k])
-        }
+        removeStrayNodes(document, '.dsh-claude-archive-list', [listHost])
         if (host.getAttribute(VIEW_ATTR) !== view) host.setAttribute(VIEW_ATTR, view)
       }
 
