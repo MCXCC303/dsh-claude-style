@@ -13,6 +13,7 @@
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
+ *   src/overrides/account/*.js   the account footer's split factories
  *   src/settings.js              settings section (brand)
  *   src/entry.js                 apply() + exports
  *
@@ -76,10 +77,12 @@ const FRAGMENTS = [
   'overrides/model-copy-lookup.js',
   'overrides/model-effort.js',
   'overrides/model-picker.js',
-  // TEMP(exclusion): effort-picker breaks plugin load on the desktop (slot entry crashed in 'conversation.input.dock'); restored once it loads cleanly.
   'overrides/effort-picker.js',
   'overrides/hero-menu.js',
   'overrides/quick-providers.js',
+  'overrides/account/profile.js',
+  'overrides/account/host-menu.js',
+  'overrides/account/footer-mirror.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',
