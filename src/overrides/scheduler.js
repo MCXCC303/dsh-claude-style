@@ -23,7 +23,6 @@
      *     resize. The feature checks whether it is open.
      * @property {Function} [onCopyChange] `onCopyChange()`: the locale, the
      *     preferences or the model copy changed.
-     *
      * Cross-feature reads outside the scheduler stay direct handle reads:
      *   effort → model.{effort, pickEffort, seat, settled, close}
      *   model → effort.close, copy.isComposerActive
@@ -330,7 +329,7 @@
         document.removeEventListener('focusin', onComposerFocusIn, true)
         // Safety-net DOM sweep. Feature teardowns run after this and tolerate
         // nodes already being detached.
-        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, .dsh-claude-ban, [data-dsh-synthetic-placeholder]')
+        var leftoverItems = document.querySelectorAll('.dsh-claude-popover-item, .dsh-claude-popover-embed, .dsh-claude-account-popover, .dsh-claude-account-btn, .dsh-claude-account-inject, .dsh-claude-perm-container, .dsh-claude-perm-popover, .dsh-claude-segments[data-composer-segments], .dsh-claude-model-btn, .dsh-claude-model-popover, .dsh-claude-ban, [data-dsh-synthetic-placeholder]')
         for (var li = 0; li < leftoverItems.length; li++) {
           if (leftoverItems[li].parentElement) {
             leftoverItems[li].parentElement.removeChild(leftoverItems[li])

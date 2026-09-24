@@ -179,13 +179,6 @@ body[data-dsh-claude-style] .dsh-claude-account-photo[hidden] {
   display: none !important;
 }
 
-/* While the skin drives the host's account menu (to read its items and to
-   forward a click), the menu must never be seen. Hiding, not removing, keeps the
-   items clickable: the drive dispatches its events directly at them. */
-body[data-dsh-claude-account-driving] [role="menu"] {
-  visibility: hidden !important;
-}
-
 /* The drawer's rows had no hover feedback at all: the only
    `.dsh-claude-popover-item:hover` rule in the stylesheet is scoped to the model
    picker. Give the account drawer the same affordance as the rest of the skin. */
@@ -199,24 +192,80 @@ body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item
   opacity: 0.5 !important;
   cursor: default !important;
 }
-/* The drawer's own Settings row steps aside where the host's account menu
-   carries Settings itself (the desktop). The shared popover-item rule sets
-   `display: flex !important`, which `hidden` alone cannot beat. */
-body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item[hidden] {
-  display: none !important;
+
+/* ---------- Host account area ---------- */
+/* The host's own account row is the entry on a host that has one (Desktop
+   0.1.7+): it stays in the host's DOM and flow and is repainted here as a
+   Claude row. overrides/account-footer.js marks it with
+   [data-dsh-claude-account-host-row]. */
+body[data-dsh-claude-style] [data-dsh-claude-account-host-row] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  height: 32px !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: var(--dsw-font-family) !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background-color 0.12s ease !important;
 }
-/* Mirrored host icons keep the host's own geometry. The sign-out glyph is a
-   13.7px svg placed absolutely inside the host's own 16px relative box, and the
-   drawer copies the svg alone: without a containing block of its own the glyph
-   anchored to the drawer and sat in its top-left corner. The shared
-   popover-item rule also forces every icon svg to 16px, which would blow the
-   glyph up past its box, so host icons keep their own size (capped at 16px). */
-body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item-icon {
-  position: relative !important;
+body[data-dsh-claude-style] [data-dsh-claude-account-host-row]:hover {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
 }
-body[data-dsh-claude-style] .dsh-claude-account-popover [data-dsh-claude-account-item] .dsh-claude-popover-item-icon svg {
-  width: auto !important;
-  height: auto !important;
-  max-width: 16px !important;
-  max-height: 16px !important;
+/* The host's own avatar keeps its picture; only its box is normalised to this
+   row's 18px circle. */
+body[data-dsh-claude-style] [data-dsh-claude-account-host-row] img {
+  width: 18px !important;
+  height: 18px !important;
+  flex: none !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
 }
+/* The chevron is the skin's own: the host row does not draw one. */
+body[data-dsh-claude-style] [data-dsh-claude-account-host-row]::after {
+  content: "" !important;
+  display: inline-block !important;
+  width: 12px !important;
+  height: 12px !important;
+  flex: none !important;
+  margin-left: auto !important;
+  background: currentColor !important;
+  opacity: 0.55 !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* The host wraps its row in its own slot markup. Every branch on the way to the
+   marked row becomes a full-width flex box, so the row can fill the footer
+   whatever the host's hashed wrapper classes are. */
+body[data-dsh-claude-style] [class*="footArea"] [class*="triggerRow"]:has([data-dsh-claude-account-host-row]) {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+body[data-dsh-claude-style] [class*="footArea"] [class*="triggerRow"] :has([data-dsh-claude-account-host-row]) {
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* Our container injected at the head of the host's account menu. Its rows use
+   the shared popover-item rules; the container only stacks them and carries the
+   account header above the host's own rows. */
+body[data-dsh-claude-style] .dsh-claude-account-inject {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 0 !important;
+}
+

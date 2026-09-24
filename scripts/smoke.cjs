@@ -18,10 +18,10 @@
  *   - idle       once settled, no scheduler pass runs — a pass that mutates the
  *                DOM schedules the next one, and then the page never idles;
  *   - enter      Enter on an open composer menu reaches the host, never "Send";
- *   - desktop    the 0.1.7 desktop footer: the host's account menu in the
- *                settings launcher slot, the drawer's mirrors of its rows,
- *                its Esc / outside-press dismissals and the account stream's
- *                read discipline;
+ *   - desktop    the 0.1.7 desktop footer: the host's own account row is the
+ *                entry, and our container is injected into its account menu —
+ *                first child, self-healing across a host re-render, reachable
+ *                by the host's keyboard walk, and gone when the menu closes;
  *   - markup     strings from settings, the account service and plugins render
  *                as text, never as markup;
  *   - isolation  a host API that breaks one feature — at install or at sync —
@@ -179,9 +179,12 @@ const STAND_IN = `(function () {
   }
 
   var menu = null
+  var menuViewport = null
+  var hostRowsHtml = ''
   function closeHostMenu() {
     if (menu && menu.parentElement) menu.parentElement.removeChild(menu)
     menu = null
+    menuViewport = null
   }
   function openHostSettingsDialog() {
     var area = document.querySelector('[class*="settingsArea"]')
@@ -191,33 +194,74 @@ const STAND_IN = `(function () {
     dialog.textContent = 'Settings'
     area.appendChild(dialog)
   }
-  document.getElementById('host-account').addEventListener('click', function () {
+  function fillHostRows() {
+    while (menuViewport.firstChild) menuViewport.removeChild(menuViewport.firstChild)
+    menuViewport.innerHTML = hostRowsHtml
+  }
+  // The host re-renders its list from React: the viewport is emptied and the
+  // host's own rows go back. Our injected container is dropped with them and the
+  // skin has to re-insert it.
+  window.__rerenderHostMenu = function () {
+    if (menuViewport) fillHostRows()
+  }
+  var accountTrigger = document.getElementById('host-account')
+  if (accountTrigger) accountTrigger.addEventListener('click', function () {
     if (menu) { closeHostMenu(); return }
+    // The host's real Menu DOM (ui-primitives/Menu.tsx): a role=menu portal to
+    // body, a role=presentation viewport, and itemWrap > button[role=menuitem].
+    // Picking an item selects it and the menu closes itself (onSelect), so the
+    // skin must not click the trigger again. The sign-out glyph copies
+    // LogoutIcon.tsx's geometry: a 16px relative box holding a 13.664x13.571 svg
+    // at (1.168, 1.214) absolute.
+    hostRowsHtml = CASE === 'desktop'
+      ? '<div class="itemWrap"><button type="button" role="menuitem">' +
+          '<svg viewBox="0 0 16 16" width="16" height="16"></svg>Settings</button></div>' +
+        '<div class="itemWrap"><button type="button" role="menuitem">' +
+          '<svg viewBox="0 0 16 16" width="16" height="16"></svg>Feedback</button></div>' +
+        '<div class="itemWrap"><button type="button" role="menuitem">' +
+          '<span style="position:relative;display:inline-block;width:16px;height:16px">' +
+            '<svg viewBox="0 0 13.664 13.571" width="13.664" height="13.571" style="position:absolute;left:1.168px;top:1.214px">' +
+              '<path d="M1 1 L12.664 12.571" fill="none" stroke="currentColor" stroke-width="1.4"></path>' +
+            '</svg></span>Sign out</button></div>'
+      : '<div class="itemWrap"><button type="button" role="menuitem">Settings</button></div>' +
+        '<div class="itemWrap"><button type="button" role="menuitem">Feedback</button></div>' +
+        '<div class="itemWrap"><button type="button" role="menuitem">Sign out</button></div>'
     menu = document.createElement('div')
     menu.setAttribute('role', 'menu')
-    if (CASE === 'desktop') {
-      // The host's real account menu: picking an item selects it and the menu
-      // closes itself (onSelect), so the skin must not click the trigger again.
-      // The sign-out glyph copies LogoutIcon.tsx's geometry: a 16px relative box
-      // holding a 13.664x13.571 svg at (1.168, 1.214) absolute.
-      menu.innerHTML =
-        '<div role="menuitem"><svg viewBox="0 0 16 16" width="16" height="16"></svg>Settings</div>' +
-        '<div role="menuitem"><svg viewBox="0 0 16 16" width="16" height="16"></svg>Feedback</div>' +
-        '<div role="menuitem"><span style="position:relative;display:inline-block;width:16px;height:16px">' +
-          '<svg viewBox="0 0 13.664 13.571" width="13.664" height="13.571" style="position:absolute;left:1.168px;top:1.214px">' +
-            '<path d="M1 1 L12.664 12.571" fill="none" stroke="currentColor" stroke-width="1.4"></path>' +
-          '</svg></span>Sign out</div>'
-      menu.addEventListener('click', function (e) {
-        var item = e.target && e.target.closest ? e.target.closest('[role="menuitem"]') : null
-        if (!item) return
-        if ((item.textContent || '').trim() === 'Settings') openHostSettingsDialog()
-        closeHostMenu()
-      })
-    } else {
-      menu.innerHTML = '<div role="menuitem"><svg></svg>Settings</div><div role="menuitem"><svg></svg>Feedback</div><div role="menuitem"><svg></svg>Sign out</div>'
-    }
+    menuViewport = document.createElement('div')
+    menuViewport.className = 'viewport'
+    menuViewport.setAttribute('role', 'presentation')
+    menu.appendChild(menuViewport)
+    fillHostRows()
+    menu.addEventListener('click', function (e) {
+      var item = e.target && e.target.closest ? e.target.closest('button[role="menuitem"]') : null
+      if (!item) return
+      if ((item.textContent || '').trim() === 'Settings') openHostSettingsDialog()
+      closeHostMenu()
+    })
     document.body.appendChild(menu)
   })
+  // The host's Menu keyboard walk: every button in the list is reachable with
+  // the direction keys, our injected rows included.
+  document.addEventListener('keydown', function (e) {
+    if (!menu) return
+    if (e.key === 'Escape') { closeHostMenu(); return }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    e.preventDefault()
+    var buttons = menuViewport.querySelectorAll('button:not(:disabled)')
+    if (!buttons.length) return
+    var idx = Array.prototype.indexOf.call(buttons, document.activeElement)
+    var next = e.key === 'ArrowDown' ? idx + 1 : idx - 1
+    if (next < 0) next = buttons.length - 1
+    if (next >= buttons.length) next = 0
+    buttons[next].focus()
+  })
+  // A press outside the menu closes it, the way the host's Menu does.
+  document.addEventListener('pointerdown', function (e) {
+    if (!menu) return
+    if (menu.contains(e.target)) return
+    closeHostMenu()
+  }, true)
 
   window.__keys = []
   var menuOpen = true
@@ -370,68 +414,56 @@ const PROBE = `(function () {
       window.__pushAccountFrame({ status: 'credential-stored', attempt: { phase: 'succeeded', id: 'smoke-1' } })
       await sleep(500)
       r.profileReadsAfterRepeat = window.__profileReads
+      // The host's own account row is the entry: visible, and the skin builds
+      // neither a trigger nor a popover of its own.
+      var hostRow = document.getElementById('host-account')
+      r.hostRowDisplay = hostRow ? getComputedStyle(hostRow).display : null
+      r.hostRowVisible = !!(hostRow && hostRow.getBoundingClientRect().width > 0)
+      r.syntheticBtn = !!document.querySelector('.dsh-claude-account-btn')
       var triggerRow = document.querySelector('[class*="footArea"] [class*="triggerRow"]')
       r.triggerRowDisplay = triggerRow ? getComputedStyle(triggerRow).display : null
-      // Open the drawer and read what it mirrors.
-      var accountBtn = document.querySelector('.dsh-claude-account-btn')
-      if (accountBtn) accountBtn.click()
-      await sleep(600)
-      var ownSettings = document.querySelector('.dsh-claude-account-popover [data-action="settings"]')
-      r.ownSettingsHidden = ownSettings ? ownSettings.hidden : null
-      var accountRows = Array.prototype.slice.call(document.querySelectorAll('.dsh-claude-account-popover [data-dsh-claude-account-item]'))
-      r.accountRowTexts = accountRows.map(function (row) {
-        var text = row.querySelector('.dsh-claude-popover-item-text')
-        return text ? text.textContent : null
-      })
-      // The sign-out glyph must stay inside its icon box (the drawer-corner bug).
-      var signOut = null
-      for (var si = 0; si < accountRows.length; si++) {
-        if ((accountRows[si].textContent || '').indexOf('Sign out') !== -1) { signOut = accountRows[si]; break }
-      }
-      if (signOut) {
-        var iconBox = signOut.querySelector('.dsh-claude-popover-item-icon')
-        var iconSvg = iconBox ? iconBox.querySelector('svg') : null
-        if (iconBox && iconSvg) {
-          var ib = iconBox.getBoundingClientRect()
-          var sb = iconSvg.getBoundingClientRect()
-          r.signoutIcon = { icon: [ib.left, ib.top, ib.right, ib.bottom], svg: [sb.left, sb.top, sb.right, sb.bottom] }
-          r.signoutContained = sb.left >= ib.left - 0.5 && sb.top >= ib.top - 0.5 &&
-            sb.right <= ib.right + 0.5 && sb.bottom <= ib.bottom + 0.5
-        }
-      }
-      // Picking the drawer's Settings row drives the host menu and opens the dialog.
-      var settingsRow = null
-      for (var ri = 0; ri < accountRows.length; ri++) {
-        var rowText = accountRows[ri].querySelector('.dsh-claude-popover-item-text')
-        if (rowText && rowText.textContent === 'Settings') { settingsRow = accountRows[ri]; break }
-      }
-      if (settingsRow) settingsRow.click()
-      await sleep(600)
-      r.dialogAfterRowClick = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
-      // The permissions control keeps a role=menu of its own in the page, so the
-      // host's account menu is the one carrying the Sign out item.
-      r.hostAccountMenusAfterRowClick = Array.prototype.filter.call(document.querySelectorAll('[role="menu"]'), function (m) {
+      // Open the host's own menu; the skin injects our container into its list.
+      if (hostRow) hostRow.click()
+      await sleep(500)
+      var viewport = document.querySelector('body > [role="menu"] [role="presentation"]')
+      var inject = document.querySelector('.dsh-claude-account-inject')
+      r.injectInViewport = !!(viewport && inject && inject.parentElement === viewport)
+      r.injectFirst = !!(viewport && viewport.firstElementChild === inject)
+      r.injectRows = inject ? Array.prototype.map.call(inject.children, function (c) {
+        if (c.hasAttribute('data-dsh-claude-ban-row')) return 'header'
+        if (c.hasAttribute('data-action-index')) return 'action'
+        if (c.hasAttribute('data-embed-index')) return 'embed'
+        return 'other'
+      }) : null
+      var injectName = inject ? inject.querySelector('.dsh-claude-account-popover-name') : null
+      r.injectName = injectName ? injectName.textContent : null
+      var htmlBefore = inject ? inject.innerHTML : null
+      // React re-renders the list: the host empties the viewport and puts its own
+      // rows back. The skin must re-insert our container, unchanged, first.
+      window.__rerenderHostMenu()
+      await sleep(400)
+      var viewport2 = document.querySelector('body > [role="menu"] [role="presentation"]')
+      var inject2 = document.querySelector('.dsh-claude-account-inject')
+      r.injectHealedFirst = !!(viewport2 && inject2 && viewport2.firstElementChild === inject2)
+      r.injectHealedSame = !!(inject2 && inject2.innerHTML === htmlBefore)
+      // The host's keyboard walk reaches our injected button.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+      await sleep(80)
+      var focused = document.activeElement
+      r.focusInInjected = !!(focused && inject2 && inject2.contains(focused) && focused.tagName === 'BUTTON')
+      // Closing the host's menu (its own Escape) leaves no container behind.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+      await sleep(400)
+      r.injectAfterClose = document.querySelectorAll('.dsh-claude-account-inject').length
+      // The model picker keeps a hidden role=menu portal in the page, so the
+      // account menu is counted by content (its Sign out row), not by role.
+      r.hostMenuAfterClose = Array.prototype.filter.call(document.querySelectorAll('body > [role="menu"]'), function (m) {
         var items = m.querySelectorAll('[role="menuitem"]')
         for (var mi = 0; mi < items.length; mi++) {
           if ((items[mi].textContent || '').trim() === 'Sign out') return true
         }
         return false
       }).length
-      // Esc closes an open drawer.
-      if (accountBtn) accountBtn.click()
-      await sleep(300)
-      r.drawerOpenBeforeEsc = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
-      await sleep(300)
-      r.drawerOpenAfterEsc = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
-      // A press on the body — outside the drawer and its trigger — closes a
-      // reopened drawer.
-      if (accountBtn) accountBtn.click()
-      await sleep(300)
-      r.drawerOpenBeforeOutside = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
-      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))
-      await sleep(300)
-      r.drawerOpenAfterOutside = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
     }
     await sleep(1200)
     var from = window.__passes
@@ -442,8 +474,11 @@ const PROBE = `(function () {
       if (c.hasAttribute('data-action-index')) return 'action'
       if (c.hasAttribute('data-embed-index')) return 'embed'
       if (c.getAttribute('data-action') === 'settings') return 'settings'
-      return c.hasAttribute('data-dsh-claude-account-item') ? 'account' : 'other'
+      return 'other'
     }) : null
+    var syntheticPopover = document.querySelector('.dsh-claude-account-popover')
+    r.syntheticHeader = !!(syntheticPopover && syntheticPopover.querySelector('[data-dsh-claude-ban-row]'))
+    r.syntheticInject = document.querySelectorAll('.dsh-claude-account-inject').length
     var user = document.querySelector('.dsh-claude-account-user')
     r.accountUser = user ? user.textContent : null
     var avatar = document.querySelector('.dsh-claude-account-avatar')
@@ -482,7 +517,7 @@ const PROBE = `(function () {
       await sleep(200)
       r.passesAfterTeardown = window.__passes - before
       r.leftNodes = document.querySelectorAll('[class*="dsh-claude-"]').length
-      r.leftMarkers = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay], [data-dsh-claude-model-host]').length
+      r.leftMarkers = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay], [data-dsh-claude-model-host], [data-dsh-claude-account-host-row]').length
       r.leftAttrs = Array.prototype.filter.call(document.body.attributes, function (a) { return /^data-dsh-(claude|window)/.test(a.name) }).map(function (a) { return a.name })
       r.leftStylesheet = !!document.getElementById('dsh-claude-style-style')
     }
@@ -509,7 +544,6 @@ function page(name) {
     : '<div class="_x_footArea_1">\n' +
         '  <div class="_x_settingsArea_1"><button aria-haspopup="dialog">Settings</button></div>\n' +
         '  ' + footerActions + '\n' +
-        '  <button id="host-account" aria-haspopup="menu" aria-label="Account menu">Me</button>\n' +
       '</div>'
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
@@ -543,8 +577,10 @@ const CASES = {
     check('apply() completes', r.applyError === null, r.applyError)
     check('stylesheet injected', r.stylesheet)
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
-    check('drawer: plugin entries, then Settings, then the host account items',
-      same(r.drawer, ['action', 'embed', 'settings', 'account', 'account']), JSON.stringify(r.drawer))
+    check('synthetic path: the popover carries the header, the plugin rows and the settings row',
+      r.drawer !== null && same(r.drawer, ['action', 'embed', 'settings']) && r.syntheticHeader === true,
+      JSON.stringify({ drawer: r.drawer, header: r.syntheticHeader }))
+    check('synthetic path injects nothing into a host menu', r.syntheticInject === 0, `${r.syntheticInject} containers`)
     check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
     check('avatar is an <img> sent without a referrer', r.photo !== null && r.photo.referrerPolicy === 'no-referrer', JSON.stringify(r.photo))
     check('Enter on an open composer menu reaches the host', same(r.keys, ['host picked the menu item']), JSON.stringify(r.keys))
@@ -577,30 +613,28 @@ const CASES = {
   },
   desktop(r) {
     check('apply() completes', r.applyError === null, r.applyError)
-    check('the takeover hides the host trigger row',
-      r.triggerRowDisplay === 'none', JSON.stringify(r.triggerRowDisplay))
-    check("the drawer's own Settings row steps aside for the host menu's",
-      r.ownSettingsHidden === true, JSON.stringify(r.ownSettingsHidden))
-    check('the host account rows are mirrored in order',
-      same(r.accountRowTexts, ['Settings', 'Feedback', 'Sign out']), JSON.stringify(r.accountRowTexts))
-    check('the sign-out icon stays inside its icon box',
-      r.signoutContained === true && r.signoutIcon !== undefined &&
-      r.signoutIcon.icon[2] - r.signoutIcon.icon[0] > 1 && r.signoutIcon.svg[2] - r.signoutIcon.svg[0] > 1,
-      JSON.stringify(r.signoutIcon))
-    check("picking the drawer's Settings opens the host dialog and leaves no host account menu open",
-      r.dialogAfterRowClick === 1 && r.hostAccountMenusAfterRowClick === 0,
-      JSON.stringify({ dialogs: r.dialogAfterRowClick, accountMenus: r.hostAccountMenusAfterRowClick }))
-    check('Esc closes an open drawer',
-      r.drawerOpenBeforeEsc === true && r.drawerOpenAfterEsc === false,
-      JSON.stringify({ before: r.drawerOpenBeforeEsc, after: r.drawerOpenAfterEsc }))
-    check('a press outside the drawer and its trigger closes it',
-      r.drawerOpenBeforeOutside === true && r.drawerOpenAfterOutside === false,
-      JSON.stringify({ before: r.drawerOpenBeforeOutside, after: r.drawerOpenAfterOutside }))
+    check("the host's own account row stays visible; the skin builds no trigger",
+      r.hostRowVisible === true && r.hostRowDisplay !== 'none' && r.syntheticBtn === false,
+      JSON.stringify({ visible: r.hostRowVisible, display: r.hostRowDisplay, synthetic: r.syntheticBtn }))
+    check('the host trigger row is not hidden', r.triggerRowDisplay !== 'none', JSON.stringify(r.triggerRowDisplay))
+    check("our container is injected as the list's first child",
+      r.injectInViewport === true && r.injectFirst === true,
+      JSON.stringify({ inViewport: r.injectInViewport, first: r.injectFirst }))
+    check('the injected container carries the header and the plugin rows',
+      same(r.injectRows, ['header', 'action', 'embed']) && r.injectName === 'Ada',
+      JSON.stringify({ rows: r.injectRows, name: r.injectName }))
+    check('a host re-render is healed: container first and rows unchanged',
+      r.injectHealedFirst === true && r.injectHealedSame === true,
+      JSON.stringify({ first: r.injectHealedFirst, same: r.injectHealedSame }))
+    check("the host's keyboard walk reaches our injected button",
+      r.focusInInjected === true, JSON.stringify(r.focusInInjected))
+    check('closing the host menu leaves no injected container behind',
+      r.injectAfterClose === 0 && r.hostMenuAfterClose === 0,
+      JSON.stringify({ containers: r.injectAfterClose, menus: r.hostMenuAfterClose }))
     check('the first account frame reads the profile exactly once',
       r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
     check('a repeated same-state frame reads nothing more',
       r.profileReadsAfterRepeat === 1, JSON.stringify(r.profileReadsAfterRepeat))
-    check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     commonChecks(r)
   },

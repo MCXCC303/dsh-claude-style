@@ -5,18 +5,18 @@
    area" preference turns the whole takeover off, so each rule below carries
    %%FOOTER_ATTR%% — the skin sets it on <body> only while the takeover is on,
    and with it absent the host footer renders exactly as shipped. */
-/* Hide original trigger buttons in footArea while keeping containers intact for modals.
-   The trigger row is not settingsArea's child: it renders inside the
+/* Hide the controls beside the account row while keeping containers intact for
+   modals. The trigger row is not settingsArea's child: it renders inside the
    `sidebar.settings` slot anchor (a display:contents div), which the child
-   selector alone never crossed. The row stayed up, squeezed into the zeroed
-   settingsArea, and what does not shrink painted over the skin's account row:
-   the connection pill, and on the desktop the update pill ("Retry update")
-   beside the host's own account trigger, which holds that slot there. The
-   account menu and its sign-in dialog are portals and the settings panel is
-   the row's sibling, so all three still open. */
-body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
-body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [data-slot="sidebar.settings"] > [class*="triggerRow"],
+   selector alone never crossed. The host's own account row is the skin's entry
+   where it exists (overrides/account-footer.js marks it), so the row itself
+   stays and only the controls next to it — the connection pill, the update pill
+   ("Retry update") — go. The account menu and its sign-in dialog are portals and
+   the settings panel is the row's sibling, so all three still open. */
 body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
+  display: none !important;
+}
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] [class*="triggerRow"] :is(button, [role="button"], a):not([data-dsh-claude-account-host-row]) {
   display: none !important;
 }
 /* Both containers stay mounted at zero size so the overlays they host keep
@@ -38,6 +38,13 @@ body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="sett
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
+}
+/* A settingsArea that holds the host's account row gets its box back: that row
+   has to paint in the footer, not inside a zero-sized cell. Everything else
+   keeps the geometric collapse. */
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"]:has([data-dsh-claude-account-host-row]) {
+  width: 100% !important;
+  height: auto !important;
 }
 body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] {
   position: static !important;
@@ -125,7 +132,19 @@ body[data-dsh-claude-style] [class*="root"][class*="collapsed"] .dsh-claude-acco
    in the rail. Reachability is unaffected — the popover's settings item opens
    the real trigger programmatically (`realTrigger.click()`), which
    display:none does not block. */
-body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]) {
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="root"][class*="collapsed"] [class*="footArea"] [class*="settingsArea"] :is(button, [class*="triggerRow"]):not([data-dsh-claude-account-host-row]):not(:has([data-dsh-claude-account-host-row])) {
+  display: none !important;
+}
+/* The rail's host account row is a 36px square with neither label nor chevron,
+   matching the self-built trigger's rail shape. */
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] [data-dsh-claude-account-host-row] {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  font-size: 0 !important;
+}
+body[data-dsh-claude-style] [class*="root"][class*="collapsed"] [data-dsh-claude-account-host-row]::after {
   display: none !important;
 }
 

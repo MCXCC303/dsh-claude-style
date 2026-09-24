@@ -88,6 +88,7 @@ const FRAGMENTS = [
   'overrides/account/profile.js',
   'overrides/account/host-menu.js',
   'overrides/account/footer-mirror.js',
+  'overrides/account/surface.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',

@@ -1,3 +1,17 @@
+    /** The marker the stylesheet hangs the host account row's Claude shape on. */
+    var HOST_ROW_ATTR = 'data-dsh-claude-account-host-row'
+
+    /**
+     * The account area of the sidebar footer.
+     *
+     * One row model, two mount points (account/surface.js): on a host that has
+     * an account row (Desktop 0.1.7+) that row is the entry and our container is
+     * injected into the host's own account menu; on a host without one (Web /
+     * 0.1.5) the skin self-builds the trigger and the popover and the popover's
+     * body is the container. The rows themselves — the account header with the
+     * hold-screen easter egg, the plugin footer entries (account/footer-mirror.js)
+     * and, on the self-built path only, the settings row — are shared.
+     */
     function installAccountFooter(ctx, ui) {
       var profile = createAccountProfile(ctx, function () {
         if (typeof ui.schedule === 'function') ui.schedule()
@@ -5,6 +19,7 @@
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
+      var settingsItem = null
       var popoverHoverIntent = createHoverIntent(openPopover, closePopover, POPOVER_OPEN_DELAY, POPOVER_CLOSE_DELAY)
       // Whether the popover is up because it was CLICKED (rather than hovered).
       // Clicking the account row opens the ban-screen easter egg and leaves the
@@ -13,15 +28,19 @@
       // instead stays until the pointer leaves the whole footer.
       var popoverOpenedByClick = false
 
+      function isPopoverOpen() {
+        return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true')
+      }
+
       function openPopover() {
         if (!accountPopover || !accountBtn) return
         cancelClosePopover()
-        // Mirrors are frozen while the popover is open (syncPopoverItems
+        // Mirrors are frozen while the popover is open (footer-mirror.sync
         // bails), so reconcile them here — before the reveal — to show fresh
         // content/order and bind click targets for the upcoming interaction.
         try {
           var footArea = document.querySelector('[class*="footArea"]')
-          if (footArea) syncPopoverItems(footArea)
+          if (footArea) mirror.sync(footArea)
         } catch (error) { /* opening must never fail because of a mirror sync */ }
         // Resolve the rail anchor before the reveal so the panel never paints at
         // its stale coordinates for a frame.
@@ -42,8 +61,7 @@
 
       function togglePopover() {
         if (!accountPopover) return
-        var isOpen = accountPopover.getAttribute('data-open') === 'true'
-        if (isOpen) {
+        if (isPopoverOpen()) {
           closePopover()
         } else {
           // The pointer stays on the trigger after a click, and the popover
@@ -133,206 +151,146 @@
         if (!avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.setAttribute('data-dsh-claude-photo', '')
       }
 
-      var hostMenu = createHostAccountMenu({
-        key: function () {
-          return [profile.state() || '', profile.name() || '', profile.avatar() || ''].join('|')
-        },
-        ownSettingsLabel: function () {
-          return hostMenu.settingsTrigger() !== null && settingsItem !== null &&
-            settingsItem.querySelector('.dsh-claude-popover-item-text') !== null
-            ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent
-            : null
-        },
-        onItems: function () { renderAccountItems() },
-        close: closePopover
+      var hostMenu = createHostAccountMenu({ close: closePopover })
+      var surface = createAccountSurface({
+        hostTrigger: hostMenu.trigger,
+        findMenu: hostMenu.findMenu,
+        menuViewport: hostMenu.menuViewport,
+        buildContainer: buildHostContainer,
+        syntheticContainer: function () { return popoverBody },
+        onMode: onSurfaceMode
       })
       var mirror = createFooterMirror({
-        body: function () { return popoverBody },
+        body: function () { return surface.container() },
         anchor: function () { return settingsItem },
-        isOpen: function () { return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true') },
-        close: closePopover
+        isOpen: function () { return surface.mode() === 'synthetic' && isPopoverOpen() },
+        close: closeSurface
       })
 
       /**
-       * What the account rows last drew. A rebuild is a DOM mutation, and every
-       * mutation under <body> schedules the next pass — so rebuilding the same
-       * rows on every pass kept the scheduler running every frame even at idle
-       * (measured ~160 passes/s on the signed-in desktop).
+       * The account header: the nickname and the hold-screen easter egg's entry.
+       * It is the first row of whichever container is active — the injected
+       * container on the host path, the popover's own header on the self-built
+       * one. The header is only a WRAPPER: the clickable strip is the inner row,
+       * so the hover plate covers the name and not the divider that follows it.
        */
-      var renderedAccountSignature = null
+      function buildAccountHeader(username) {
+        var header = document.createElement('div')
+        header.className = 'dsh-claude-account-popover-header'
+        header.setAttribute('data-dsh-claude-ban-row', '')
 
-      function accountItemsSignature() {
-        var parts = []
-        for (var i = 0; i < hostMenu.items().length; i++) {
-          var entry = hostMenu.items()[i]
-          parts.push(entry.text + '\u0000' + (entry.disabled ? '1' : '0') + '\u0000' + entry.iconHtml)
-        }
-        return parts.join('\u0001')
+        var rowEl = document.createElement('div')
+        rowEl.className = 'dsh-claude-account-popover-row'
+        rowEl.setAttribute('role', 'button')
+        rowEl.setAttribute('tabindex', '0')
+        rowEl.setAttribute('aria-haspopup', 'dialog')
+
+        var nameEl = document.createElement('div')
+        nameEl.className = 'dsh-claude-account-popover-name'
+        nameEl.textContent = username
+
+        var divider = document.createElement('div')
+        divider.className = 'dsh-claude-account-popover-divider'
+
+        rowEl.appendChild(nameEl)
+        header.appendChild(rowEl)
+        header.appendChild(divider)
+        return header
       }
 
       /**
-       * One drawer row per host item; clicking it clicks the host's own item.
-       * Rows are rebuilt only when the set changed (or went missing), and never
-       * under the pointer: while the drawer is open its rows stay put, since a
-       * row replaced between pointerdown and pointerup swallows the click —
-       * openPopover() runs one more sync right before the reveal.
+       * Sync the header of the active container: the nickname and the easter
+       * egg's binding. Bound OUTSIDE the build branch so the pass that creates
+       * the container already wires the row; `__dshBanBound` keeps a later pass
+       * from binding it twice, which would open the overlay twice per click.
        */
-      function renderAccountItems() {
-        if (!popoverBody) return
-        var existing = popoverBody.querySelectorAll('[data-dsh-claude-account-item]')
-        var signature = accountItemsSignature()
-        if (signature === renderedAccountSignature && existing.length === hostMenu.items().length) return
-        if (existing.length > 0 && accountPopover !== null && accountPopover.getAttribute('data-open') === 'true') return
-        renderedAccountSignature = signature
-        for (var e = 0; e < existing.length; e++) {
-          if (existing[e].parentElement !== null) existing[e].parentElement.removeChild(existing[e])
-        }
-        for (var i = 0; i < hostMenu.items().length; i++) {
-          (function (entry) {
-            var row = document.createElement('button')
-            row.type = 'button'
-            row.className = 'dsh-claude-popover-item'
-            row.setAttribute('data-dsh-claude-account-item', '')
-            row.innerHTML =
-              '<span class="dsh-claude-popover-item-icon"></span>' +
-              '<span class="dsh-claude-popover-item-text"></span>'
-            if (entry.icon !== null) row.querySelector('.dsh-claude-popover-item-icon').appendChild(entry.icon.cloneNode(true))
-            row.querySelector('.dsh-claude-popover-item-text').textContent = entry.text
-            if (entry.disabled) row.setAttribute('aria-disabled', 'true')
-            row.addEventListener('click', function (event) {
-              event.stopPropagation()
-              closePopover()
-              // 直连官方行为（与归档同一条思路：不再驱动宿主菜单）。
-              var account = profile.service()
-              if (/反馈|contact|意见/i.test(entry.text)) {
-                var url = 'https://trtgsjkv6r.feishu.cn/share/base/form/shrcnlCoGElW7MQznGy9r3YYXcg'
-                try { window.open(url, '_blank', 'noopener,noreferrer') } catch (error) { /* popup blocked */ }
-                return
-              }
-              if (/退出|登出|sign ?out|log ?out|logout/i.test(entry.text)) {
-                if (account !== null && typeof account.signOut === 'function') {
-                  // The answer is the signed-out state: take it now rather than
-                  // wait for the stream to report it.
-                  account.signOut().then(function (result) {
-                    if (result && result.ok === true) profile.apply(result.value)
-                  }).catch(function () { /* stay signed in on failure */ })
-                }
-                return
-              }
-              if (/登录|sign ?in|login/i.test(entry.text)) {
-                if (account !== null && typeof account.startSignIn === 'function') {
-                  var origin = window.location.origin
-                  try { var t = window.__DSH_TRANSPORT__; if (t && t.streamBaseUrl) origin = new URL(t.streamBaseUrl).origin } catch (error) { /* keep the default */ }
-                  var locale = 'en'
-                  try { locale = ctx.locale.getSnapshot().active === 'zh' ? 'zh' : 'en' } catch (error) { /* default */ }
-                  account.startSignIn(locale, origin, 'desktop')
-                }
-                return
-              }
-              // 设置 has no call of its own — on the desktop the account menu is
-              // the settings launcher, and there is no settings button to click —
-              // and neither has an option the skin does not know: the host's own
-              // item does it.
-              hostMenu.pick(entry.text)
-            })
-            popoverBody.appendChild(row)
-          })(hostMenu.items()[i])
+      function syncAccountHeader(root) {
+        if (root === null) return
+        var nameEl = root.querySelector('.dsh-claude-account-popover-name')
+        var username = profile.name() || getUsername(ctx)
+        if (nameEl && nameEl.textContent !== username) nameEl.textContent = username
+        var banRow = root.querySelector('[data-dsh-claude-ban-row]')
+        if (banRow && !banRow.__dshBanBound) {
+          banRow.__dshBanBound = true
+          banRow.addEventListener('click', function (e) {
+            // The row's gesture is the easter egg, not a menu selection.
+            e.preventDefault()
+            e.stopPropagation()
+            // Leave the surface up: the overlay is a full-window surface, so
+            // what is behind it does not matter, and the footer is left as the
+            // user had it once the screen is dismissed.
+            popoverOpenedByClick = true
+            if (ui.ban) ui.ban.open()
+          })
+          banRow.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return
+            e.preventDefault()
+            e.stopPropagation()
+            popoverOpenedByClick = true
+            if (ui.ban) ui.ban.open()
+          })
         }
       }
 
-      var settingsItem = null
-      function syncPopoverItems(footArea) {
-        if (!popoverBody || !footArea) return
+      /** The container injected at the head of the host's account menu. */
+      function buildHostContainer() {
+        var container = document.createElement('div')
+        container.className = 'dsh-claude-account-inject'
+        container.appendChild(buildAccountHeader(profile.name() || getUsername(ctx)))
+        return container
+      }
 
-        // Only the host's settings button can name and open this row. Any other
-        // button in that slot is wrong: on the desktop the first one is the
-        // ACCOUNT trigger (the row read "叶落风随" and opened the account menu),
-        // and the next one is the update pill.
-        var origSettingsTrigger = hostMenu.settingsTrigger()
+      /** The settings row, needed on the self-built path only. */
+      function buildSettingsItem() {
+        var item = document.createElement('button')
+        item.type = 'button'
+        item.className = 'dsh-claude-popover-item'
+        item.setAttribute('data-action', 'settings')
+        item.innerHTML =
+          '<span class="dsh-claude-popover-item-icon">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+              '<circle cx="12" cy="12" r="3"></circle>' +
+              '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' +
+            '</svg>' +
+          '</span>' +
+          '<span class="dsh-claude-popover-item-text"></span>'
+        item.addEventListener('click', function (e) {
+          e.stopPropagation()
+          hostMenu.openSettings()
+        })
+        return item
+      }
+
+      /**
+       * The settings row names and opens whatever the host's settings entry is:
+       * its settings button, or the 设置 item of its account menu. The
+       * self-built path is used exactly when the host has no account area, so
+       * there is no host copy of this row to step aside for.
+       */
+      function syncSettingsItem() {
+        if (settingsItem === null) return
         var labelText = '设置'
-        if (origSettingsTrigger) {
-          var txt = (origSettingsTrigger.textContent || '').trim()
-          if (!txt) txt = origSettingsTrigger.getAttribute('aria-label') || ''
+        var trigger = hostMenu.settingsTrigger()
+        if (trigger) {
+          var txt = (trigger.textContent || '').trim()
+          if (!txt) txt = trigger.getAttribute('aria-label') || ''
           if (txt) labelText = txt
         }
-
-        if (!settingsItem) {
-          settingsItem = document.createElement('button')
-          settingsItem.type = 'button'
-          settingsItem.className = 'dsh-claude-popover-item'
-          settingsItem.setAttribute('data-action', 'settings')
-          settingsItem.innerHTML =
-            '<span class="dsh-claude-popover-item-icon">' +
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-                '<circle cx="12" cy="12" r="3"></circle>' +
-                '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' +
-              '</svg>' +
-            '</span>' +
-            '<span class="dsh-claude-popover-item-text"></span>'
-          settingsItem.querySelector('.dsh-claude-popover-item-text').textContent = labelText
-
-          settingsItem.addEventListener('click', function (e) {
-            e.stopPropagation()
-            hostMenu.openSettings()
-          })
-          popoverBody.appendChild(settingsItem)
-        } else {
-          var txtEl = settingsItem.querySelector('.dsh-claude-popover-item-text')
-          if (txtEl && txtEl.textContent !== labelText) txtEl.textContent = labelText
-        }
-
-        hostMenu.sync()
-        // No settings button, but the host's account menu has been read: that is
-        // the desktop, whose menu carries 设置 itself, so its row stands in for
-        // this one.
-        var stepAside = origSettingsTrigger === null && hostMenu.items().length > 0
-        if (settingsItem.hidden !== stepAside) settingsItem.hidden = stepAside
-
-        // The takeover hides the host's account row with its settings slot; this
-        // covers an account trigger that lives anywhere else. Clicking it would
-        // open the host's own menu next to ours.
-        var hostTrigger = hostMenu.trigger()
-        if (hostTrigger !== null) {
-          if (hostTrigger.style.visibility !== 'hidden') hostTrigger.style.visibility = 'hidden'
-          if (hostTrigger.style.pointerEvents !== 'none') hostTrigger.style.pointerEvents = 'none'
-        }
-        mirror.sync(footArea)
+        var txtEl = settingsItem.querySelector('.dsh-claude-popover-item-text')
+        if (txtEl && txtEl.textContent !== labelText) txtEl.textContent = labelText
       }
+
       /**
-       * Hand the sidebar footer back to the host.
-       *
-       * The "Collapse the sidebar settings area" preference turns the whole
-       * takeover off, so the skin's own nodes go and every marker it put on the
-       * host's entries is removed — with the stylesheet's takeover rules gated
-       * on the same attribute, the footer then renders exactly as shipped.
+       * Build (or reuse) the self-built trigger and popover and return the
+       * popover body. Idempotent against a torn-down-less reload: client HMR
+       * drops the old fiber's disposals instead of running them, so a previous
+       * generation's button and popover are still in the DOM and this fresh
+       * scope knows nothing of them. Sweep the strays before deciding whether to
+       * build — otherwise the row renders twice (and the orphan keeps a stale
+       * name).
        */
-      function dropAccountFooter(footArea) {
-        cancelClosePopover()
-        if (accountBtn !== null && accountBtn.parentElement !== null) accountBtn.parentElement.removeChild(accountBtn)
-        if (accountPopover !== null && accountPopover.parentElement !== null) {
-          accountPopover.parentElement.removeChild(accountPopover)
-        }
-        accountBtn = null
-        accountPopover = null
-        popoverBody = null
-        settingsItem = null
-        mirror.clear(footArea)
-      }
-      function syncAccountFooter() {
-        var footArea = document.querySelector('[class*="footArea"]')
-        if (footArea === null) return
-
-        if (!readPrefs().collapseFooter) {
-          dropAccountFooter(footArea)
-          return
-        }
+      function ensureSynthetic(footArea) {
         var username = profile.name() || getUsername(ctx)
-
-        // Idempotent against a torn-down-less reload: client HMR drops the old
-        // fiber's disposals instead of running them, so a previous generation's
-        // button and popover are still in the DOM and this fresh scope knows
-        // nothing of them. Sweep the strays before deciding whether to build —
-        // otherwise the row renders twice (and the orphan keeps a stale name).
         var strayBtns = footArea.querySelectorAll('.dsh-claude-account-btn')
         for (var sb = 0; sb < strayBtns.length; sb++) {
           if (strayBtns[sb] !== accountBtn) strayBtns[sb].parentElement.removeChild(strayBtns[sb])
@@ -396,123 +354,149 @@
             scheduleClosePopover()
           })
 
-          // The account row is the ban-screen easter egg's trigger
-          // (src/overrides/ban-screen.js). The marker attribute stays on the
-          // header (it is the row's stable hook, and the row keeps its
-          // semantics), but the header is only a WRAPPER: the clickable strip is
-          // the inner `.…-row`, and the divider is its SIBLING so the hover
-          // plate covers the name alone instead of swallowing the rule.
-          var header = document.createElement('div')
-          header.className = 'dsh-claude-account-popover-header'
-          header.setAttribute('data-dsh-claude-ban-row', '')
-
-          var rowEl = document.createElement('div')
-          rowEl.className = 'dsh-claude-account-popover-row'
-          rowEl.setAttribute('role', 'button')
-          rowEl.setAttribute('tabindex', '0')
-          rowEl.setAttribute('aria-haspopup', 'dialog')
-
-          var nameEl = document.createElement('div')
-          nameEl.className = 'dsh-claude-account-popover-name'
-          nameEl.textContent = username
-
-          var divider = document.createElement('div')
-          divider.className = 'dsh-claude-account-popover-divider'
-
-          rowEl.appendChild(nameEl)
-          header.appendChild(rowEl)
-          header.appendChild(divider)
-          accountPopover.appendChild(header)
+          accountPopover.appendChild(buildAccountHeader(username))
 
           popoverBody = document.createElement('div')
           popoverBody.className = 'dsh-claude-account-popover-body'
           accountPopover.appendChild(popoverBody)
 
+          settingsItem = null
           footArea.appendChild(accountPopover)
+        }
+
+        if (settingsItem === null || !popoverBody.contains(settingsItem)) {
+          settingsItem = buildSettingsItem()
+          popoverBody.appendChild(settingsItem)
+        }
+        syncSettingsItem()
+        return popoverBody
+      }
+
+      /** Remove the self-built trigger and popover (the host path's shape). */
+      function dropSynthetic() {
+        cancelClosePopover()
+        if (accountBtn !== null && accountBtn.parentElement !== null) accountBtn.parentElement.removeChild(accountBtn)
+        if (accountPopover !== null && accountPopover.parentElement !== null) {
+          accountPopover.parentElement.removeChild(accountPopover)
+        }
+        var strays = document.querySelectorAll('.dsh-claude-account-btn, body > .dsh-claude-account-popover')
+        for (var s = 0; s < strays.length; s++) {
+          if (strays[s].parentElement) strays[s].parentElement.removeChild(strays[s])
+        }
+        accountBtn = null
+        accountPopover = null
+        popoverBody = null
+        settingsItem = null
+      }
+
+      /**
+       * Close the active surface after one of OUR rows was picked. The host's
+       * menu belongs to the host: it is dismissed the way the host dismisses it
+       * (an Escape its own Menu handles), never by driving its trigger. The
+       * self-built popover is ours and closes directly.
+       */
+      function closeSurface() {
+        if (surface.mode() === 'host') {
+          var menu = hostMenu.findMenu()
+          if (menu !== null) {
+            menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+          }
+          return
+        }
+        closePopover()
+      }
+
+      function onSurfaceMode(mode) {
+        // The host's account row is the entry on that host, so the self-built
+        // trigger and popover have no job there.
+        if (mode === 'host') dropSynthetic()
+      }
+
+      /**
+       * Hand the sidebar footer back to the host.
+       *
+       * The "Collapse the sidebar settings area" preference turns the whole
+       * takeover off, so the skin's own nodes and injected container go and
+       * every marker it put on the host's entries is removed — with the
+       * stylesheet's takeover rules gated on the same attribute, the footer then
+       * renders exactly as shipped.
+       */
+      function dropAccountFooter(footArea) {
+        cancelClosePopover()
+        dropSynthetic()
+        var injected = document.querySelectorAll('.dsh-claude-account-inject')
+        for (var i = 0; i < injected.length; i++) {
+          if (injected[i].parentElement) injected[i].parentElement.removeChild(injected[i])
+        }
+        var marked = document.querySelectorAll('[' + HOST_ROW_ATTR + ']')
+        for (var m = 0; m < marked.length; m++) marked[m].removeAttribute(HOST_ROW_ATTR)
+        if (footArea) mirror.clear(footArea)
+      }
+
+      function syncAccountFooter() {
+        var footArea = document.querySelector('[class*="footArea"]')
+        if (footArea === null) return
+
+        if (!readPrefs().collapseFooter) {
+          dropAccountFooter(footArea)
+          return
+        }
+        surface.sync()
+        if (surface.mode() === 'host') {
+          dropSynthetic()
         } else {
-          var nameEl2 = accountPopover.querySelector('.dsh-claude-account-popover-name')
-          if (nameEl2 && nameEl2.textContent !== username) nameEl2.textContent = username
+          ensureSynthetic(footArea)
         }
 
-        // The account row is the ban-screen easter egg's trigger (ban-screen.js).
-        // Bound OUTSIDE the build/refresh branch above so the pass that creates
-        // the popover already wires the row — inside the `else` the very first
-        // render would leave it dead until the next sync. `__dshBanBound` keeps
-        // a later pass from binding it twice, which would open the overlay twice
-        // per click.
-        var banRow = accountPopover.querySelector('[data-dsh-claude-ban-row]')
-        if (banRow && !banRow.__dshBanBound) {
-          banRow.__dshBanBound = true
-          banRow.addEventListener('click', function (e) {
-            // The row's gesture is the easter egg, not a popover selection.
-            e.preventDefault()
-            e.stopPropagation()
-            // Leave the popover up: the overlay is a full-window surface, so
-            // what is behind it does not matter, and the footer is left as the
-            // user had it once the screen is dismissed. The pointer is still
-            // parked on the trigger, so the mouseleave close stays suspended
-            // (popoverOpenedByClick) and the panel does not blink out from under
-            // the overlay.
-            popoverOpenedByClick = true
-            if (ui.ban) ui.ban.open()
-          })
-          banRow.addEventListener('keydown', function (e) {
-            if (e.key !== 'Enter' && e.key !== ' ') return
-            e.preventDefault()
-            e.stopPropagation()
-            popoverOpenedByClick = true
-            if (ui.ban) ui.ban.open()
-          })
-        }
+        // The host's own account row is the entry on the host path: mark it so
+        // the stylesheet can repaint it as a Claude row. It is left in the host's
+        // DOM and flow, never moved or copied.
+        var hostTrigger = hostMenu.trigger()
+        if (hostTrigger !== null && !hostTrigger.hasAttribute(HOST_ROW_ATTR)) hostTrigger.setAttribute(HOST_ROW_ATTR, '')
 
-        syncPopoverItems(footArea)
+        var root = surface.mode() === 'host' ? surface.container() : accountPopover
+        if (root === null) return
+        syncAccountHeader(root)
+        mirror.sync(footArea)
         // The rail toggle (and any reflow) moves the anchor without a window
         // resize or a page scroll, so an open drawer re-resolves its position at
-        // the end of its own pass. (The scheduler used to do this after every
-        // pass; folding it here keeps it in the same frame at the same point.)
-        if (accountPopover && accountPopover.getAttribute('data-open') === 'true') positionAccountPopover()
+        // the end of its own pass.
+        if (isPopoverOpen()) positionAccountPopover()
       }
+
       ui.footer = {
         sync: syncAccountFooter,
         /**
-         * The drawer's dismiss routes: 'outside' (a press the footer does not
-         * own), 'escape' and 'composer'. The shipped scheduler only closed an
-         * OPEN drawer on an outside press, so that reason keeps the open check;
-         * Esc and composer focus close regardless.
+         * The self-built drawer's dismiss routes: 'outside' (a press the footer
+         * does not own), 'escape' and 'composer'. The shipped scheduler only
+         * closed an OPEN drawer on an outside press, so that reason keeps the
+         * open check; Esc and composer focus close regardless. On the host path
+         * the drawer is null, so this is a no-op and the host keeps its own
+         * dismissal.
          */
         close: function (reason) {
-          if (reason === 'outside' && !(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          if (reason === 'outside' && !isPopoverOpen()) return
           closePopover()
         },
         openSettings: hostMenu.openSettings,
         owns: function (target) {
           if (!target) return false
-          return (accountBtn !== null && accountBtn.contains(target)) ||
-                 (accountPopover !== null && accountPopover.contains(target))
+          if (accountBtn !== null && accountBtn.contains(target)) return true
+          if (accountPopover !== null && accountPopover.contains(target)) return true
+          var container = surface.container()
+          return container !== null && container.contains(target)
         },
-        isOpen: function () {
-          return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true')
-        },
+        isOpen: function () { return isPopoverOpen() },
         /** Re-anchor an open drawer after a viewport change; a closed one has
-         * nothing to place (the scheduler used to guard this itself). */
+         * nothing to place. */
         reposition: function () {
-          if (!(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          if (!isPopoverOpen()) return
           positionAccountPopover()
         }
       }
       return function () {
         profile.stop()
-        cancelClosePopover()
         var footArea = document.querySelector('[class*="footArea"]')
-        if (footArea) {
-          dropAccountFooter(footArea)
-        } else {
-          if (accountBtn !== null && accountBtn.parentElement !== null) accountBtn.parentElement.removeChild(accountBtn)
-          if (accountPopover !== null && accountPopover.parentElement !== null) accountPopover.parentElement.removeChild(accountPopover)
-          accountBtn = null
-          accountPopover = null
-          popoverBody = null
-          settingsItem = null
-        }
+        dropAccountFooter(footArea)
       }
     }
