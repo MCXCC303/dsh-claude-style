@@ -127,10 +127,7 @@ const STYLE_FILES = [
 
 const HEADER = (() => {
   const jsFragments = FRAGMENTS.map((name) => ` *   - src/${name}`).join('\n')
-  const styleSheets = STYLE_FILES.map((fileDef) => {
-    const file = typeof fileDef === 'string' ? fileDef : fileDef.file
-    return ` *   - src/styles/${file}`
-  }).join('\n')
+  const styleSheets = STYLE_FILES.map((fileDef) => ` *   - src/styles/${fileDef.file}`).join('\n')
   return `/**
  * Claude Style — Claude Code Desktop theme for the DeepSeek Harness web GUI.
  *
@@ -207,13 +204,8 @@ function gateComposerScope(file, text) {
   const markerAt = text.indexOf(COMPOSER_GATE_MARKER)
   if (markerAt === -1) throw new Error(`build: src/styles/${file} is missing the ${COMPOSER_GATE_MARKER} marker`)
   const gate = `[%%COMPOSER_ATTR%%]`
-  // inline.css previously lived entirely below the one gate marker in
-  // composer/card.css + composer/inline.css. The inline marker is synthetic (added only so the build's
-  // "all gated stylesheets carry the marker" guard is uniform), so it must
-  // not be emitted into the bundle.
-  const syntheticMarker = file === 'composer/inline.css'
-  const head = syntheticMarker ? '' : text.slice(0, markerAt + COMPOSER_GATE_MARKER.length)
-  const body = syntheticMarker ? text.slice(markerAt + COMPOSER_GATE_MARKER.length) : text.slice(markerAt + COMPOSER_GATE_MARKER.length)
+  const head = text.slice(0, markerAt + COMPOSER_GATE_MARKER.length)
+  const body = text.slice(markerAt + COMPOSER_GATE_MARKER.length)
 
   let inComment = false
   let stamped = 0
@@ -241,7 +233,7 @@ function gateComposerScope(file, text) {
   if (missed.length > 0) {
     throw new Error(`build: src/styles/${file} left ${missed.length} rule(s) ungated: ${missed[0].trim().slice(0, 80)}`)
   }
-  return syntheticMarker ? gated.replace(/^\n/, '') : head + gated
+  return head + gated
 }
 
 /**
@@ -323,7 +315,7 @@ function substitute(file, text, tokens) {
  * silently missing mark on one row.
  *
  * @param doc - parsed `src/model-descriptions.json`.
- * @param brands - vendored brand ids (loadLobeIcons keys).
+ * @param lobeBrands - the vendored lockups keyed by brand id (loadCombines).
  * @returns the number of exact entries, for the build log.
  */
 function validateModelCopy(doc, lobeBrands) {
@@ -396,8 +388,8 @@ function main() {
 
   const cssText = STYLE_FILES
     .map((fileDef) => {
-      const file = typeof fileDef === 'string' ? fileDef : fileDef.file
-      const gated = typeof fileDef !== 'string' && fileDef.gate === true
+      const file = fileDef.file
+      const gated = fileDef.gate === true
       let text = fs.readFileSync(path.join(SRC, 'styles', file), 'utf8').replace(/\r\n/g, '\n')
       if (gated) text = gateComposerScope(file, text)
       return substitute(file, text, tokens).replace(/\n+$/, '')
