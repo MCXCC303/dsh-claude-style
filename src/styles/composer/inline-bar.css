@@ -132,10 +132,9 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-
 /* ---------- combined composer stats ---------- */
 /* The host ships two pills (time / usage) with icons and its own spacing.
    We keep the two click targets but hide their internals and render one
-   centered sentence from the CSS variables syncStatsSummary() writes.
-   Guarded against the host's compact mode: there the host draws its own icon
-   readings with its own spacing, and there is no trigger or panel for the
-   merged sentence to stand in for, so the host's row is left untouched. */
+   centered sentence from the CSS variables syncStatsSummary() writes. These
+   rules key off the host's detailed button structure, so they carry the mode
+   marker; the compact row gets its own block further down. */
 body[data-dsh-claude-style] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]) {
   gap: 0 !important;
   justify-content: center !important;
@@ -210,6 +209,35 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-
 body[data-dsh-claude-style] [data-composer-card] [class*="_row"] [data-composer-stats]:not([data-dsh-claude-stats-mode="compact"]):hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
   border-radius: 6px !important;
+}
+
+/* Compact row (the host's 性能与用量 preference set to 简洁): the same two
+   readings as bare spans with their own icons and spacing. The skin renders
+   them as its own sentence — one type with the merged detailed row, icons
+   hidden, the readings joined by the skin's separator. The host renders no
+   trigger and no panel in this mode, so the row carries no hover plate and no
+   card: there is no detail data behind it to show. */
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="compact"] {
+  gap: 0 !important;
+  justify-content: center !important;
+  font-family: var(--dsw-font-family) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  color: var(--dsw-alias-label-secondary) !important;
+}
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="compact"] > span {
+  padding: 0 !important;
+  gap: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="compact"] svg {
+  display: none !important;
+}
+body[data-dsh-claude-style] [data-composer-stats][data-dsh-claude-stats-mode="compact"] > span + span::before {
+  content: ' · ';
+  color: var(--dsw-alias-separator-primary);
 }
 
 /* ---------- one type for the composer's bottom line ---------- */

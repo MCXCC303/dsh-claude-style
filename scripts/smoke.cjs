@@ -704,9 +704,9 @@ const CASES = {
   'stats-compact'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
-    check('compact stats are marked, keep the host icons and drop our separator',
+    check('compact stats carry the skin sentence: icons hidden, our separator in',
       r.statsMode === 'compact' && r.statsIcons !== null && r.statsIcons.length === 2 &&
-        r.statsIcons.every((d) => d !== 'none') && r.statsSep === 'none',
+        r.statsIcons.every((d) => d === 'none') && r.statsSep.indexOf('·') !== -1,
       JSON.stringify({ mode: r.statsMode, icons: r.statsIcons, sep: r.statsSep }))
     check('a hover on compact stats opens no card', r.statsOpen === 0, r.statsOpen + ' open')
     commonChecks(r)
