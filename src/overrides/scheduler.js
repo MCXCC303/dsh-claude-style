@@ -143,19 +143,24 @@
       window.addEventListener('resize', onFixedPopoverViewportChange)
       window.addEventListener('scroll', onFixedPopoverViewportChange, true)
 
-      // The picker's copy follows the shell language, so a locale switch has to
-      // rebuild the rows it already painted. Subscribing here (rather than
-      // reading the locale at render time only) is what makes the change land
-      // while a popover is open.
-      var localeUnsubscribe = null
-      function onLocaleChange() {
-        if (ui.model) ui.model.invalidateCopy()
+      // A copy source changed — the locale, the preferences or the model copy
+      // document. Each feature that paints copy rebuilds its render signatures
+      // through onCopyChange, then one pass repaints. The picker's copy follows
+      // the shell language, so a locale switch has to rebuild the rows it already
+      // painted; subscribing here (rather than reading the locale at render time
+      // only) is what makes the change land while a popover is open.
+      function onCopyChange() {
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (handle && typeof handle.onCopyChange === 'function') handle.onCopyChange()
+        }
         schedule()
       }
+      var localeUnsubscribe = null
       try {
         var localeService = ctx.get('locale')
         if (localeService && typeof localeService.subscribe === 'function') {
-          localeUnsubscribe = localeService.subscribe(onLocaleChange)
+          localeUnsubscribe = localeService.subscribe(onCopyChange)
         }
       } catch (error) { /* no locale service: the picker keeps the fallback language */ }
 
@@ -165,20 +170,11 @@
       // first read also arrives through here, which is what replaces the
       // defaults with the stored values.
       var prefsUnsubscribe = null
-      prefsUnsubscribe = subscribePrefs(function () {
-        if (ui.model) ui.model.invalidateCopy()
-        // The account-hold page is assembled once per open, so a language change
-        // has to rebuild an open one (a no-op while it is closed).
-        if (ui.ban) ui.ban.refresh()
-        schedule()
-      })
+      prefsUnsubscribe = subscribePrefs(onCopyChange)
       loadPrefs()
 
       var modelCopyUnsubscribe = null
-      modelCopyUnsubscribe = onModelCopyLoaded(function () {
-        if (ui.model) ui.model.invalidateCopy()
-        schedule()
-      })
+      modelCopyUnsubscribe = onModelCopyLoaded(onCopyChange)
 
       var usernameUnsubscribe = null
       usernameUnsubscribe = onUsernameLoaded(function () {

@@ -888,7 +888,11 @@
             if (at !== -1) providerListeners.splice(at, 1)
           }
         },
-        invalidateCopy: function () {
+        /**
+         * A copy source changed: drop the render signatures so the next pass
+         * repaints the rows in the new language.
+         */
+        onCopyChange: function () {
           modelBodySig = ''
           modelSubSig = ''
         },
