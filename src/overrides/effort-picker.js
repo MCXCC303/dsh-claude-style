@@ -258,7 +258,6 @@
           closeEffortPopover()
         },
         owns: ownsEffort,
-        reposition: function () { positionEffortTrigger(); positionEffortPopover() },
         teardown: teardown,
       }
       return teardown

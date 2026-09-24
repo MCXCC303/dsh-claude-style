@@ -489,7 +489,12 @@
         isOpen: function () {
           return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true')
         },
-        reposition: positionAccountPopover
+        /** Re-anchor an open drawer after a viewport change; a closed one has
+         * nothing to place (the scheduler used to guard this itself). */
+        reposition: function () {
+          if (!(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          positionAccountPopover()
+        }
       }
       return function () {
         profile.stop()

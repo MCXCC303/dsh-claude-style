@@ -130,13 +130,15 @@
       document.addEventListener('compositionend', onComposerInput, true)
       document.addEventListener('focusin', onComposerFocusIn, true)
 
-      // Both fixed popovers are anchored to their trigger; scroll of the page
-      // (not the conversation's own auto-stick) and resizes move the anchor, so
-      // whichever is open must re-resolve it.
+      // Fixed popovers are anchored to their trigger; scroll of the page (not
+      // the conversation's own auto-stick) and resizes move the anchor, so
+      // whichever is open must re-resolve it. Each feature checks whether it is
+      // open itself.
       function onFixedPopoverViewportChange() {
-        if (ui.model) ui.model.reposition()
-        if (ui.heroMenu) ui.heroMenu.reposition()
-        if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (handle && typeof handle.reposition === 'function') handle.reposition()
+        }
       }
       window.addEventListener('resize', onFixedPopoverViewportChange)
       window.addEventListener('scroll', onFixedPopoverViewportChange, true)
