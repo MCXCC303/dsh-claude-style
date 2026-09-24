@@ -115,6 +115,14 @@
         // space: the row's 12px gap covers 12 of the needed width+2, the margin
         // covers the rest. Measured, not a magic number: the width follows the
         // current level's name.
+        // A seat the host keeps in the DOM without laying it out (another view is
+        // up, or an ancestor is hidden) reports a zero box; pinning to it put the
+        // trigger in the window's top-left corner. No box, no trigger.
+        var seatBox = modelBtn.getBoundingClientRect()
+        if (seatBox.width === 0 || seatBox.height === 0) {
+          hideEffortTrigger()
+          return
+        }
         // Show it BEFORE measuring: a trigger coming back from the hidden state
         // (its seat returned) would otherwise read offsetWidth 0, reserve no
         // room for that one pass and overlap the control that follows.
@@ -193,14 +201,18 @@
       }
 
       /**
-       * Take the body-mounted trigger down with its seat. Nothing else removes
-       * it: it is not inside the composer, so when the seat slot goes away (the
-       * composer handed back, or another view — the plugins page — is up) it
-       * used to stay pinned on <body> and float over the page that came next.
-       * The model trigger's reserved margin goes back with it.
+       * Take the body-mounted trigger down with its seat. It is removed rather
+       * than hidden: the stylesheet pins `display: inline-flex` with !important,
+       * which beats an inline `display: none`, so a hidden trigger stayed on
+       * screen at its last coordinates after the seat lost its box (the
+       * trajectory and context views) or went away with the composer. The model
+       * trigger's reserved margin goes back with it.
        */
       function hideEffortTrigger() {
-        if (effortBtn !== null && effortBtn.style.display !== 'none') effortBtn.style.display = 'none'
+        if (effortBtn !== null) {
+          if (effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
+          effortBtn = null
+        }
         var modelBtn = document.querySelector('.dsh-claude-model-btn')
         if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
         closeEffortPopover()
