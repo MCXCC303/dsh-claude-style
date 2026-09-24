@@ -1,4 +1,40 @@
     /**
+     * A feature's handle on the shared `ui` registry. The scheduler calls the
+     * hooks; every hook is optional, and a feature that does not implement one
+     * is simply skipped for that trigger. The scheduler reads nothing else from
+     * a handle except `sync`, which decides pass order.
+     *
+     * @typedef {Object} FeatureHandle
+     * @property {Function} [sync] Every scheduler pass. The one hook a pass
+     *     feature must have.
+     * @property {Function} [owns] `owns(target) → boolean`: whether the press
+     *     landed inside the feature's own DOM. A press the feature does not own
+     *     closes it through `close('outside')`.
+     * @property {Function} [onPointerDown] `onPointerDown(target)`: every
+     *     pointer press, owned or not. settingsNav uses this because its class
+     *     changes are outside the observer's attributeFilter, so no pass fires.
+     * @property {Function} [close] `close(reason)`: `'outside'` (press
+     *     outside), `'escape'` (Esc), or `'composer'` (focus moved into the
+     *     composer). Features ignore the reasons they do not act on, so each
+     *     keeps its exact shipped dismiss routes.
+     * @property {Function} [onInput] `onInput(target)`: an input or
+     *     compositionend event whose target is inside the composer input.
+     * @property {Function} [reposition] `reposition()`: a viewport scroll or
+     *     resize. The feature checks whether it is open.
+     * @property {Function} [onCopyChange] `onCopyChange()`: the locale, the
+     *     preferences or the model copy changed.
+     * @property {Function} [onKey] `onKey(event) → boolean`: a keydown, after
+     *     the scheduler's own Esc handling. The return value does not gate the
+     *     scheduler's unconditional Ctrl+, preventDefault.
+     *
+     * Cross-feature reads outside the scheduler stay direct handle reads:
+     *   effort → model.{effort, pickEffort, seat, settled, close}
+     *   model → effort.close, copy.isComposerActive
+     *   heroMenu, permissions → copy.*
+     *   quickProviders → model.{providers, onProviders}
+     *   footer → ban.open
+     */
+    /**
      * Say once, loudly, that a feature was switched off. The skin keeps running
      * without it, so the console line is the only trace — it names the feature.
      */
@@ -8,42 +44,45 @@
       } catch (ignored) { /* no console */ }
     }
 
-    function installScheduler(ctx, ui) {
+    function installScheduler(ctx, ui, passFeatures, hookFeatures) {
       function onGlobalPointerDown(e) {
         var target = e.target
-        // The model picker is hover-driven; a press anywhere outside its
-        // trigger and both levels closes it (same discipline as the perm menu).
-        if (target && ui.model && !ui.model.owns(target)) {
-          ui.model.close()
+        // A press a feature does not own closes it: the model picker and the
+        // effort card are hover-driven popovers, the account drawer a click one.
+        // Features without an `owns` keep their own dismiss route — permissions
+        // runs its own outside-press listener, and quickProviders closes only on
+        // composer focus — so none gains a route it did not have.
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (!handle || typeof handle.owns !== 'function' || typeof handle.close !== 'function') continue
+          if (target && !handle.owns(target)) handle.close('outside')
         }
-        // The effort card is its own popover with its own trigger, so it closes
-        // on the same press-anywhere-outside rule.
-        if (target && ui.effort && !ui.effort.owns(target)) {
-          ui.effort.close()
+        // A press also drives hooks that are not about closing: settingsNav's
+        // class changes are outside the observer's attributeFilter, so its sync
+        // runs on the press itself. It is last, in feature order.
+        for (var j = 0; j < HOOK_FEATURES.length; j++) {
+          var pressed = ui[HOOK_FEATURES[j]]
+          if (pressed && typeof pressed.onPointerDown === 'function') pressed.onPointerDown(target)
         }
-        if (ui.settingsNav) ui.settingsNav.sync()
-        if (!ui.footer || !ui.footer.isOpen()) return
-        if (target && ui.footer.owns(target)) return
-        ui.footer.close()
       }
 
       function onGlobalKeyDown(e) {
         if (e.key === 'Escape') {
-          if (ui.footer) ui.footer.close()
-          if (ui.permissions) ui.permissions.closeMenu()
-          if (ui.model) ui.model.close()
-          if (ui.effort) ui.effort.close()
-          // The account-hold overlay is the one layer that does NOT close on a
-          // window blur (it is meant to be read, and reading it may mean
-          // switching windows), so Esc is its keyboard way out.
-          if (ui.ban) ui.ban.close()
+          // Every feature's own Esc route, in feature order. The account-hold
+          // overlay is the one layer that does NOT close on a window blur (it is
+          // meant to be read, and reading it may mean switching windows), so Esc
+          // is its keyboard way out; a feature that ignores the reason is skipped.
+          for (var i = 0; i < HOOK_FEATURES.length; i++) {
+            var handle = ui[HOOK_FEATURES[i]]
+            if (handle && typeof handle.close === 'function') handle.close('escape')
+          }
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+          // Unconditional: the hook's return value never gates this.
           e.preventDefault()
-          var realTrigger = document.querySelector('[class*="footArea"] [class*="settingsArea"] button[aria-haspopup="dialog"]') ||
-                            document.querySelector('[class*="footArea"] [class*="settingsArea"] button')
-          if (realTrigger) {
-            realTrigger.click()
+          for (var k = 0; k < HOOK_FEATURES.length; k++) {
+            var keyHandle = ui[HOOK_FEATURES[k]]
+            if (keyHandle && typeof keyHandle.onKey === 'function') keyHandle.onKey(e)
           }
         }
         // Enter is deliberately NOT handled here. The host's composer keymap (every
@@ -65,32 +104,33 @@
       }
 
       // Focus moving into the composer means the user is about to type: every
-      // popover the skin keeps open around the card is in the way there, so all
-      // of them close. `focusin` bubbles (unlike focus), so one listener covers
-      // the card and everything inside it; the observer's attributeFilter does
-      // not watch focus events, so this cannot feed itself another pass.
+      // popover the skin keeps open around the card is in the way there, so each
+      // feature's composer route runs, in feature order. `focusin` bubbles
+      // (unlike focus), so one listener covers the card and everything inside
+      // it; the observer's attributeFilter does not watch focus events, so this
+      // cannot feed itself another pass. The hero menu has no close of its own —
+      // it lives and dies with the host's hover state, and syncHeroMenu notices
+      // when it is gone — so it has no hook and is simply skipped.
       function onComposerFocusIn(e) {
         var target = e.target
         if (!target || typeof target.closest !== 'function') return
         if (target.closest('[data-composer-card]') === null) return
-        if (ui.model) ui.model.close()
-        if (ui.permissions) ui.permissions.closeMenu()
-        if (ui.permissions && ui.permissions.closeStats) ui.permissions.closeStats()
-        if (ui.footer) ui.footer.close()
-        // The hero menu has no close of its own — it lives and dies with the
-        // host's hover state, and syncHeroMenu notices when it is gone — so the
-        // call is guarded like closeStats above. Unguarded it threw a TypeError
-        // on every composer focus-in, which also aborted the rest of this
-        // handler for that event.
-        if (ui.heroMenu && ui.heroMenu.close) ui.heroMenu.close()
-        if (ui.quickProviders) ui.quickProviders.close()
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (handle && typeof handle.close === 'function') handle.close('composer')
+        }
       }
 
       function onComposerInput(e) {
         var target = e.target
         if (!target) return
         if (target.hasAttribute && (target.hasAttribute('data-composer-input') || (target.closest && target.closest('[data-composer-input]')))) {
-          if (ui.copy && ui.copy.syncAttachmentPlaceholder) ui.copy.syncAttachmentPlaceholder()
+          // The [data-composer-input] filter stays in this event pipe; a feature
+          // is only told that a composer-input event happened.
+          for (var i = 0; i < HOOK_FEATURES.length; i++) {
+            var handle = ui[HOOK_FEATURES[i]]
+            if (handle && typeof handle.onInput === 'function') handle.onInput(target)
+          }
         }
       }
 
@@ -101,30 +141,37 @@
       document.addEventListener('compositionend', onComposerInput, true)
       document.addEventListener('focusin', onComposerFocusIn, true)
 
-      // Both fixed popovers are anchored to their trigger; scroll of the page
-      // (not the conversation's own auto-stick) and resizes move the anchor, so
-      // whichever is open must re-resolve it.
+      // Fixed popovers are anchored to their trigger; scroll of the page (not
+      // the conversation's own auto-stick) and resizes move the anchor, so
+      // whichever is open must re-resolve it. Each feature checks whether it is
+      // open itself.
       function onFixedPopoverViewportChange() {
-        if (ui.model) ui.model.reposition()
-        if (ui.heroMenu) ui.heroMenu.reposition()
-        if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (handle && typeof handle.reposition === 'function') handle.reposition()
+        }
       }
       window.addEventListener('resize', onFixedPopoverViewportChange)
       window.addEventListener('scroll', onFixedPopoverViewportChange, true)
 
-      // The picker's copy follows the shell language, so a locale switch has to
-      // rebuild the rows it already painted. Subscribing here (rather than
-      // reading the locale at render time only) is what makes the change land
-      // while a popover is open.
-      var localeUnsubscribe = null
-      function onLocaleChange() {
-        if (ui.model) ui.model.invalidateCopy()
+      // A copy source changed — the locale, the preferences or the model copy
+      // document. Each feature that paints copy rebuilds its render signatures
+      // through onCopyChange, then one pass repaints. The picker's copy follows
+      // the shell language, so a locale switch has to rebuild the rows it already
+      // painted; subscribing here (rather than reading the locale at render time
+      // only) is what makes the change land while a popover is open.
+      function onCopyChange() {
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (handle && typeof handle.onCopyChange === 'function') handle.onCopyChange()
+        }
         schedule()
       }
+      var localeUnsubscribe = null
       try {
         var localeService = ctx.get('locale')
         if (localeService && typeof localeService.subscribe === 'function') {
-          localeUnsubscribe = localeService.subscribe(onLocaleChange)
+          localeUnsubscribe = localeService.subscribe(onCopyChange)
         }
       } catch (error) { /* no locale service: the picker keeps the fallback language */ }
 
@@ -134,20 +181,11 @@
       // first read also arrives through here, which is what replaces the
       // defaults with the stored values.
       var prefsUnsubscribe = null
-      prefsUnsubscribe = subscribePrefs(function () {
-        if (ui.model) ui.model.invalidateCopy()
-        // The account-hold page is assembled once per open, so a language change
-        // has to rebuild an open one (a no-op while it is closed).
-        if (ui.ban) ui.ban.refresh()
-        schedule()
-      })
+      prefsUnsubscribe = subscribePrefs(onCopyChange)
       loadPrefs()
 
       var modelCopyUnsubscribe = null
-      modelCopyUnsubscribe = onModelCopyLoaded(function () {
-        if (ui.model) ui.model.invalidateCopy()
-        schedule()
-      })
+      modelCopyUnsubscribe = onModelCopyLoaded(onCopyChange)
 
       var usernameUnsubscribe = null
       usernameUnsubscribe = onUsernameLoaded(function () {
@@ -174,8 +212,14 @@
         })
       }
 
-      /** The features a pass syncs (their `ui` handle names), in pass order. */
-      var PASS_FEATURES = ['copy', 'permissions', 'model', 'effort', 'heroMenu', 'footer', 'workspace', 'viewTabs', 'settingsNav']
+      /**
+       * The features a pass syncs (their `ui` handle names), in pass order.
+       * entry.js passes them in FEATURES order, filtered to handles that exist
+       * and have a `sync`.
+       */
+      var PASS_FEATURES = passFeatures || []
+      /** Every installed feature handle, in install order, for the event hooks. */
+      var HOOK_FEATURES = hookFeatures || []
       /** Failed passes in a row after which a feature's sync is switched off. */
       var SYNC_FAILURE_LIMIT = 3
       var syncFailures = {}
@@ -212,9 +256,6 @@
           if (stopped) return
           for (var i = 0; i < PASS_FEATURES.length; i++) runSync(PASS_FEATURES[i])
           try {
-            // Covers the rail toggle (and any reflow) while the popover is open:
-            // its anchor moved without a window resize or a page scroll.
-            if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
             if (composerCardObserver) {
               var currentCard = document.querySelector('[data-composer-card]')
               if (currentCard !== observedCard) {

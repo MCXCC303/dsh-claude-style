@@ -5,8 +5,17 @@
    area" preference turns the whole takeover off, so each rule below carries
    %%FOOTER_ATTR%% — the skin sets it on <body> only while the takeover is on,
    and with it absent the host footer renders exactly as shipped. */
-/* Hide original trigger buttons in footArea while keeping containers intact for modals */
+/* Hide original trigger buttons in footArea while keeping containers intact for modals.
+   The trigger row is not settingsArea's child: it renders inside the
+   `sidebar.settings` slot anchor (a display:contents div), which the child
+   selector alone never crossed. The row stayed up, squeezed into the zeroed
+   settingsArea, and what does not shrink painted over the skin's account row:
+   the connection pill, and on the desktop the update pill ("Retry update")
+   beside the host's own account trigger, which holds that slot there. The
+   account menu and its sign-in dialog are portals and the settings panel is
+   the row's sibling, so all three still open. */
 body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [class*="triggerRow"],
+body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="settingsArea"] > [data-slot="sidebar.settings"] > [class*="triggerRow"],
 body[data-dsh-claude-style][%%FOOTER_ATTR%%] [class*="footArea"] > [class*="footerActions"] :is([class*="footerButtons"], > button) {
   display: none !important;
 }

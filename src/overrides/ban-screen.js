@@ -305,18 +305,28 @@
       // `ui.ban` at click time, so the order is safe either way.)
       ui.ban = {
         open: openBanScreen,
-        close: closeBanScreen,
+        /**
+         * Esc is the overlay's only keyboard exit. The scheduler dispatches
+         * 'composer' for composer focus and 'outside' for a press; neither may
+         * dismiss a page the reader is looking at.
+         */
+        close: function (reason) {
+          if (reason === 'composer' || reason === 'outside') return
+          closeBanScreen()
+        },
         isOpen: function () {
           return banRoot !== null
         },
         /**
          * Rebuild an OPEN overlay in place — the page is assembled once, so a
-         * change of the language preference (or of the brand mark) would
-         * otherwise only land the next time it is opened. A no-op while closed,
-         * and the hold timestamp is kept so a re-render never re-dates the page
-         * under the reader.
+         * copy change (the locale, the preferences or the model copy document)
+         * would otherwise only land the next time it is opened. A no-op while
+         * closed, and the hold timestamp is kept so a re-render never re-dates
+         * the page under the reader. The scheduler dispatches this for every
+         * copy source; the shipped code only did it for a preferences change,
+         * which is a no-op while closed and the more correct rebuild while open.
          */
-        refresh: function () {
+        onCopyChange: function () {
           if (banRoot === null) return
           openBanScreen(banOpenedAt === null ? new Date() : banOpenedAt)
         },

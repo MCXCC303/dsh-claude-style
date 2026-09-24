@@ -97,3 +97,14 @@
   - 退役 = 跑该特性自己的 teardown，并把它接管的宿主界面还回去。页脚接管（`FOOTER_ATTR`，由偏好写）与 composer 重绘（`COMPOSER_ATTR`，由 permissions 的 pass 写）都会隐藏宿主控件，所以退役 `footer` / `permissions` 时对应的闸门强制关闭、不再随偏好打开。特性的 teardown 因此必须撤干净自己的 DOM 与标记（模型选择器此前只清变量，已补上）；只做装饰的 pass 用自己的句柄名（`ui.settingsNav`），退役它不会卸掉设置页。
 - **代价**：特性失效时界面上没有提示，只有控制台一行；依赖它的特性（例如都读 `ui.copy.isComposerActive()`）会各自连续失败、依次退役——降级而非崩溃。
 - **重审条件**：宿主提供插件级的错误上报 / 健康面板时，把报告接过去。
+
+## D13. 特性碎片的拆分布局与调度契约
+
+- **背景**：重构开始时，三个特性碎片都越过 750 行上限——`account-footer.js` 1357 行（账户资料、宿主账号菜单桥接、其他插件页脚条目的镜像、抽屉壳、行构建五份工作挤在一个闭包里）、`model-picker.js` 900 行（模型目录订阅与行构建也塞在里面）、`permissions.js` 868 行（会话统计卡也在里面）；`composer/inline.css` 847 行与 `components/model-picker.css` 767 行两条 CSS 同样超限。调度器同时把每个特性的触发调用硬编码在手写清单里：`PASS_FEATURES` 按名列 pass 序、与 entry.js 的安装序分开维护，另有 21 处特性专属调用散在各触发分支里，而且已经与特性漂移——`ui.heroMenu.close` 是被守卫着的死调用（heroMenu 的句柄只有 `{ sync, reposition }`）。`ui` 是跨特性共享的服务注册表，却没有任何文档说明句柄有哪些方法、谁可以读谁。
+- **决定**（重构 Phase 0–3 已落地）：
+  - **辅助碎片导出顶层 `createX(...)` 工厂**，仿 popover-utils 的 `createHoverIntent` 与 model-effort 的 `createEffortControl`：状态收在工厂自己的闭包里，返回一个小对象；访问器与回调经参数传入（如 `{ isOpen: fn, onChange: fn }`），绝不伸手进别的闭包。特性的 `installX` 负责把工厂接起来（现有六个：`createAccountProfile`、`createHostAccountMenu`、`createFooterMirror`、`createModelCatalog`、`createModelRows`、`createSessionStats`）。
+  - **拆出多个碎片的特性建一个子目录**（`overrides/account/`、`overrides/model/`）；只拆出一个辅助碎片的特性把它放在特性旁边（`overrides/session-stats.js`）——单文件目录是噪音。FRAGMENTS 里列在特性碎片紧前面；顶层名对整个 bundle 全局唯一、以特性起名（`createAccountProfile`，不是 `createProfile`）。移动就是移动：注释随行、风格与名字不变，只有闭包变量必须变成参数时才改签名。
+  - **特性契约**：entry.js 的 FEATURES 表（`{ name, handle?, install }`）统一安装序与 pass 序——pass 序就是安装序过滤出句柄带 `sync` 的特性（`settings` 安装到 `ui.settingsNav`）。scheduler 只认 FeatureHandle 的可选钩子（typedef 在 scheduler.js 头部）：`sync` / `owns` + `close('outside')` / `onPointerDown` / `close('escape')` / `close('composer')` / `onInput` / `reposition` / `onCopyChange` / `onKey`；没实现的钩子直接跳过，每个特性保住自己原有的关闭路线（permissions 没有外部点击关闭，quickProviders 只在 composer 聚焦时关）。`retire` 按 name 或 handle 匹配：纯 handle 命中只停 sync、不拆安装（settingsNav 的显式分支——失败计数器已拒绝后续 pass，安装继续跑、设置页不卸）；退役 `footer` / `permissions` 仍强制归还 body 属性（FOOTER_ATTR / COMPOSER_ATTR）。
+- **理由**：拆分前「加一个特性」要改两处清单（entry.js 安装序列 + scheduler 的 PASS_FEATURES）再往各触发分支加调用；现在变成往 FEATURES 表加一行、在句柄上实现钩子——scheduler 不再认识任何具体特性，手写清单无从漂移。拆分把千行闭包变成状态自持的工厂加薄编排，750 行上限重新可守。移动就是移动（注释随行、闭包变量变参数才改签名），搬运提交的 diff 因此可审：搬运里不该出现逻辑改动。本决策不推翻 D1/D6/D12：仍是单文件逐字拼接（D1）、仍是单一调度器统一驱动（D6，钩子只是把硬编码调用变成句柄方法）、特性级失败隔离与 retire 语义原样保留（D12）——它在三者之内工作。
+- **代价**：多一层间接——特性内部状态要经工厂参数表交接，动状态时多过一遍参数；「加一个特性」前要先读这条决策与 scheduler.js 的 typedef。
+- **重审条件**：钩子表继续膨胀（例如第二类键盘事件或第二种观察源进场）时，重审契约粒度——按事件域分组，或让特性自己声明要订阅的触发器。

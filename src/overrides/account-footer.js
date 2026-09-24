@@ -1,96 +1,7 @@
     function installAccountFooter(ctx, ui) {
-      /**
-       * The signed-in account, when the desktop has one: `remote.account.getProfile()`
-       * resolves to a profile whose `status` is 'ready' and whose value carries the
-       * nickname and the avatar URL. Read leniently by NAME (the same way the archive
-       * registry is read), so a host without the account plugin simply keeps the
-       * hand-drawn mark and the stored username.
-       */
-      var accountName = null
-      var accountAvatar = null
-      function loadAccount() {
-        var account = null
-        try { account = ctx.get('remote.account') } catch (error) { account = null }
-        if (account === undefined || account === null || typeof account.getProfile !== 'function') return
-        account.getProfile().then(function (result) {
-          if (!result || result.ok !== true) return
-          // A `null` profile is the host's "signed out"; a 'failed' one is a
-          // transient miss, and the row keeps what it already shows.
-          var name = null
-          var avatar = null
-          if (result.value) {
-            var profile = result.value.profile || result.value
-            if (!profile || profile.status !== 'ready' || !profile.value) return
-            name = profile.value.name || profile.value.contact || null
-            avatar = profile.value.avatarUrl || profile.avatarUrl || null
-          }
-          if (name === accountName && avatar === accountAvatar) return
-          accountName = name
-          accountAvatar = avatar
-          // Nothing in the DOM changed, so no mutation will schedule the pass that
-          // paints the new name and picture: ask for one. (A body attribute used to
-          // stand in for this, but the observer's attributeFilter never sees it.)
-          if (typeof ui.schedule === 'function') ui.schedule()
-        }).catch(function () { /* stay on the fallback */ })
-      }
-
-      /**
-       * The profile picture's address, or null when there is none usable. It
-       * comes from the account service, so only http(s) is accepted, and it is
-       * handed to an `<img>` as a property — never written into markup.
-       */
-      function accountPhotoUrl(raw) {
-        if (typeof raw !== 'string' || raw === '') return null
-        try {
-          var url = new URL(raw, window.location.href)
-          return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
-        } catch (error) {
-          return null
-        }
-      }
-
-      /**
-       * Paint (or clear) the picture inside the avatar circle. It is a real
-       * `<img>` layered over the starburst rather than a CSS background: the
-       * host's own avatar `<img>` carries `referrerPolicy="no-referrer"`, which
-       * is what the picture host expects, and a background cannot drop the
-       * referrer. A picture that fails to load hides itself, so the starburst
-       * underneath shows instead of an empty circle.
-       */
-      function syncAccountAvatar(avatarEl) {
-        if (avatarEl === null) return
-        var src = accountPhotoUrl(accountAvatar)
-        var photo = avatarEl.querySelector('.dsh-claude-account-photo')
-        if (src === null) {
-          if (photo !== null) avatarEl.removeChild(photo)
-          if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
-          return
-        }
-        if (photo === null) {
-          photo = document.createElement('img')
-          photo.className = 'dsh-claude-account-photo'
-          photo.alt = ''
-          photo.decoding = 'async'
-          photo.draggable = false
-          photo.referrerPolicy = 'no-referrer'
-          photo.addEventListener('load', function () { photo.hidden = false })
-          photo.addEventListener('error', function () { photo.hidden = true })
-          avatarEl.appendChild(photo)
-        }
-        if (photo.getAttribute('src') !== src) photo.src = src
-        if (!avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.setAttribute('data-dsh-claude-photo', '')
-      }
-      loadAccount()
-      /**
-       * Keep it live without a page refresh. The host exposes a real account stream
-       * (`remote.account.watch`), but it is an async iterable and this half is ES5;
-       * a slow poll costs one cheap RPC a minute and covers sign-in,
-       * sign-out and avatar changes alike.
-       */
-      var accountTimer = setInterval(function () {
-    if (accountBtn === null || accountBtn.parentElement === null) return
-    loadAccount()
-      }, 60000)
+      var profile = createAccountProfile(ctx, function () {
+        if (typeof ui.schedule === 'function') ui.schedule()
+      })
       var accountBtn = null
       var accountPopover = null
       var popoverBody = null
@@ -176,164 +87,71 @@
       }
 
       /**
-       * The host's account menu (设置 / 意见反馈 / 退出登录, or 登录 when signed out)
-       * lives in a portal that only exists while its trigger is open, and the
-       * trigger listens on pointer events — a synthetic `click()` alone does
-       * nothing. So the skin drives it the way a pointer would, reads whatever
-       * items the host renders (never a hard-coded list, so a future option shows
-       * up on its own), and clicks one back when the user picks it. The drive is
-       * hidden with a body flag so no menu ever flashes.
+       * The profile picture's address, or null when there is none usable. It
+       * comes from the account service, so only http(s) is accepted, and it is
+       * handed to an `<img>` as a property — never written into markup.
        */
-      /**
-       * The host's account menu (设置 / 意见反馈 / 退出登录, or 登录 when signed out)
-       * lives in a portal that exists only while its trigger is open, and the
-       * trigger listens on pointer events — a bare `click()` does nothing. The
-       * skin drives it the way a pointer would, reads whatever items the host
-       * renders (never a hard-coded list, so a future option shows up on its own)
-       * and clicks one back when the user picks it. A body flag keeps the drive
-       * out of sight.
-       */
-      var ACCOUNT_MENU_ATTR = 'data-dsh-claude-account-menu'
-      var DRIVING_ATTR = 'data-dsh-claude-account-driving'
-      var accountItems = []
-      var accountMenuError = false
-      /**
-       * True once the host's own account menu has been read. When it is, the
-       * drawer mirrors ITS items (which include 设置 on the desktop) and the
-       * skin's own settings row steps aside; on a host without the desktop
-       * account UI the drawer keeps that row, because there is nothing to mirror.
-       */
-      var hostMenuAvailable = false
-      var accountReading = false
-      var accountSignature = ''
-
-      /** A click the host's React handlers actually see (pointerdown + click). */
-      function realClick(el) {
-        if (el === null || el === undefined) return
-        var rect = el.getBoundingClientRect()
-        var init = {
-          bubbles: true, cancelable: true, composed: true, button: 0, buttons: 1,
-          clientX: Math.round(rect.left + rect.width / 2),
-          clientY: Math.round(rect.top + rect.height / 2)
+      function accountPhotoUrl(raw) {
+        if (typeof raw !== 'string' || raw === '') return null
+        try {
+          var url = new URL(raw, window.location.href)
+          return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
+        } catch (error) {
+          return null
         }
-        try { el.dispatchEvent(new PointerEvent('pointerdown', init)) } catch (error) { /* older engines */ }
-        el.dispatchEvent(new MouseEvent('mousedown', init))
-        try { el.dispatchEvent(new PointerEvent('pointerup', init)) } catch (error) { /* older engines */ }
-        el.dispatchEvent(new MouseEvent('mouseup', init))
-        el.click()
       }
 
       /**
-       * The host's account trigger: the menu anchor inside the FOOTER, which is
-       * where the account row lives. Taking "the first menu anchor that is not
-       * ours" was wrong — the shell has several (the open-in-app picker, the
-       * workspace selector), and on a host without the desktop account the skin
-       * then mirrored THAT menu into the account drawer. Hidden with `visibility`,
-       * so it keeps a box and stays reachable here.
+       * Paint (or clear) the picture inside the avatar circle. It is a real
+       * `<img>` layered over the starburst rather than a CSS background: the
+       * host's own avatar `<img>` carries `referrerPolicy="no-referrer"`, which
+       * is what the picture host expects, and a background cannot drop the
+       * referrer. A picture that fails to load hides itself, so the starburst
+       * underneath shows instead of an empty circle.
        */
-      function hostAccountTrigger() {
-        var foot = document.querySelector('[class*="footArea"]')
-        var scopes = [foot, document]
-        // The account menu names itself ("账号菜单" / "Account menu"): the shell
-        // has several menu anchors (open-in-app, workspace picker) and "the first
-        // one that is not ours" picked the wrong one on hosts whose account row is
-        // not in the footer. Match the label first, and only then fall back to
-        // "the first non-ours anchor in the footer".
-        for (var s = 0; s < scopes.length; s++) {
-          if (scopes[s] === null || scopes[s] === undefined) continue
-          var anchors = scopes[s].querySelectorAll('[aria-haspopup="menu"]')
-          for (var i = 0; i < anchors.length; i++) {
-            var el = anchors[i]
-            if (String(el.className || '').indexOf('dsh-claude-') !== -1) continue
-            if (/账号|account/i.test(el.getAttribute('aria-label') || '')) return el
-          }
+      function syncAccountAvatar(avatarEl) {
+        if (avatarEl === null) return
+        var src = accountPhotoUrl(profile.avatar())
+        var photo = avatarEl.querySelector('.dsh-claude-account-photo')
+        if (src === null) {
+          if (photo !== null) avatarEl.removeChild(photo)
+          if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+          return
         }
-        // No fallback. The skin replaces the host's account row, so on a host
-        // without the desktop account there is simply no account menu to mirror —
-        // and "the first non-ours anchor in the footer" picked the open-in-app
-        // menu instead, filling the drawer with Cursor / VS Code / … Returning
-        // null is the honest answer: the drawer keeps only its own 设置 row.
-        return null
+        if (photo === null) {
+          photo = document.createElement('img')
+          photo.className = 'dsh-claude-account-photo'
+          photo.alt = ''
+          photo.decoding = 'async'
+          photo.draggable = false
+          photo.referrerPolicy = 'no-referrer'
+          photo.addEventListener('load', function () { photo.hidden = false })
+          photo.addEventListener('error', function () { photo.hidden = true })
+          avatarEl.appendChild(photo)
+        }
+        if (photo.getAttribute('src') !== src) photo.src = src
+        if (!avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.setAttribute('data-dsh-claude-photo', '')
       }
 
-      function hostMenus() {
-        return Array.prototype.slice.call(document.querySelectorAll('[role="menu"]'))
-      }
-
-      /**
-       * Open the host's account menu out of sight, hand its items to `read`, close
-       * it again. Asynchronous on purpose: the host renders the portal on a later
-       * tick, so a synchronous wait would block the very render it waits for.
-       */
-      function withHostAccountMenu(read) {
-        return new Promise(function (resolve) {
-          var trigger = hostAccountTrigger()
-          if (trigger === null) { resolve(false); return }
-          var before = hostMenus()
-          document.body.setAttribute(DRIVING_ATTR, '')
-          realClick(trigger)
-          var tries = 0
-          function finish(ok) {
-            realClick(trigger)
-            document.body.removeAttribute(DRIVING_ATTR)
-            resolve(ok)
-          }
-          function look() {
-            var menu = null
-            var now = hostMenus()
-            for (var i = 0; i < now.length; i++) {
-              if (before.indexOf(now[i]) === -1) menu = now[i]
-            }
-            var items = menu !== null ? menu.querySelectorAll('[role="menuitem"]') : []
-            if (menu !== null && items.length > 0) {
-              menu.setAttribute(ACCOUNT_MENU_ATTR, '')
-              read(menu, items)
-              finish(true)
-              return
-            }
-            if (tries++ > 20) { finish(false); return }
-            setTimeout(look, 40)
-          }
-          setTimeout(look, 40)
-        })
-      }
-
-      /** Read the host's items (once per account state) and re-render the rows. */
-      function refreshAccountItems() {
-        if (accountReading) return
-        accountReading = true
-        withHostAccountMenu(function (menu, items) {
-          var ownSettings = settingsItem !== null && settingsItem.querySelector('.dsh-claude-popover-item-text') !== null
+      var hostMenu = createHostAccountMenu({
+        key: function () {
+          return [profile.state() || '', profile.name() || '', profile.avatar() || ''].join('|')
+        },
+        ownSettingsLabel: function () {
+          return hostMenu.settingsTrigger() !== null && settingsItem !== null &&
+            settingsItem.querySelector('.dsh-claude-popover-item-text') !== null
             ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent
             : null
-          var next = []
-          for (var i = 0; i < items.length; i++) {
-            var text = (items[i].textContent || '').trim()
-            // The drawer carries its own settings row (with the shortcut hint);
-            // mirroring the host's copy would list 设置 twice.
-            if (ownSettings !== null && text === ownSettings) continue
-            var icon = items[i].querySelector('svg')
-            next.push({
-              text: text,
-              // The host disables its own sign-out row while its flow is busy;
-              // the skin's row stays enabled, or the drawer would dead-end the
-              // very action the user is reaching for.
-              disabled: false,
-              // A detached copy of the host's node, not its markup: the menu is
-              // closed again right after this read, and a copy never re-parses.
-              icon: icon !== null ? icon.cloneNode(true) : null,
-              iconHtml: icon !== null ? icon.outerHTML : ''
-            })
-          }
-          accountItems = next
-        }).then(function (ok) {
-          accountReading = false
-          accountMenuError = !ok
-          accountReadAt = Date.now()
-          accountSignature = (accountName || '') + '|' + (accountAvatar || '')
-          renderAccountItems()
-        })
-      }
+        },
+        onItems: function () { renderAccountItems() },
+        close: closePopover
+      })
+      var mirror = createFooterMirror({
+        body: function () { return popoverBody },
+        anchor: function () { return settingsItem },
+        isOpen: function () { return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true') },
+        close: closePopover
+      })
 
       /**
        * What the account rows last drew. A rebuild is a DOM mutation, and every
@@ -345,8 +163,8 @@
 
       function accountItemsSignature() {
         var parts = []
-        for (var i = 0; i < accountItems.length; i++) {
-          var entry = accountItems[i]
+        for (var i = 0; i < hostMenu.items().length; i++) {
+          var entry = hostMenu.items()[i]
           parts.push(entry.text + '\u0000' + (entry.disabled ? '1' : '0') + '\u0000' + entry.iconHtml)
         }
         return parts.join('\u0001')
@@ -363,13 +181,13 @@
         if (!popoverBody) return
         var existing = popoverBody.querySelectorAll('[data-dsh-claude-account-item]')
         var signature = accountItemsSignature()
-        if (signature === renderedAccountSignature && existing.length === accountItems.length) return
+        if (signature === renderedAccountSignature && existing.length === hostMenu.items().length) return
         if (existing.length > 0 && accountPopover !== null && accountPopover.getAttribute('data-open') === 'true') return
         renderedAccountSignature = signature
         for (var e = 0; e < existing.length; e++) {
           if (existing[e].parentElement !== null) existing[e].parentElement.removeChild(existing[e])
         }
-        for (var i = 0; i < accountItems.length; i++) {
+        for (var i = 0; i < hostMenu.items().length; i++) {
           (function (entry) {
             var row = document.createElement('button')
             row.type = 'button'
@@ -385,31 +203,24 @@
               event.stopPropagation()
               closePopover()
               // 直连官方行为（与归档同一条思路：不再驱动宿主菜单）。
-              if (entry.text === (settingsItem && settingsItem.querySelector('.dsh-claude-popover-item-text') ? settingsItem.querySelector('.dsh-claude-popover-item-text').textContent : '') || /设置|settings/i.test(entry.text)) {
-                var settingsButtons = footArea ? footArea.querySelectorAll('[class*="settingsArea"] button') : []
-                for (var sb = 0; sb < settingsButtons.length; sb++) {
-                  if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { realClick(settingsButtons[sb]); return }
-                }
-              }
+              var account = profile.service()
               if (/反馈|contact|意见/i.test(entry.text)) {
                 var url = 'https://trtgsjkv6r.feishu.cn/share/base/form/shrcnlCoGElW7MQznGy9r3YYXcg'
                 try { window.open(url, '_blank', 'noopener,noreferrer') } catch (error) { /* popup blocked */ }
                 return
               }
               if (/退出|登出|sign ?out|log ?out|logout/i.test(entry.text)) {
-                var account = null
-                try { account = ctx.get('remote.account') } catch (error) { account = null }
-                if (account !== undefined && account !== null && typeof account.signOut === 'function') {
-                  account.signOut().then(function () {
-                    if (items !== null) items = items.filter(function (row) { return row.id !== id })
+                if (account !== null && typeof account.signOut === 'function') {
+                  // The answer is the signed-out state: take it now rather than
+                  // wait for the stream to report it.
+                  account.signOut().then(function (result) {
+                    if (result && result.ok === true) profile.apply(result.value)
                   }).catch(function () { /* stay signed in on failure */ })
                 }
                 return
               }
               if (/登录|sign ?in|login/i.test(entry.text)) {
-                var account = null
-                try { account = ctx.get('remote.account') } catch (error) { account = null }
-                if (account !== undefined && account !== null && typeof account.startSignIn === 'function') {
+                if (account !== null && typeof account.startSignIn === 'function') {
                   var origin = window.location.origin
                   try { var t = window.__DSH_TRANSPORT__; if (t && t.streamBaseUrl) origin = new URL(t.streamBaseUrl).origin } catch (error) { /* keep the default */ }
                   var locale = 'en'
@@ -418,56 +229,26 @@
                 }
                 return
               }
-              // An option the skin does not know: fall back to driving the host's
-              // own menu for that one item.
-              withHostAccountMenu(function (menu, menuItems) {
-                for (var k = 0; k < menuItems.length; k++) {
-                  if ((menuItems[k].textContent || '').trim() === entry.text) { realClick(menuItems[k]); return }
-                }
-              })
+              // 设置 has no call of its own — on the desktop the account menu is
+              // the settings launcher, and there is no settings button to click —
+              // and neither has an option the skin does not know: the host's own
+              // item does it.
+              hostMenu.pick(entry.text)
             })
             popoverBody.appendChild(row)
-          })(accountItems[i])
+          })(hostMenu.items()[i])
         }
       }
 
-      /**
-       * Read the host's menu when there is one to read: once, again whenever the
-       * account changes, and — after a read that came back empty — at most every
-       * ACCOUNT_REREAD_MS. Each read opens and closes the host's menu, so an
-       * empty result must not turn into a read on every pass.
-       */
-      var ACCOUNT_REREAD_MS = 5000
-      var accountReadAt = 0
-      function syncAccountMenuItems() {
-        if (!popoverBody) return
-        if (!accountReading && hostAccountTrigger() !== null) {
-          var stale = (accountName || '') + '|' + (accountAvatar || '') !== accountSignature
-          var retry = accountItems.length === 0 && Date.now() - accountReadAt > ACCOUNT_REREAD_MS
-          if (stale || retry) refreshAccountItems()
-        }
-        renderAccountItems()
-      }
       var settingsItem = null
       function syncPopoverItems(footArea) {
         if (!popoverBody || !footArea) return
 
-        // A `menu` anchor is not the settings button: on the desktop the footer's
-        // first button in that slot is the ACCOUNT trigger, which made this row
-        // read "叶落风随" and, when clicked, open the account menu. Accept only a
-        // dialog trigger, then any button that is not a menu anchor.
-        var settingsButtons = footArea.querySelectorAll('[class*="settingsArea"] button')
-        var origSettingsTrigger = null
-        for (var sb = 0; sb < settingsButtons.length; sb++) {
-          if (settingsButtons[sb].getAttribute('aria-haspopup') === 'dialog') { origSettingsTrigger = settingsButtons[sb]; break }
-        }
-        if (origSettingsTrigger === null) {
-          for (var sb2 = 0; sb2 < settingsButtons.length; sb2++) {
-            if (settingsButtons[sb2].getAttribute('aria-haspopup') === 'menu') continue
-            origSettingsTrigger = settingsButtons[sb2]
-            break
-          }
-        }
+        // Only the host's settings button can name and open this row. Any other
+        // button in that slot is wrong: on the desktop the first one is the
+        // ACCOUNT trigger (the row read "叶落风随" and opened the account menu),
+        // and the next one is the update pill.
+        var origSettingsTrigger = hostMenu.settingsTrigger()
         var labelText = '设置'
         if (origSettingsTrigger) {
           var txt = (origSettingsTrigger.textContent || '').trim()
@@ -493,17 +274,7 @@
 
           settingsItem.addEventListener('click', function (e) {
             e.stopPropagation()
-            closePopover()
-            var realTrigger = null
-            var candidates = footArea.querySelectorAll('[class*="settingsArea"] button')
-            for (var cb = 0; cb < candidates.length; cb++) {
-              if (candidates[cb].getAttribute('aria-haspopup') === 'menu') continue
-              realTrigger = candidates[cb]
-              break
-            }
-            if (realTrigger) {
-              realTrigger.click()
-            }
+            hostMenu.openSettings()
           })
           popoverBody.appendChild(settingsItem)
         } else {
@@ -511,480 +282,23 @@
           if (txtEl && txtEl.textContent !== labelText) txtEl.textContent = labelText
         }
 
-        syncAccountMenuItems()
+        hostMenu.sync()
+        // No settings button, but the host's account menu has been read: that is
+        // the desktop, whose menu carries 设置 itself, so its row stands in for
+        // this one.
+        var stepAside = origSettingsTrigger === null && hostMenu.items().length > 0
+        if (settingsItem.hidden !== stepAside) settingsItem.hidden = stepAside
 
-        var footerActions = footArea.querySelector('[class*="footerActions"]')
-        // The host's account trigger is a 12px sliver left behind by the footer
-        // takeover: clicking it opens the host's own menu next to ours.
-        var hostTrigger = hostAccountTrigger()
+        // The takeover hides the host's account row with its settings slot; this
+        // covers an account trigger that lives anywhere else. Clicking it would
+        // open the host's own menu next to ours.
+        var hostTrigger = hostMenu.trigger()
         if (hostTrigger !== null) {
           if (hostTrigger.style.visibility !== 'hidden') hostTrigger.style.visibility = 'hidden'
           if (hostTrigger.style.pointerEvents !== 'none') hostTrigger.style.pointerEvents = 'none'
         }
-        var footerEntries = syncFooterActionVisibility(footerActions)
-
-        // While the popover is open, its mirrors must stay completely static:
-        // a content rewrite, reorder, or embedded-clone replacement under the
-        // pointer cancels the browser's :hover state and can swallow the click
-        // between pointerdown and pointerup. Sync runs only while closed;
-        // openPopover runs one final pass right before the reveal — and the
-        // sidebar-side redirection above stays live, so a newly mounted entry
-        // keeps being hidden even with the popover open.
-        if (accountPopover && accountPopover.getAttribute('data-open') === 'true') return
-
-        var existingActionItems = popoverBody.querySelectorAll('[data-action-index], [data-embed-index]')
-        for (var ea = 0; ea < existingActionItems.length; ea++) {
-          var staleIdx = parseInt(existingActionItems[ea].getAttribute('data-action-index') || existingActionItems[ea].getAttribute('data-embed-index'), 10)
-          if (isNaN(staleIdx) || staleIdx >= footerEntries.length) {
-            existingActionItems[ea].parentElement.removeChild(existingActionItems[ea])
-          }
-        }
-
-        for (var f = 0; f < footerEntries.length; f++) {
-          try {
-            (function (entry, idx) {
-            // The host's account area also lives in the footer, and its logout
-            // button used to be mirrored into the drawer's header (the stray [→]
-            // icon above the account name). Skip anything that is a menu anchor or
-            // contains one, and anything that reads as sign-out.
-            if (entry.getAttribute('aria-haspopup') === 'menu') return
-            if (entry.querySelector('[aria-haspopup="menu"]') !== null) return
-            if (/退出|登出|注销|sign ?out|log ?out/i.test(entry.textContent || '')) return
-            // The host's sign-out row is ICON-ONLY, so its text says nothing. Read
-            // the label/title/class, and skip anything living in the host's account
-            // area — that is where the stray [→] in the drawer header came from.
-            var entryLabel = (entry.getAttribute('aria-label') || '') + ' ' + (entry.getAttribute('title') || '') + ' ' + String(entry.className || '')
-            if (/退出|登出|注销|sign ?out|log ?out|logout/i.test(entryLabel)) return
-            if (typeof entry.closest === 'function' && entry.closest('[class*="account"]') !== null) return
-            var trigger = findFooterTrigger(entry)
-            var hasContent = (entry.textContent || '').trim() !== '' ||
-                             entry.querySelector('svg, img, canvas') !== null
-
-            // Rich widgets (progress bars, stat panels) cannot collapse into
-            // a text menu item — embed a live clone instead, forwarding
-            // clicks to the entry's trigger when it has one (the cost-meter
-            // balance stack is itself clickable).
-            if (!entryIsActionLike(entry, trigger)) {
-              removeActionMirror(idx)
-              if (hasContent) {
-                syncEmbedMirror(entry, idx, trigger)
-              } else {
-                removeEmbedMirror(idx)
-              }
-              return
-            }
-            removeEmbedMirror(idx)
-
-            // The mirrored item activates the first interactive element
-            // outside any overlay.
-            var activator = trigger
-            var item = popoverBody.querySelector('[data-action-index="' + idx + '"]')
-            var iconEl = (trigger && trigger.querySelector('svg')) || entry.querySelector('svg')
-            var text = activator.getAttribute('aria-label') || (activator.textContent || '').trim() || '插件'
-            var badge = activator.getAttribute('data-cordis-badge') || entry.getAttribute('data-cordis-badge') || ''
-
-            if (!item) {
-              item = document.createElement('button')
-              item.type = 'button'
-              item.className = 'dsh-claude-popover-item'
-              item.setAttribute('data-action-index', idx)
-              item.innerHTML =
-                '<span class="dsh-claude-popover-item-icon"></span>' +
-                '<span class="dsh-claude-popover-item-text"></span>'
-
-              item.addEventListener('click', function (e) {
-                e.stopPropagation()
-                closePopover()
-                // The activator is rebound on every (closed-state) sync pass
-                // (`item.__dshActivator`), never captured at creation — the
-                // host re-sorts list slots by `order` on each render, so the
-                // entry behind an index changes over time.
-                var live = item.__dshActivator
-                if (!live || typeof live.click !== 'function') {
-                  // Safety net: re-resolve the current trigger for this index
-                  // from the live footer DOM. Covers the rare case where the
-                  // stored node was detached by a host re-render while the
-                  // popover was open.
-                  try {
-                    var fa = document.querySelector('[class*="footArea"]')
-                    var actions = fa ? fa.querySelector('[class*="footerActions"]') : null
-                    var liveEntries = actions ? footerEntriesOf(actions) : []
-                    var liveEntry = liveEntries[idx] || null
-                    live = liveEntry ? findFooterTrigger(liveEntry) : null
-                  } catch (error) {
-                    live = null
-                  }
-                }
-                if (live && typeof live.click === 'function') live.click()
-              })
-              popoverBody.insertBefore(item, settingsItem)
-            }
-            // Entries are reused by index: the host re-sorts list slots by
-            // `order` on every render, so a re-sort can seat a different
-            // plugin under an existing item — icon, text, badge AND the
-            // click target must all re-sync, or the label shows one entry
-            // while the click fires the previous occupant's trigger.
-            syncMirrorItem(item, iconEl, text, badge)
-            // Rebind the click target to the entry currently behind this
-            // index. Done on every pass, for new and reused items alike.
-            item.__dshActivator = activator
-            })(footerEntries[f], f)
-          } catch (err) {
-            // A single broken entry must not abort the rest of the mirror
-            // sync (which would leave later items without a rebound
-            // activator or un-ordered).
-          }
-        }
-
-        // The host re-sorts list-slot outlets by `order` on every render
-        // (stable, ties keep registration order), and plugins mount
-        // progressively at startup — so the mirror nodes must track the live
-        // footer order on every pass: a later re-sort would otherwise leave
-        // the popover frozen in a stale order that no longer matches the
-        // real controls. Re-append action items and embedded widgets in
-        // entry-index order.
-        var mirrors = []
-        for (var mi = 0; mi < popoverBody.children.length; mi++) {
-          var mirrorNode = popoverBody.children[mi]
-          if (mirrorNode === settingsItem) continue
-          if (mirrorNode.hasAttribute('data-action-index') || mirrorNode.hasAttribute('data-embed-index')) {
-            mirrors.push(mirrorNode)
-          }
-        }
-        mirrors.sort(function (a, b) {
-          var ai = parseInt(a.getAttribute('data-action-index') || a.getAttribute('data-embed-index'), 10) || 0
-          var bi = parseInt(b.getAttribute('data-action-index') || b.getAttribute('data-embed-index'), 10) || 0
-          return ai - bi
-        })
-        // Walk back from the settings row and move a mirror only when it is out
-        // of place. Inserting front to back before the settings row moved every
-        // mirror on every pass once there were two (each insert lands after the
-        // ones already placed), and each move is a mutation that schedules the
-        // next pass — the scheduler never went idle.
-        var nextMirror = settingsItem
-        for (var mr = mirrors.length - 1; mr >= 0; mr--) {
-          if (mirrors[mr].nextSibling !== nextMirror) popoverBody.insertBefore(mirrors[mr], nextMirror)
-          nextMirror = mirrors[mr]
-        }
+        mirror.sync(footArea)
       }
-
-      // --- Footer action redirection helpers ---
-      /**
-       * The `sidebar.footer.action` list slot accepts arbitrary plugin
-       * controls, not just buttons: a plugin may render a composite widget
-       * (toggles, selects, status chips) straight into the sidebar footer.
-       * Redirection therefore works on ENTRIES (direct children of
-       * footerActions), not on `querySelectorAll('button')`:
-       *   - every entry is marked `data-dsh-claude-footer-entry` (CSS
-       *     collapses its box so nothing paints in the sidebar);
-       *   - entries without a floating overlay are hidden wholesale via
-       *     `data-dsh-claude-footer-hidden`;
-       *   - entries hosting an overlay — a fixed-position panel (the cordis
-       *     inventory panel) or a dialog/menu/listbox — stay visible, but
-       *     every branch of their subtree that does not lead to the overlay
-       *     is hidden, so only the overlay itself can surface.
-       * Returns the live entry list for popover mirroring.
-       */
-      function syncFooterActionVisibility(footerActions) {
-        if (!footerActions) return []
-        var entries = footerEntriesOf(footerActions)
-        for (var i = 0; i < entries.length; i++) {
-          var entry = entries[i]
-          entry.setAttribute('data-dsh-claude-footer-entry', '')
-          var all = entry.querySelectorAll('*')
-          for (var j = 0; j < all.length; j++) {
-            var el = all[j]
-            if (el.hasAttribute('data-dsh-claude-footer-overlay')) continue
-            var role = el.getAttribute('role') || ''
-            var overlay = role === 'dialog' || role === 'menu' || role === 'listbox'
-            if (!overlay) {
-              try { overlay = window.getComputedStyle(el).position === 'fixed' } catch (e) { overlay = false }
-            }
-            if (overlay) el.setAttribute('data-dsh-claude-footer-overlay', '')
-          }
-          markFooterHiddenBranches(entry)
-        }
-        return entries
-      }
-
-      /**
-       * Mirrorable footer units. Every slot outlet renders inside a
-       * `div[data-slot]` anchor with `display:contents`, so a list slot's
-       * entries are the ANCHOR's children, not footerActions' — reading
-       * `footerActions.children` directly collapses every registrant into a
-       * single mirrorable unit and drops all but the first from the popover.
-       * Dead cells (`data-slot-error`) never mirror.
-       */
-      function footerEntriesOf(footerActions) {
-        var entries = []
-        var kids = footerActions.children
-        for (var i = 0; i < kids.length; i++) {
-          var kid = kids[i]
-          if (kid.hasAttribute('data-slot-error')) continue
-          if (kid.hasAttribute('data-slot')) {
-            var slotKids = kid.children
-            for (var j = 0; j < slotKids.length; j++) {
-              if (!slotKids[j].hasAttribute('data-slot-error')) entries.push(slotKids[j])
-            }
-          } else {
-            entries.push(kid)
-          }
-        }
-        return entries
-      }
-
-      /** Hide every branch of `el`'s subtree that does not carry an overlay. */
-      function markFooterHiddenBranches(el) {
-        if (el.hasAttribute('data-dsh-claude-footer-overlay')) {
-          el.removeAttribute('data-dsh-claude-footer-hidden')
-          return
-        }
-        if (el.querySelector('[data-dsh-claude-footer-overlay]') !== null) {
-          el.removeAttribute('data-dsh-claude-footer-hidden')
-          var kids = el.children
-          for (var i = 0; i < kids.length; i++) markFooterHiddenBranches(kids[i])
-          return
-        }
-        el.setAttribute('data-dsh-claude-footer-hidden', '')
-      }
-
-      /**
-       * Bring one mirrored text item in line with the entry behind its index.
-       * The label and badge are the plugin's own strings, so they are written as
-       * text; the icon is a copy of the plugin's node rather than re-parsed
-       * markup, and is replaced only when the source's markup changed.
-       */
-      function syncMirrorItem(item, iconEl, text, badge) {
-        var iconBox = item.querySelector('.dsh-claude-popover-item-icon')
-        var iconHtml = iconEl ? iconEl.outerHTML : ''
-        if (iconBox !== null && iconBox.__dshIconHtml !== iconHtml) {
-          iconBox.__dshIconHtml = iconHtml
-          while (iconBox.firstChild) iconBox.removeChild(iconBox.firstChild)
-          if (iconEl) iconBox.appendChild(iconEl.cloneNode(true))
-        }
-        var textBox = item.querySelector('.dsh-claude-popover-item-text')
-        if (textBox !== null && textBox.textContent !== text) textBox.textContent = text
-        var badgeBox = item.querySelector('.dsh-claude-popover-item-badge')
-        if (badge) {
-          if (badgeBox === null) {
-            badgeBox = document.createElement('span')
-            badgeBox.className = 'dsh-claude-popover-item-badge'
-            item.appendChild(badgeBox)
-          }
-          if (badgeBox.textContent !== badge) badgeBox.textContent = badge
-        } else if (badgeBox !== null) {
-          item.removeChild(badgeBox)
-        }
-      }
-
-      /** Remove the mirrored text item for one entry index, if present. */
-      function removeActionMirror(idx) {
-        var item = popoverBody.querySelector('[data-action-index="' + idx + '"]')
-        if (item && item.parentElement) item.parentElement.removeChild(item)
-      }
-
-      /** Remove the embedded widget clone for one entry index, if present. */
-      function removeEmbedMirror(idx) {
-        var embed = popoverBody.querySelector('[data-embed-index="' + idx + '"]')
-        if (embed && embed.parentElement) embed.parentElement.removeChild(embed)
-      }
-
-      /**
-       * Whether an entry reads as a plain ACTION (mirror it as a text menu
-       * item) or as a rich WIDGET (embed a live clone). A text item is only
-       * faithful when the trigger accounts for essentially all of the
-       * entry's visible content: a clickable progress-bar stack (cost-meter
-       * balance) would otherwise shrink to one label and lose its bars.
-       * Overlay text is excluded so an open cordis panel does not flip its
-       * own entry into a widget.
-       */
-      function entryIsActionLike(entry, trigger) {
-        if (trigger === null) return false
-        if (trigger === entry) {
-          // Only genuinely interactive ROOTS count as actions; a clickable
-          // container (a region or tabindex wrapper) is still a widget.
-          var tag = entry.tagName
-          var role = entry.getAttribute('role') || ''
-          return tag === 'BUTTON' || tag === 'A' || role === 'button'
-        }
-        // Semantic meter markup is always a widget, however small.
-        if (entry.querySelector('[role="progressbar"], [role="meter"], meter, progress') !== null) return false
-        var entryText = textExcludingOverlays(entry)
-        var triggerText = (trigger.textContent || '').trim()
-        // Tight slack: the trigger must account for essentially all of the
-        // entry's visible text. A balance box reading "余额¥10.07" beside an
-        // icon-only trigger already exceeds it — and its bar must survive.
-        return entryText.length - triggerText.length <= 2
-      }
-
-      /** Visible text of an entry, skipping overlay subtrees. */
-      function textExcludingOverlays(entry) {
-        var text = ''
-        var walker = document.createTreeWalker(entry, 4 /* SHOW_TEXT */, {
-          acceptNode: function (node) {
-            var p = node.parentElement
-            while (p && p !== entry) {
-              if (p.hasAttribute('data-dsh-claude-footer-overlay')) return 2 // REJECT
-              p = p.parentElement
-            }
-            return 1 // ACCEPT
-          }
-        })
-        while (walker.nextNode()) text += walker.currentNode.nodeValue
-        return text.trim()
-      }
-
-      /**
-       * Embed a live clone of a display-only footer entry (a progress bar
-       * reads as nothing as a text menu item — the cost-meter balance/quota
-       * stack is the known case). The clone is replaced only when the
-       * source's markup changes, so it tracks the plugin's re-renders without
-       * churning the popover DOM. Skin marker attributes, ids, and overlay
-       * subtrees are stripped from the copy: it must never be re-hidden by
-       * the footArea hiding rule, double-register an id, or duplicate an
-       * open panel next to the real one. Event listeners do not survive
-       * cloning, so the embed forwards clicks back into the live entry —
-       * path-mapped to the clicked sub-control (see resolveEmbedActivator) —
-       * and deliberately leaves the popover open so the widget's response
-       * stays visible; it still closes on pointer-leave as usual. The embed
-       * is marked `data-clickable` for the cursor when the entry has a
-       * trigger at all.
-       */
-      function syncEmbedMirror(entry, idx, forward) {
-        var embed = popoverBody.querySelector('[data-embed-index="' + idx + '"]')
-        if (!embed) {
-          embed = document.createElement('div')
-          embed.className = 'dsh-claude-popover-embed'
-          embed.setAttribute('data-embed-index', idx)
-          embed.addEventListener('click', function (e) {
-            if (!embed.__dshEntry) return
-            e.stopPropagation()
-            var activator = resolveEmbedActivator(e.target, embed)
-            if (activator) activator.click()
-          })
-          popoverBody.insertBefore(embed, settingsItem)
-        }
-        embed.__dshEntry = entry
-        embed.__dshForward = forward || null
-        if (forward) {
-          embed.setAttribute('data-clickable', '')
-        } else {
-          embed.removeAttribute('data-clickable')
-        }
-        var clone = entry.cloneNode(true)
-        clone.removeAttribute('id')
-        clone.removeAttribute('data-dsh-claude-footer-entry')
-        clone.removeAttribute('data-dsh-claude-footer-hidden')
-        clone.removeAttribute('data-dsh-claude-footer-overlay')
-        var overlays = clone.querySelectorAll('[data-dsh-claude-footer-overlay]')
-        for (var o = 0; o < overlays.length; o++) {
-          overlays[o].parentElement.removeChild(overlays[o])
-        }
-        var stripped = clone.querySelectorAll('[id], [data-dsh-claude-footer-hidden]')
-        for (var s = 0; s < stripped.length; s++) {
-          stripped[s].removeAttribute('id')
-          stripped[s].removeAttribute('data-dsh-claude-footer-hidden')
-        }
-        var html = clone.outerHTML
-        if (embed.getAttribute('data-embed-html') !== html) {
-          embed.setAttribute('data-embed-html', html)
-          while (embed.firstChild) embed.removeChild(embed.firstChild)
-          embed.appendChild(clone)
-        }
-      }
-
-      var INTERACTIVE_SELECTOR = 'button, [role="button"], a[href], [tabindex], input, select, summary'
-
-      /**
-       * Map a click inside the embedded clone back to the matching control
-       * of the live entry. Forwarding every embed click to the entry's FIRST
-       * trigger misfires for multi-control widgets (the cost-meter stack
-       * carries refresh / collapse / tab buttons): the user clicks the
-       * balance box but the first button in tree order fires. The clone
-       * preserves the entry's tree shape, so the clicked node's child-index
-       * path replays onto the original (tag-checked per level — overlay
-       * stripping can shift siblings); the nearest interactive element at or
-       * above the mapped node wins, and any mismatch falls back to the
-       * entry's primary trigger.
-       */
-      function resolveEmbedActivator(clicked, embed) {
-        var entry = embed.__dshEntry
-        var cloneRoot = embed.firstChild
-        if (!entry || !cloneRoot || !clicked || clicked.nodeType !== 1) return embed.__dshForward
-        if (clicked === embed || clicked === cloneRoot) return embed.__dshForward
-        // Child-index path from the clicked clone node up to the clone root.
-        var path = []
-        var node = clicked
-        while (node && node !== cloneRoot) {
-          var parent = node.parentElement
-          if (!parent) return embed.__dshForward
-          path.unshift(Array.prototype.indexOf.call(parent.children, node))
-          node = parent
-        }
-        // Replay the path on the live entry, verifying shape level by level.
-        var original = entry
-        var cloneNode = cloneRoot
-        for (var i = 0; i < path.length; i++) {
-          var nextClone = cloneNode.children[path[i]]
-          var nextOrig = original.children[path[i]]
-          if (!nextClone || !nextOrig || nextClone.tagName !== nextOrig.tagName) {
-            return embed.__dshForward
-          }
-          cloneNode = nextClone
-          original = nextOrig
-        }
-        // Nearest interactive element at or above the mapped original,
-        // bounded by the entry and never inside an overlay subtree.
-        var target = original
-        while (target) {
-          if (target !== entry && target.matches && target.matches(INTERACTIVE_SELECTOR) &&
-              !hasOverlayAncestor(target, entry)) {
-            return target
-          }
-          if (target === entry) break
-          target = target.parentElement
-        }
-        return embed.__dshForward
-      }
-
-      /** Whether `el` sits inside an overlay-marked subtree above `entry`. */
-      function hasOverlayAncestor(el, entry) {
-        var node = el
-        while (node && node !== entry) {
-          if (node.hasAttribute && node.hasAttribute('data-dsh-claude-footer-overlay')) return true
-          node = node.parentElement
-        }
-        return false
-      }
-
-      /**
-       * First interactive element of a footer entry that is not part of an
-       * overlay subtree (an open panel may render action buttons of its own,
-       * and those must never become the popover item's activation target).
-       */
-      function findFooterTrigger(entry) {
-        var selector = INTERACTIVE_SELECTOR
-        if (entry.matches && entry.matches(selector) &&
-            !entry.hasAttribute('data-dsh-claude-footer-overlay')) {
-          return entry
-        }
-        var found = entry.querySelectorAll(selector)
-        for (var i = 0; i < found.length; i++) {
-          var candidate = found[i]
-          var node = candidate
-          var insideOverlay = false
-          while (node && node !== entry) {
-            if (node.hasAttribute && node.hasAttribute('data-dsh-claude-footer-overlay')) {
-              insideOverlay = true
-              break
-            }
-            node = node.parentElement
-          }
-          if (!insideOverlay) return candidate
-        }
-        return null
-      }
-
       /**
        * Hand the sidebar footer back to the host.
        *
@@ -1003,14 +317,7 @@
         accountPopover = null
         popoverBody = null
         settingsItem = null
-        var marked = footArea.querySelectorAll(
-          '[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay]',
-        )
-        for (var i = 0; i < marked.length; i++) {
-          marked[i].removeAttribute('data-dsh-claude-footer-entry')
-          marked[i].removeAttribute('data-dsh-claude-footer-hidden')
-          marked[i].removeAttribute('data-dsh-claude-footer-overlay')
-        }
+        mirror.clear(footArea)
       }
       function syncAccountFooter() {
         var footArea = document.querySelector('[class*="footArea"]')
@@ -1020,7 +327,7 @@
           dropAccountFooter(footArea)
           return
         }
-        var username = accountName || getUsername(ctx)
+        var username = profile.name() || getUsername(ctx)
 
         // Idempotent against a torn-down-less reload: client HMR drops the old
         // fiber's disposals instead of running them, so a previous generation's
@@ -1160,12 +467,39 @@
         }
 
         syncPopoverItems(footArea)
+        // The rail toggle (and any reflow) moves the anchor without a window
+        // resize or a page scroll, so an open drawer re-resolves its position at
+        // the end of its own pass. (The scheduler used to do this after every
+        // pass; folding it here keeps it in the same frame at the same point.)
+        if (accountPopover && accountPopover.getAttribute('data-open') === 'true') positionAccountPopover()
       }
-
-
       ui.footer = {
         sync: syncAccountFooter,
-        close: closePopover,
+        /**
+         * The drawer's dismiss routes: 'outside' (a press the footer does not
+         * own), 'escape' and 'composer'. The shipped scheduler only closed an
+         * OPEN drawer on an outside press, so that reason keeps the open check;
+         * Esc and composer focus close regardless.
+         */
+        close: function (reason) {
+          if (reason === 'outside' && !(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          closePopover()
+        },
+        openSettings: hostMenu.openSettings,
+        /**
+         * Ctrl+, opens settings. The scheduler's keydown handler owns the
+         * unconditional preventDefault; this returns whether it acted, which the
+         * scheduler does not gate on.
+         */
+        onKey: function (e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+            // The footer knows both ways in (see openHostSettings): "the first
+            // button in the settings slot" was the account trigger on the desktop.
+            hostMenu.openSettings()
+            return true
+          }
+          return false
+        },
         owns: function (target) {
           if (!target) return false
           return (accountBtn !== null && accountBtn.contains(target)) ||
@@ -1174,14 +508,15 @@
         isOpen: function () {
           return !!(accountPopover && accountPopover.getAttribute('data-open') === 'true')
         },
-        reposition: positionAccountPopover
-      }
-
-      return function () {
-        if (accountTimer !== null) {
-          clearInterval(accountTimer)
-          accountTimer = null
+        /** Re-anchor an open drawer after a viewport change; a closed one has
+         * nothing to place (the scheduler used to guard this itself). */
+        reposition: function () {
+          if (!(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          positionAccountPopover()
         }
+      }
+      return function () {
+        profile.stop()
         cancelClosePopover()
         var footArea = document.querySelector('[class*="footArea"]')
         if (footArea) {

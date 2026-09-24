@@ -104,17 +104,22 @@
           effortBtn.style.display = 'none'
           return
         }
-        var r = modelBtn.getBoundingClientRect()
-        // The model trigger is OUR element, so the effort picker reserves room
-        // for itself on the model trigger's right edge (a margin on it shifts the
-        // trigger left, out from under the context meter / send button) and then
-        // sits in that reserved space. Measured, not a magic number: the width
-        // follows the current level's name.
-        var need = effortBtn.offsetWidth + 16
+        // The row's own rhythm is the 12px flex gap (8px in narrow cards) the
+        // host puts between the trailing cluster's children: sit 2px past the
+        // model trigger, and with its 8px right padding and this trigger's 2px
+        // left padding the two texts land 12px apart — the same 12 the meter's
+        // ring (8px into its pill) and the send icon then keep. The model
+        // trigger is OUR element, so the effort picker reserves room for itself
+        // on its right edge (a margin on it shifts the trigger left, out from
+        // under the context meter / send button) and then sits in that reserved
+        // space: the row's 12px gap covers 12 of the needed width+2, the margin
+        // covers the rest. Measured, not a magic number: the width follows the
+        // current level's name.
+        var need = Math.max(0, effortBtn.offsetWidth - 6)
         if (modelBtn.style.marginRight !== need + 'px') modelBtn.style.marginRight = need + 'px'
         var shifted = modelBtn.getBoundingClientRect()
         effortBtn.style.display = 'inline-flex'
-        effortBtn.style.left = Math.round(shifted.right + 8) + 'px'
+        effortBtn.style.left = Math.round(shifted.right + 2) + 'px'
         effortBtn.style.top = Math.round(shifted.top + (shifted.height - effortBtn.offsetHeight) / 2) + 'px'
       }
 
@@ -129,6 +134,15 @@
             // A drag must not be cut short by the hover-close timer: the pointer
             // is inside the control the whole time.
             onDragStart: cancelCloseEffort,
+            // ...and a hold that leaves the card closes it on the RELEASE, not
+            // at the boundary crossing (the mouseleave guard stands down while
+            // the button is held; this is the other half).
+            onDragEnd: function (e) {
+              if (effortPop === null || effortPop.getAttribute('data-open') !== 'true') return
+              var under = e && typeof e.clientX === 'number' ? document.elementFromPoint(e.clientX, e.clientY) : null
+              if (under !== null && effortPop.contains(under)) return
+              closeEffortPopover()
+            },
           })
         }
         return effortSlider.el
@@ -160,8 +174,11 @@
           effortPop.setAttribute('data-open', 'false')
           effortPop.addEventListener('mouseenter', cancelCloseEffort)
           effortPop.addEventListener('mouseleave', function () {
-            // A drag in flight must not be cut short by the hover-close timer.
-            if (effortSlider !== null && effortSlider.isDragging()) return
+            // A hold must not be cut short by the hover-close timer: the
+            // slider settles at its own edge while the pointer travels on
+            // with the button down, and the card closing mid-hold read as a
+            // crash. A release OUTSIDE the card closes it (onDragEnd).
+            if (effortSlider !== null && effortSlider.isHeld()) return
             effortHoverIntent.scheduleClose()
           })
           document.body.appendChild(effortPop)
@@ -186,8 +203,12 @@
         var info = effortInfo()
         if (info === null) {
           // No ladder on this seat: the trigger goes away with it, exactly as the
-          // model card drew no effort row for such a model.
+          // model card drew no effort row for such a model. The margin the
+          // trigger reserved on the model button goes with it, or the gap
+          // outlives the trigger.
           if (effortBtn !== null && effortBtn.parentElement !== null) effortBtn.parentElement.removeChild(effortBtn)
+          var idleModelBtn = document.querySelector('.dsh-claude-model-btn')
+          if (idleModelBtn !== null && idleModelBtn.style.marginRight !== '') idleModelBtn.style.marginRight = ''
           closeEffortPopover()
           return
         }
@@ -244,13 +265,23 @@
         effortBtn = null
         effortPop = null
         effortSlider = null
+        // Hand the reserved margin on the model trigger back too.
+        var modelBtn = document.querySelector('.dsh-claude-model-btn')
+        if (modelBtn !== null && modelBtn.style.marginRight !== '') modelBtn.style.marginRight = ''
       }
 
       ui.effort = {
         sync: syncEffortControl,
-        close: closeEffortPopover,
+        /**
+         * The effort card closes on an outside press and on Esc. Composer focus
+         * is NOT one of its dismiss routes (the model picker closes there, this
+         * one does not), so that reason is ignored.
+         */
+        close: function (reason) {
+          if (reason === 'composer') return
+          closeEffortPopover()
+        },
         owns: ownsEffort,
-        reposition: function () { positionEffortTrigger(); positionEffortPopover() },
         teardown: teardown,
       }
       return teardown

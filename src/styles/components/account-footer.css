@@ -199,3 +199,24 @@ body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item
   opacity: 0.5 !important;
   cursor: default !important;
 }
+/* The drawer's own Settings row steps aside where the host's account menu
+   carries Settings itself (the desktop). The shared popover-item rule sets
+   `display: flex !important`, which `hidden` alone cannot beat. */
+body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item[hidden] {
+  display: none !important;
+}
+/* Mirrored host icons keep the host's own geometry. The sign-out glyph is a
+   13.7px svg placed absolutely inside the host's own 16px relative box, and the
+   drawer copies the svg alone: without a containing block of its own the glyph
+   anchored to the drawer and sat in its top-left corner. The shared
+   popover-item rule also forces every icon svg to 16px, which would blow the
+   glyph up past its box, so host icons keep their own size (capped at 16px). */
+body[data-dsh-claude-style] .dsh-claude-account-popover .dsh-claude-popover-item-icon {
+  position: relative !important;
+}
+body[data-dsh-claude-style] .dsh-claude-account-popover [data-dsh-claude-account-item] .dsh-claude-popover-item-icon svg {
+  width: auto !important;
+  height: auto !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+}

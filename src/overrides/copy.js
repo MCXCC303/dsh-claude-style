@@ -145,6 +145,9 @@
           rewriteHeadline()
         },
         syncAttachmentPlaceholder: syncAttachmentPlaceholder,
+        /** A composer input/compositionend event: refresh the placeholder. The
+         * scheduler owns the [data-composer-input] filter. */
+        onInput: function () { syncAttachmentPlaceholder() },
         isHeroView: isHeroView,
         isComposerActive: isComposerActive
       }

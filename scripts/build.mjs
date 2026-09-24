@@ -13,6 +13,9 @@
  *   src/styles/*.css             plain CSS with %%TOKEN%% placeholders
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
+ *   src/overrides/session-stats.js  the permissions feature's split factory
+ *   src/overrides/account/*.js   the account footer's split factories
+ *   src/overrides/model/*.js     the model picker's split factories
  *   src/settings.js              settings section (brand)
  *   src/entry.js                 apply() + exports
  *
@@ -71,15 +74,20 @@ const FRAGMENTS = [
   'overrides/popover-utils.js',
   'overrides/selection.js',
   'overrides/copy.js',
+  'overrides/session-stats.js',
   'overrides/permissions.js',
   'overrides/model-brand.js',
   'overrides/model-copy-lookup.js',
   'overrides/model-effort.js',
+  'overrides/model/catalog.js',
+  'overrides/model/rows.js',
   'overrides/model-picker.js',
-  // TEMP(exclusion): effort-picker breaks plugin load on the desktop (slot entry crashed in 'conversation.input.dock'); restored once it loads cleanly.
   'overrides/effort-picker.js',
   'overrides/hero-menu.js',
   'overrides/quick-providers.js',
+  'overrides/account/profile.js',
+  'overrides/account/host-menu.js',
+  'overrides/account/footer-mirror.js',
   'overrides/account-footer.js',
   'overrides/ban-screen.js',
   'overrides/theme-flip.js',
@@ -97,11 +105,14 @@ const STYLE_FILES = [
   { file: 'composer/hero.css' },
   { file: 'composer/card.css', gate: true },
   { file: 'composer/inline.css', gate: true },
+  { file: 'composer/inline-bar.css', gate: true },
   { file: 'sidebar.css' },
   { file: 'components/permissions.css' },
   { file: 'components/account-footer.css' },
   { file: 'components/ban-screen.css' },
   { file: 'components/model-picker.css' },
+  { file: 'components/effort-picker.css' },
+  { file: 'components/popover.css' },
   { file: 'components/hero-menu.css', gate: true },
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },

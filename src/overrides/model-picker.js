@@ -33,14 +33,30 @@
       var modelHoverIntent = createHoverIntent(openModelPopover, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
       /** The More-models cell drills in on the same dwell/grace as the trigger. */
       var modelSubHoverIntent = createHoverIntent(openModelSub, closeModelIfAway, POPOVER_OPEN_DELAY, MODEL_CLOSE_DELAY)
-      var modelDir = null
-      var modelSub = null
-      var modelSessionId = null
-      var modelWarmRequested = false
       var modelBodySig = ''
       var modelSubSig = ''
-      /** Settings-page listeners waiting on the provider list. */
-      var providerListeners = []
+      /**
+       * The catalog half of the picker (src/overrides/model/catalog.js):
+       * directory, snapshot, warm-up and the provider listeners. `schedule` is
+       * the scheduler wake-up the directory's store subscription calls.
+       */
+      var modelCatalog = createModelCatalog({
+          ctx: ctx,
+          schedule: function () { if (ui.schedule) ui.schedule() }
+      })
+      /**
+       * The row half of the picker (src/overrides/model/rows.js): the level-1
+       * and level-2 builders. `pickModel` is this closure's own commit function
+       * (a hoisted declaration); the rest is the second level's state.
+       */
+      var modelRows = createModelRows({
+          ctx: ctx,
+          pickModel: pickModel,
+          subHoverIntent: modelSubHoverIntent,
+          isSubOpen: function () { return modelSubPop !== null && modelSubPop.getAttribute('data-open') === 'true' },
+          closeSub: closeModelPopovers,
+          openSub: openModelSub
+      })
 
       function cancelCloseModel() {
         modelHoverIntent.cancel()
@@ -111,12 +127,12 @@
         // One card at a time: the two triggers sit side by side, so leaving the
         // effort card up would stack two panels over the same corner.
         if (ui.effort && typeof ui.effort.close === 'function') ui.effort.close()
-        modelDirectory()
+        var dir = modelCatalog.directory()
         // load() is async — the host itself guards with .catch(() => {}); a bare
         // try/catch cannot see its rejection.
-        if (modelDir && typeof modelDir.load === 'function') {
+        if (dir && typeof dir.load === 'function') {
           try {
-            var pending = modelDir.load()
+            var pending = dir.load()
             if (pending && typeof pending.catch === 'function') {
               pending.catch(function () { /* the store's error surface covers a failure */ })
             }
@@ -135,248 +151,8 @@
         if (modelSubPop) modelSubPop.setAttribute('data-open', 'true')
       }
 
-      /**
-       * The current session id. The Session Controller dropped
-       * `list.current` in dsh 0.2 (the main-view selection now comes from the
-       * `uiSession` projection), so this MUST go through the shared
-       * currentSessionId() in context.js — reading the legacy field directly
-       * resolves to null on current hosts and the picker never loads.
-       */
-      function currentModelSessionId() {
-        try {
-          var sessions = ctx.get('sessions')
-          if (sessions === void 0 || sessions === null) return null
-          var id = currentSessionId(ctx, sessions)
-          return id === void 0 || id === null ? null : id
-        } catch (error) {
-          return null
-        }
-      }
-
-      function dropModelSubscription() {
-        if (modelSub) {
-          try { modelSub() } catch (error) { /* already disposed */ }
-        }
-        modelSub = null
-      }
-
-      /** Resolve the session's directory (and observe it) once per session. */
-      function modelDirectory() {
-        var id = currentModelSessionId()
-        if (id === null) {
-          dropModelSubscription()
-          modelDir = null
-          modelSessionId = null
-          return null
-        }
-        if (modelSessionId === id && modelDir !== null) return modelDir
-        dropModelSubscription()
-        modelDir = null
-        modelSessionId = null
-        try {
-          var dirs = ctx.get('modelDirectories')
-          if (dirs && typeof dirs.directoryFor === 'function') {
-            modelDir = dirs.directoryFor(id)
-          }
-        } catch (error) {
-          modelDir = null
-        }
-        modelSessionId = id
-        // The directory INSTANCE only carries load/select — its reactive state
-        // hangs off the `.store` snapshot store (the host hands that same store
-        // to its own menu as `directory`). Subscribe to the store, never to the
-        // instance, and never let a subscribe failure discard the directory.
-        if (modelDir !== null) {
-          var store = modelDir.store
-          if (store && typeof store.subscribe === 'function') {
-            try {
-              modelSub = store.subscribe(function () { notifyProviders(); if (ui.schedule) ui.schedule() })
-            } catch (error) {
-              modelSub = null
-            }
-          }
-        }
-        return modelDir
-      }
-
-      function modelSnapshot() {
-        if (modelDir === null || !modelDir.store) return null
-        try { return modelDir.store.getSnapshot() } catch (error) { return null }
-      }
-
-      /**
-       * The catalog's providers, in catalog order, each with its model count.
-       *
-       * The settings page's quick-provider picker is the other consumer, and it
-       * may be opened before the picker itself ever was — so this resolves the
-       * directory and starts the shared catalog load rather than requiring a
-       * first popover open.
-       */
-      function modelProviders() {
-        modelDirectory()
-        warmModelCatalog()
-        var snap = modelSnapshot()
-        var groups = (snap && snap.groups) || []
-        var out = []
-        for (var i = 0; i < groups.length; i++) {
-          if (groups[i].models.length === 0) continue
-          out.push({ id: groups[i].id, name: groups[i].name || groups[i].id, count: groups[i].models.length })
-        }
-        return out
-      }
-
-      /** Tell the settings picker the provider list moved (catalog arrived, changed). */
-      function notifyProviders() {
-        if (providerListeners.length === 0) return
-        var list = modelProviders()
-        var listeners = providerListeners.slice()
-        for (var i = 0; i < listeners.length; i++) {
-          try { listeners[i](list) } catch (error) { /* one listener must not block the rest */ }
-        }
-      }
-
-      /**
-       * Start the host's model catalog load as soon as a session resolves, rather
-       * than waiting for the first popover open.
-       *
-       * The catalog is one RPC per Host generation (`remote.session.modelCatalog`)
-       * and nothing else fetches it: the host kicks it off from its own menu's
-       * `show()`, and this skin hides that seat — so the first open used to pay the
-       * whole round-trip, which is seconds on a cold start. Starting it here moves
-       * that wait into the startup the user is already sitting through, and the
-       * trigger's label needs the same catalog anyway: the current model's name
-       * comes out of it. The load is shared and cached host-side, so the popover's
-       * own `load()` becomes a no-op instead of a second request.
-       *
-       * Failures are the store's to report — the popover shows the error and the
-       * host offers a retry — so this only has to avoid throwing into a pass.
-       */
-      function warmModelCatalog() {
-        if (modelWarmRequested || modelDir === null || typeof modelDir.load !== 'function') return
-        modelWarmRequested = true
-        try {
-          var pending = modelDir.load()
-          if (pending && typeof pending.catch === 'function') {
-            pending.catch(function () { /* surfaced by the store, not here */ })
-          }
-        } catch (error) { /* synchronous failure — the store's error surface covers it */ }
-      }
-
-      /** The current selection resolved to its group + model entries. */
-      function modelCurrent(snap) {
-        if (!snap || snap.current === null) return null
-        for (var g = 0; g < snap.groups.length; g++) {
-          var group = snap.groups[g]
-          if (group.id !== snap.current.provider) continue
-          for (var m = 0; m < group.models.length; m++) {
-            if (group.models[m].id === snap.current.model) return { group: group, model: group.models[m] }
-          }
-        }
-        return null
-      }
-
-      /** Reasoning metadata + the effective effort for the current model. */
-      function modelEffort(snap) {
-        var current = modelCurrent(snap)
-        if (current === null || !current.model.reasoning) return null
-        var reasoning = current.model.reasoning
-        var effective = snap.current.reasoningEffort !== void 0 ? snap.current.reasoningEffort : reasoning.defaultEffort
-        var label = MODEL_EFFORT_DEFAULT
-        if (effective !== void 0) {
-          label = effective
-          for (var i = 0; i < reasoning.efforts.length; i++) {
-            if (reasoning.efforts[i].id === effective) {
-              label = reasoning.efforts[i].name
-              break
-            }
-          }
-        }
-        return { reasoning: reasoning, effective: effective, label: label }
-      }
-
-      var MODEL_CHECK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg>'
-      var MODEL_CHEVRON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>'
-
-      /** Catalog order is whatever the provider happened to send; id order is scannable. */
-      function byModelId(a, b) {
-        var left = String(a.id)
-        var right = String(b.id)
-        return left < right ? -1 : left > right ? 1 : 0
-      }
-
-      /**
-       * The rule that separates one provider's models from the next. The provider
-       * name rides the rule itself rather than trailing the model in parentheses:
-       * one quiet line above the group says who serves it, and the model names
-       * stay clean.
-       */
-      function buildProviderRule(name) {
-        var rule = modelEl('div', 'dsh-claude-model-rule')
-        if (name) rule.appendChild(modelEl('span', 'dsh-claude-model-rule-name', name))
-        return rule
-      }
-
-      /** One selectable model row: brand mark, name, optional description line and a check when current. */
-      function buildModelOption(group, model, selected, withDescription) {
-        var item = modelEl('button', 'dsh-claude-model-option')
-        item.type = 'button'
-        item.setAttribute('role', 'menuitemradio')
-        item.setAttribute('aria-checked', selected ? 'true' : 'false')
-        var brand = modelBrand(model.id)
-        // The brand id is the row's styling hook — it is what gives a vendor's rows
-        // their own typography (see .dsh-claude-model-name in
-        // styles/components/model-picker.css). The vendor's mark is no longer drawn
-        // here: it rides inside the label's lockup. The scheduler's attributeFilter
-        // does not watch data-*, so this write cannot re-trigger a pass.
-        if (brand) item.setAttribute('data-brand', brand)
-        var copy = modelEl('span', 'dsh-claude-model-copy')
-        copy.appendChild(buildModelLabel(model.name, brand))
-        // The description belongs to level 1 only: that list is the official
-        // catalog, short enough that the line is what tells the models apart,
-        // while "More models" is every provider's full catalog and reads better
-        // as names alone. One line, in the shell's language — the copy document is
-        // localized rather than stacked, so a row never carries two languages.
-        var desc = withDescription ? modelDescription(ctx, group.id, model) : ''
-        if (desc) copy.appendChild(modelEl('span', 'dsh-claude-model-desc', desc))
-        item.appendChild(copy)
-        var check = modelEl('span', 'dsh-claude-model-check')
-        check.innerHTML = selected ? MODEL_CHECK_SVG : ''
-        item.appendChild(check)
-        item.addEventListener('click', (function (g, m) {
-          return function (e) {
-            e.stopPropagation()
-            pickModel(g, m)
-          }
-        })(group.id, model.id))
-        return item
-      }
-
-      /** The More-models row: label + chevron, hover opens the second level. */
-      function buildModelCell(label) {
-        var cell = modelEl('button', 'dsh-claude-model-cell')
-        cell.type = 'button'
-        cell.setAttribute('role', 'menuitem')
-        cell.appendChild(modelEl('span', 'dsh-claude-model-cell-label', label))
-        var chevron = modelEl('span', 'dsh-claude-model-cell-chevron')
-        chevron.innerHTML = MODEL_CHEVRON_SVG
-        cell.appendChild(chevron)
-        cell.addEventListener('mouseenter', function () {
-          if (readPrefs().autoPopover === AUTO_POPOVER_ALL) modelSubHoverIntent.scheduleOpen()
-        })
-        cell.addEventListener('mouseleave', function () {
-          // A pointer that only crossed the cell must not drill in behind it.
-          modelSubHoverIntent.cancel()
-        })
-        cell.addEventListener('click', function (e) {
-          e.stopPropagation()
-          if (modelSubPop && modelSubPop.getAttribute('data-open') === 'true') closeModelPopovers()
-          else openModelSub()
-        })
-        return cell
-      }
-
       function pickModel(provider, modelId) {
-        var dir = modelDirectory()
+        var dir = modelCatalog.directory()
         if (dir === null) return
         try {
           // select() is async and rejects on a failed selection; swallow the
@@ -389,8 +165,8 @@
 
       /** Commit one reasoning level. The slider stays open for the next nudge. */
       function pickEffort(effort) {
-        var dir = modelDirectory()
-        var snap = modelSnapshot()
+        var dir = modelCatalog.directory()
+        var snap = modelCatalog.snapshot()
         if (dir === null || !snap || snap.current === null) return
         var selection = { provider: snap.current.provider, model: snap.current.model }
         if (effort !== void 0) selection.reasoningEffort = effort
@@ -398,53 +174,6 @@
           var pending = dir.select(selection)
           if (pending && typeof pending.catch === 'function') pending.catch(function () {})
         } catch (error) { /* rejected selections surface on the host's toast */ }
-      }
-
-      /**
-       * The providers level 1 lists: the official service first, then the quick
-       * providers the settings page picked. Only when the catalog has no
-       * (non-empty) official service at all does the list fall back to the
-       * picked providers, and with none picked to every provider.
-       */
-      function levelOneSections(groups) {
-        var sections = []
-        var chosen = readPrefs().quickProviders
-        for (var g0 = 0; g0 < groups.length; g0++) {
-          if (groups[g0].id === MODEL_OFFICIAL_GROUP && groups[g0].models.length > 0) {
-            sections.push(groups[g0])
-            break
-          }
-        }
-        for (var g2 = 0; g2 < groups.length; g2++) {
-          if (chosen.indexOf(groups[g2].id) === -1 || groups[g2].id === MODEL_OFFICIAL_GROUP || groups[g2].models.length === 0) continue
-          sections.push(groups[g2])
-        }
-        if (sections.length === 0) {
-          for (var g4 = 0; g4 < groups.length; g4++) {
-            if (groups[g4].models.length > 0) sections.push(groups[g4])
-          }
-        }
-        return sections
-      }
-
-      /**
-       * The provider groups level 1 does NOT show — which is exactly what level 2
-       * is for. Repeating a provider across the two cards made the same models
-       * appear twice, one card apart.
-       *
-       * Only a GROUP counts as shown. The seat level 1 surfaces as a row of its
-       * own does not: that row carries one model, not the provider, so hiding the
-       * provider's remaining models behind it would strand them.
-       */
-      function remainingGroups(groups, sections) {
-        var shown = {}
-        for (var i = 0; i < sections.length; i++) shown[sections[i].id] = true
-        var out = []
-        for (var g = 0; g < groups.length; g++) {
-          if (groups[g].models.length === 0 || shown[groups[g].id] === true) continue
-          out.push(groups[g])
-        }
-        return out
       }
 
       /**
@@ -473,16 +202,16 @@
         for (var i = 0; i < stale.length; i++) modelFooter.removeChild(stale[i])
         if (!showMore) return
         modelFooter.appendChild(modelEl('div', 'dsh-claude-model-divider'))
-        modelFooter.appendChild(buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL)))
+        modelFooter.appendChild(modelRows.buildModelCell(copyLabel('moreLabel', MODEL_MORE_LABEL)))
       }
 
       /** Level 1: the provider sections, the divider, More models. */
       function renderModelBody() {
         if (!modelBody) return
-        var snap = modelSnapshot()
+        var snap = modelCatalog.snapshot()
         var status = snap ? snap.status : 'idle'
         var groups = (snap && snap.groups) || []
-        var current = modelCurrent(snap)
+        var current = modelCatalog.current(snap)
         var sig = [status, activeLocale(), current ? current.group.id + '/' + current.model.id : '', readPrefs().quickProviders.join(',')].join('|')
         for (var g = 0; g < groups.length; g++) sig += ';' + groups[g].id + ':' + groups[g].models.length
         if (sig === modelBodySig) {
@@ -503,7 +232,7 @@
           modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('loading', MODEL_LOADING_LABEL)))
           layoutModelFooter(false)
         } else {
-          var sections = levelOneSections(groups)
+          var sections = modelRows.levelOneSections(groups)
           if (sections.length === 0) {
             modelBody.appendChild(modelEl('div', 'dsh-claude-model-status', copyLabel('empty', MODEL_EMPTY_LABEL)))
           } else {
@@ -512,11 +241,11 @@
               // The official source needs no naming, and the first section needs
               // no rule: a bare line above the list would be one line too many.
               var sectionLabel = section.id === MODEL_OFFICIAL_GROUP ? '' : (section.name || section.id)
-              if (sectionLabel !== '' || s > 0) modelBody.appendChild(buildProviderRule(sectionLabel))
+              if (sectionLabel !== '' || s > 0) modelBody.appendChild(modelRows.buildProviderRule(sectionLabel))
               var sectionModels = section.models.slice().sort(byModelId)
               for (var m = 0; m < sectionModels.length; m++) {
                 var selected = current !== null && current.group.id === section.id && current.model.id === sectionModels[m].id
-                modelBody.appendChild(buildModelOption(section, sectionModels[m], selected, true))
+                modelBody.appendChild(modelRows.buildModelOption(section, sectionModels[m], selected, true))
               }
             }
           }
@@ -534,7 +263,7 @@
             // The divider above already draws a line, so a provider that needs no
             // naming (the official source) adds nothing here.
             var currentRuleName = current.group.id === MODEL_OFFICIAL_GROUP ? '' : (current.group.name || current.group.id)
-            if (currentRuleName !== '') modelBody.appendChild(buildProviderRule(currentRuleName))
+            if (currentRuleName !== '') modelBody.appendChild(modelRows.buildProviderRule(currentRuleName))
             var currentRow = modelEl('button', 'dsh-claude-model-option')
             currentRow.type = 'button'
             currentRow.setAttribute('role', 'menuitemradio')
@@ -567,7 +296,7 @@
             // "More models" carries what level 1 does not. With every provider
             // already on screen the row would only open an empty card, so it goes
             // away with the last remaining provider.
-            var showMore = remainingGroups(groups, sections).length > 0
+            var showMore = modelRows.remainingGroups(groups, sections).length > 0
             // The divider exists to close the list off from what follows it. With
             // no More-models row there is nothing left to close off, and a bare
             // line under the list reads as a stray rule. layoutModelFooter owns
@@ -580,12 +309,12 @@
       /** Level 2: the providers level 1 does NOT show, each headed by its name. */
       function renderModelSub() {
         if (!modelSubBody) return
-        var snap = modelSnapshot()
+        var snap = modelCatalog.snapshot()
         var groups = (snap && snap.groups) || []
-        var current = modelCurrent(snap)
+        var current = modelCatalog.current(snap)
         // What level 2 holds depends on what level 1 lists, so the signature has
         // to carry level 1's provider ids as well.
-        var sections = levelOneSections(groups)
+        var sections = modelRows.levelOneSections(groups)
         var listed = []
         for (var s0 = 0; s0 < sections.length; s0++) listed.push(sections[s0].id)
         var sig2 = 'more|' + listed.join(',')
@@ -594,7 +323,7 @@
         if (sig2 === modelSubSig) return
         modelSubSig = sig2
         while (modelSubBody.firstChild) modelSubBody.removeChild(modelSubBody.firstChild)
-        var rest = remainingGroups(groups, sections)
+        var rest = modelRows.remainingGroups(groups, sections)
         for (var g2 = 0; g2 < rest.length; g2++) {
           var group = rest[g2]
           if (group.models.length === 0) continue
@@ -612,7 +341,7 @@
           var groupModels = group.models.slice().sort(byModelId)
           for (var m = 0; m < groupModels.length; m++) {
             var selected = current !== null && current.group.id === group.id && current.model.id === groupModels[m].id
-            groupSection.appendChild(buildModelOption(group, groupModels[m], selected, false))
+            groupSection.appendChild(modelRows.buildModelOption(group, groupModels[m], selected, false))
           }
           modelSubBody.appendChild(groupSection)
         }
@@ -734,9 +463,7 @@
         modelBodySig = ''
         modelSubSig = ''
         cancelCloseModel()
-        dropModelSubscription()
-        modelDir = null
-        modelSessionId = null
+        modelCatalog.reset()
       }
 
       /** Build/refresh the trigger, its label and the popover rows. */
@@ -752,8 +479,8 @@
         // The copy document is fetched on first paint of the picker rather than
         // at install, so a session that never opens it never pays for it.
         loadModelCopy()
-        modelDirectory()
-        warmModelCatalog()
+        modelCatalog.directory()
+        modelCatalog.warm()
         var slot = document.querySelector('[data-slot="conversation.input.model"]')
         modelSlot = slot
         if (slot === null) return
@@ -798,8 +525,8 @@
         }
         ensureModelChrome()
 
-        var snap = modelSnapshot()
-        var current = modelCurrent(snap)
+        var snap = modelCatalog.snapshot()
+        var current = modelCatalog.current(snap)
         var groupsNow = (snap && snap.groups) || []
         var label = current ? current.model.name : copyLabel('fallbackLabel', MODEL_FALLBACK_LABEL)
         var labelEl = modelBtn.querySelector('.dsh-claude-model-btn-label')
@@ -840,7 +567,13 @@
 
       ui.model = {
         sync: syncModelControl,
-        close: closeModelPopovers,
+        /**
+         * Close both levels of the picker. The scheduler calls this for every
+         * dismiss reason ('outside', 'escape', 'composer') and the picker acts
+         * on all of them, so the reason is ignored; other features (the effort
+         * picker) call it with none.
+         */
+        close: function () { closeModelPopovers() },
         /**
          * The seat slot, the effort descriptor and the commit call: the effort
          * picker (a separate fragment) owns the level's trigger and card, and
@@ -849,7 +582,7 @@
          * without either fragment pushing it.
          */
         seat: function () { return modelSlot },
-        effort: function () { return modelEffort(modelSnapshot()) },
+        effort: function () { return modelCatalog.effort(modelCatalog.snapshot()) },
         /**
          * Whether the catalog is currently able to name the seat. FALSE means
          * "in flight": the host re-enumerates the whole directory for seconds
@@ -860,11 +593,11 @@
          * would take its trigger away mid-selection.
          */
         settled: function () {
-          var snap = modelSnapshot()
+          var snap = modelCatalog.snapshot()
           if (!snap) return true
           var inFlight = snap.status === 'loading' || snap.status === 'idle' || snap.status === 'selecting'
           var groups = snap.groups || []
-          return !inFlight || (groups.length > 0 && modelCurrent(snap) !== null)
+          return !inFlight || (groups.length > 0 && modelCatalog.current(snap) !== null)
         },
         pickEffort: pickEffort,
         owns: function (target) {
@@ -874,15 +607,13 @@
                  (modelSubPop !== null && modelSubPop.contains(target))
         },
         reposition: positionModelPopovers,
-        providers: modelProviders,
-        onProviders: function (listener) {
-          providerListeners.push(listener)
-          return function () {
-            var at = providerListeners.indexOf(listener)
-            if (at !== -1) providerListeners.splice(at, 1)
-          }
-        },
-        invalidateCopy: function () {
+        providers: modelCatalog.providers,
+        onProviders: modelCatalog.onProviders,
+        /**
+         * A copy source changed: drop the render signatures so the next pass
+         * repaints the rows in the new language.
+         */
+        onCopyChange: function () {
           modelBodySig = ''
           modelSubSig = ''
         },
@@ -891,7 +622,7 @@
         // handed back here rather than by the stylesheet going away.
         teardown: function () {
           dropModelControl()
-          modelWarmRequested = false
+          modelCatalog.resetWarm()
           modelSlot = null
         }
       }
