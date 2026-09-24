@@ -104,6 +104,7 @@ const STYLE_FILES = [
   { file: 'composer/hero.css' },
   { file: 'composer/card.css', gate: true },
   { file: 'composer/inline.css', gate: true },
+  { file: 'composer/inline-bar.css', gate: true },
   { file: 'sidebar.css' },
   { file: 'components/permissions.css' },
   { file: 'components/account-footer.css' },
