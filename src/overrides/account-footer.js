@@ -228,8 +228,9 @@
        * where the account row lives. Taking "the first menu anchor that is not
        * ours" was wrong — the shell has several (the open-in-app picker, the
        * workspace selector), and on a host without the desktop account the skin
-       * then mirrored THAT menu into the account drawer. Hidden with `visibility`,
-       * so it keeps a box and stays reachable here.
+       * then mirrored THAT menu into the account drawer. The takeover hides the
+       * row it sits in (footer-takeover.css), but it stays in the DOM, and the
+       * drive dispatches its events at it directly.
        */
       function hostAccountTrigger() {
         var foot = document.querySelector('[class*="footArea"]')
@@ -514,8 +515,9 @@
         syncAccountMenuItems()
 
         var footerActions = footArea.querySelector('[class*="footerActions"]')
-        // The host's account trigger is a 12px sliver left behind by the footer
-        // takeover: clicking it opens the host's own menu next to ours.
+        // The takeover hides the host's account row with its settings slot; this
+        // covers an account trigger that lives anywhere else. Clicking it would
+        // open the host's own menu next to ours.
         var hostTrigger = hostAccountTrigger()
         if (hostTrigger !== null) {
           if (hostTrigger.style.visibility !== 'hidden') hostTrigger.style.visibility = 'hidden'
