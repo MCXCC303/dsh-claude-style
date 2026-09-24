@@ -23,6 +23,10 @@
      *     resize. The feature checks whether it is open.
      * @property {Function} [onCopyChange] `onCopyChange()`: the locale, the
      *     preferences or the model copy changed.
+     * @property {Function} [onKey] `onKey(event) → boolean`: a keydown, after
+     *     the scheduler's own Esc handling. The return value does not gate the
+     *     scheduler's unconditional Ctrl+, preventDefault.
+     *
      * Cross-feature reads outside the scheduler stay direct handle reads:
      *   effort → model.{effort, pickEffort, seat, settled, close}
      *   model → effort.close, copy.isComposerActive
@@ -71,6 +75,14 @@
           for (var i = 0; i < HOOK_FEATURES.length; i++) {
             var handle = ui[HOOK_FEATURES[i]]
             if (handle && typeof handle.close === 'function') handle.close('escape')
+          }
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+          // Unconditional: the hook's return value never gates this.
+          e.preventDefault()
+          for (var k = 0; k < HOOK_FEATURES.length; k++) {
+            var keyHandle = ui[HOOK_FEATURES[k]]
+            if (keyHandle && typeof keyHandle.onKey === 'function') keyHandle.onKey(e)
           }
         }
         // Enter is deliberately NOT handled here. The host's composer keymap (every

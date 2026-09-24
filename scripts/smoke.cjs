@@ -464,6 +464,10 @@ const PROBE = `(function () {
         }
         return false
       }).length
+      // Ctrl+, opens the host's settings dialog through the account menu.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true, cancelable: true }))
+      await sleep(700)
+      r.dialogAfterShortcut = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
     }
     await sleep(1200)
     var from = window.__passes
@@ -631,6 +635,7 @@ const CASES = {
     check('closing the host menu leaves no injected container behind',
       r.injectAfterClose === 0 && r.hostMenuAfterClose === 0,
       JSON.stringify({ containers: r.injectAfterClose, menus: r.hostMenuAfterClose }))
+    check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
     check('the first account frame reads the profile exactly once',
       r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
     check('a repeated same-state frame reads nothing more',
