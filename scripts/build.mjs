@@ -14,6 +14,7 @@
  *   src/context/*.js             host accessors, prefs, model copy, i18n
  *   src/overrides/*.js           feature installers, shared popover utils, scheduler
  *   src/overrides/account/*.js   the account footer's split factories
+ *   src/overrides/model/*.js     the model picker's split factories
  *   src/settings.js              settings section (brand)
  *   src/entry.js                 apply() + exports
  *
@@ -76,6 +77,8 @@ const FRAGMENTS = [
   'overrides/model-brand.js',
   'overrides/model-copy-lookup.js',
   'overrides/model-effort.js',
+  'overrides/model/catalog.js',
+  'overrides/model/rows.js',
   'overrides/model-picker.js',
   'overrides/effort-picker.js',
   'overrides/hero-menu.js',
