@@ -74,13 +74,6 @@ body[data-dsh-claude-style] .dsh-claude-popover-item-text {
   white-space: nowrap !important;
   text-align: left !important;
 }
-body[data-dsh-claude-style] .dsh-claude-popover-item-shortcut {
-  margin-left: auto !important;
-  font-size: 11px !important;
-  color: var(--dsw-alias-label-tertiary, #a6a094) !important;
-  font-family: var(--ds-font-family-code, monospace) !important;
-  padding-left: 8px !important;
-}
 body[data-dsh-claude-style] .dsh-claude-popover-item-badge {
   margin-left: auto !important;
   font-size: 10px !important;

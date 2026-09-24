@@ -20,7 +20,8 @@
  *   - enter      Enter on an open composer menu reaches the host, never "Send";
  *   - desktop    the 0.1.7 desktop footer: the host's account menu in the
  *                settings launcher slot, the drawer's mirrors of its rows,
- *                Ctrl+, and the account stream's read discipline;
+ *                its Esc / outside-press dismissals and the account stream's
+ *                read discipline;
  *   - markup     strings from settings, the account service and plugins render
  *                as text, never as markup;
  *   - isolation  a host API that breaks one feature — at install or at sync —
@@ -416,13 +417,6 @@ const PROBE = `(function () {
         }
         return false
       }).length
-      // Clear the host's dialog so the shortcut's own open is observable.
-      Array.prototype.forEach.call(document.querySelectorAll('[class*="settingsArea"] [role="dialog"]'), function (dialog) {
-        if (dialog.parentElement) dialog.parentElement.removeChild(dialog)
-      })
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true, cancelable: true }))
-      await sleep(600)
-      r.dialogAfterShortcut = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
       // Esc closes an open drawer.
       if (accountBtn) accountBtn.click()
       await sleep(300)
@@ -596,7 +590,6 @@ const CASES = {
     check("picking the drawer's Settings opens the host dialog and leaves no host account menu open",
       r.dialogAfterRowClick === 1 && r.hostAccountMenusAfterRowClick === 0,
       JSON.stringify({ dialogs: r.dialogAfterRowClick, accountMenus: r.hostAccountMenusAfterRowClick }))
-    check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
     check('Esc closes an open drawer',
       r.drawerOpenBeforeEsc === true && r.drawerOpenAfterEsc === false,
       JSON.stringify({ before: r.drawerOpenBeforeEsc, after: r.drawerOpenAfterEsc }))

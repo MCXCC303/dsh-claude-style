@@ -140,9 +140,9 @@
        * Open the host's settings: its settings button where it has one, or else
        * the 设置 item of its account menu — the desktop, where that menu is the
        * settings launcher. The menu's rows carry no ids, so the item is found by
-       * the host's own label in its two locales. The drawer's settings row and
-       * Ctrl+, both come through here; "the first button in the settings slot"
-       * was the account trigger on the desktop, and Ctrl+, opened that menu.
+       * the host's own label in its two locales. The drawer's settings row
+       * comes through here; "the first button in the settings slot" was the
+       * account trigger on the desktop, and that opened the account menu.
        */
       var SETTINGS_LABEL = /^(设置|settings)$/i
       function openHostSettings() {
@@ -166,8 +166,8 @@
         accountReading = true
         var key = accountMenuKey()
         withHostAccountMenu(function (menu, items) {
-          // The drawer's own settings row (with the shortcut hint) stands for the
-          // host's settings button where there is one, and the menu's copy would
+          // The drawer's own settings row stands for the host's settings button
+          // where there is one, and the menu's copy would
           // list 设置 twice. Without that button (the desktop) the menu's 设置 is
           // the only way to settings, and the drawer's own row steps aside.
           var ownSettings = options.ownSettingsLabel()

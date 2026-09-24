@@ -268,8 +268,7 @@
                 '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' +
               '</svg>' +
             '</span>' +
-            '<span class="dsh-claude-popover-item-text"></span>' +
-            '<span class="dsh-claude-popover-item-shortcut">Ctrl+,</span>'
+            '<span class="dsh-claude-popover-item-text"></span>'
           settingsItem.querySelector('.dsh-claude-popover-item-text').textContent = labelText
 
           settingsItem.addEventListener('click', function (e) {
@@ -486,20 +485,6 @@
           closePopover()
         },
         openSettings: hostMenu.openSettings,
-        /**
-         * Ctrl+, opens settings. The scheduler's keydown handler owns the
-         * unconditional preventDefault; this returns whether it acted, which the
-         * scheduler does not gate on.
-         */
-        onKey: function (e) {
-          if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-            // The footer knows both ways in (see openHostSettings): "the first
-            // button in the settings slot" was the account trigger on the desktop.
-            hostMenu.openSettings()
-            return true
-          }
-          return false
-        },
         owns: function (target) {
           if (!target) return false
           return (accountBtn !== null && accountBtn.contains(target)) ||
