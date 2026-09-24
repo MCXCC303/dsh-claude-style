@@ -109,6 +109,8 @@ const STYLE_FILES = [
   { file: 'components/account-footer.css' },
   { file: 'components/ban-screen.css' },
   { file: 'components/model-picker.css' },
+  { file: 'components/effort-picker.css' },
+  { file: 'components/popover.css' },
   { file: 'components/hero-menu.css', gate: true },
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },
