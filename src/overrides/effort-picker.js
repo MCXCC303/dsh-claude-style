@@ -104,20 +104,22 @@
           effortBtn.style.display = 'none'
           return
         }
-        // The two read as one phrase ("Opus 5.5 High"): sit 6px INTO the model
-        // trigger's 8px right padding, so with this trigger's 2px left padding
-        // the two texts land ~4px apart (the boxes overlap, as the retired
-        // margin-left:-6px draft had them). The model trigger is OUR element,
-        // so the effort picker reserves room for itself on its right edge (a
-        // margin on it shifts the trigger left, out from under the context
-        // meter / send button) and then sits in that reserved space: width,
-        // minus the overlap, plus 8px of slack. Measured, not a magic number:
-        // the width follows the current level's name.
-        var need = effortBtn.offsetWidth + 2
+        // The row's own rhythm is the 12px flex gap (8px in narrow cards) the
+        // host puts between the trailing cluster's children: sit 2px past the
+        // model trigger, and with its 8px right padding and this trigger's 2px
+        // left padding the two texts land 12px apart — the same 12 the meter's
+        // ring (8px into its pill) and the send icon then keep. The model
+        // trigger is OUR element, so the effort picker reserves room for itself
+        // on its right edge (a margin on it shifts the trigger left, out from
+        // under the context meter / send button) and then sits in that reserved
+        // space: the row's 12px gap covers 12 of the needed width+2, the margin
+        // covers the rest. Measured, not a magic number: the width follows the
+        // current level's name.
+        var need = Math.max(0, effortBtn.offsetWidth - 6)
         if (modelBtn.style.marginRight !== need + 'px') modelBtn.style.marginRight = need + 'px'
         var shifted = modelBtn.getBoundingClientRect()
         effortBtn.style.display = 'inline-flex'
-        effortBtn.style.left = Math.round(shifted.right - 6) + 'px'
+        effortBtn.style.left = Math.round(shifted.right + 2) + 'px'
         effortBtn.style.top = Math.round(shifted.top + (shifted.height - effortBtn.offsetHeight) / 2) + 'px'
       }
 

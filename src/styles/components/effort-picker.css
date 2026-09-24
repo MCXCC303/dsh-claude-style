@@ -357,11 +357,10 @@ body[data-dsh-claude-style] .dsh-claude-effort-btn {
   display: inline-flex !important;
   align-items: center !important;
   height: 28px !important;
-  /* Tight against the model trigger: positionEffortTrigger() already overlaps
-     6px of the model trigger's right padding, so the 2px here lands the two
-     texts ~4px apart — they read as one phrase ("Opus 5.5 High"). The 6px on
-     the right keeps the hover plate off the control that follows. */
-  padding: 0 6px 0 2px !important;
+  /* The row's rhythm: 2px here plus the model trigger's 8px right padding and
+     the 2px the JS sits past its box land the two texts 12px apart — the
+     trailing cluster's own flex gap. */
+  padding: 0 2px !important;
   border: none !important;
   border-radius: 6px !important;
   background: transparent !important;
