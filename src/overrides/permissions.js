@@ -844,9 +844,7 @@
         close: function (reason) {
           closePermMenu()
           if (reason === 'composer') hideStatsPopover()
-        },
-        closeMenu: closePermMenu,
-        closeStats: hideStatsPopover
+        }
       }
 
       return function () {
