@@ -6,11 +6,19 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 [中文](#cn-unreleased) | [English](#en-unreleased)
 
-<h3 id="cn-unreleased">移除</h3>
+<h3 id="cn-unreleased">问题修复</h3>
+
+- 修复 **会话切换或卸载时因移动 React 插槽节点导致浏览器卡死与 DOM 异常**：停止将 `conversation.composer.dock` 容器内的会话统计药丸与上下文计量器通过 DOM 操作移入工具栏行，改为纯样式定位覆盖，保留节点在 React 虚拟树中的原生父子归属，消除 `Node.removeChild: The node to be removed is not a child of this node` 抛错与死循环卡死。
+
+### 移除
 
 - **移除 0.1.5 及更早宿主的适配**：偏好读写只走宿主官方的 `configForms` 表单，删掉插件自建的 `/prefs` 路由；最低宿主版本提高到 0.1.7。
 
-<h3 id="en-unreleased">Removals</h3>
+<h3 id="en-unreleased">Bug Fixes</h3>
+
+- Fix **browser freezes and DOM exceptions during session switching or unmounting caused by moving React slot nodes**: stop moving the session stats pills and context meter out of the `conversation.composer.dock` container via DOM manipulation into the toolbar row; position them via CSS overlay instead, preserving native parent-child relationships in the React virtual tree and eliminating `Node.removeChild: The node to be removed is not a child of this node` crashes and freeze loops.
+
+### Removals
 
 - **Remove the adaptation for hosts 0.1.5 and earlier**: preference reads and writes go only through the host's `configForms` form, dropping the plugin's own `/prefs` route; the minimum host version rises to 0.1.7.
 

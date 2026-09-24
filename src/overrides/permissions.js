@@ -33,8 +33,6 @@
 
       var permDocPointerListener = null
       var permResizeListener = null
-      /** The context meter this skin last moved out of the host's dock line. */
-      var dockedMeter = null
       /** The session-stats card (src/overrides/session-stats.js). */
       var stats = createSessionStats()
 
@@ -286,57 +284,7 @@
         if (ui.copy && ui.copy.syncAttachmentPlaceholder) ui.copy.syncAttachmentPlaceholder()
       }
 
-      /**
-       * Merge the session-stats pills into the composer toolbar row so the
-       * controls and the stats share ONE line. The host renders the pills
-       * (the `conversation.composer.dock` slot) as the card's sibling — a
-       * full-width line of their own below the input box; the skin moves
-       * them into the row, right before the trailing model/status group.
-       * A host re-render can put them back, so the move is re-applied on
-       * every pass and is a no-op once they are in place.
-       */
-      function mergeStatsIntoRow() {
-        var stats = document.querySelector('[data-composer-stats]')
-        if (!stats) return
-        var active = ui.copy.isComposerActive()
-        if (!active) {
-          if (stats.parentElement && stats.parentElement.matches && stats.parentElement.matches('[class*="_row"]')) {
-            var card = stats.closest('[data-composer-card]')
-            if (card && card.parentElement) {
-              card.parentElement.insertBefore(stats, card.nextSibling)
-            }
-          }
-          return
-        }
-        // `[class*="_row"]`, not `[class*="row"]`: the bare substring also
-        // matches the input growth wrapper (`grow` contains `row`).
-        var row = null
-        if (stats.parentElement && stats.parentElement.matches && stats.parentElement.matches('[class*="_row"]')) {
-          row = stats.parentElement
-        } else {
-          // Host default: the pills sit in a slot anchor beside the card.
-          // Walk up to the nearest ancestor that also holds a composer card.
-          var node = stats.parentElement
-          while (node && node !== document.body && row === null) {
-            var card = node.querySelector('[data-composer-card]')
-            if (card) {
-              var r = card.querySelector('[class*="_row"]')
-              if (r) row = r
-            }
-            node = node.parentElement
-          }
-        }
-        if (row === null) return
-        var trailing = row.querySelector('[class*="trailing"]')
-        var inPlace = stats.parentElement === row &&
-          (trailing !== null ? stats.nextElementSibling === trailing : row.lastElementChild === stats)
-        if (inPlace) return
-        if (trailing !== null) row.insertBefore(stats, trailing)
-        else row.appendChild(stats)
-      }
-
-      /** The composer's dock line: the stack child that is not the card. The host
-       * parks the stats pills there, and since 0.1.7 the context meter too. */
+      /** The composer's dock line: the stack child that is not the card. */
       function composerDock(card) {
         var stack = card.parentElement
         if (stack === null) return null
@@ -363,45 +311,30 @@
       }
 
       /**
-       * Merge the context-occupancy meter into the toolbar row beside the stats.
-       * DSH 0.1.7 moved the meter out of the input bar's trailing cluster into
-       * the dock line below the card, so a skin that merges only the stats
-       * leaves it alone on a line of its own — a stray marker on a second row.
-       * Older hosts keep it inside the card, where this finds nothing to move.
-       * A host re-render can put it back, so the move is re-applied every pass.
+       * Stamp the context-occupancy meter with a stable attribute for styling.
+       * The node is kept in its native React parent container (dock on 0.1.7,
+       * trailing on earlier hosts) to prevent React unmount crashes (Node.removeChild
+       * DOMException / browser freeze).
        */
-      function mergeContextMeterIntoRow() {
+      function stampContextMeter() {
         var card = document.querySelector('[data-composer-card]')
         if (card === null) return
         var dock = composerDock(card)
-        var row = card.querySelector('[class*="_row"]')
-        if (row === null) return
-        if (!ui.copy.isComposerActive()) {
-          if (dockedMeter !== null && dock !== null && row.contains(dockedMeter)) dock.appendChild(dockedMeter)
-          return
-        }
         var meter = dockedContextMeter(dock)
-        if (meter === null) return
-        dockedMeter = meter
-        // The stamp is what the stylesheet hangs the shared composer-line type
-        // on: the host's own class names are hashed per build, and the ring's
-        // trigger has no other stable hook.
-        meter.setAttribute('data-dsh-claude-context-meter', '')
-        var trailing = row.querySelector('[class*="trailing"]')
-        if (trailing === null) { row.appendChild(meter); return }
-        // Right of the model trigger, which lives inside the trailing cluster:
-        // park the ring after whichever trailing child owns that trigger (our
-        // own button when the skin draws the seat, the host's cluster when the
-        // picker preference hands it back).
-        var anchor = trailing.querySelector('[class*="standardControls"]')
-        var modelBtn = trailing.querySelector('.dsh-claude-model-btn')
-        if (modelBtn !== null) {
-          var node = modelBtn
-          while (node.parentElement !== null && node.parentElement !== trailing) node = node.parentElement
-          if (node.parentElement === trailing) anchor = node
+        if (meter === null) {
+          var triggers = card.querySelectorAll('button[aria-haspopup="dialog"]')
+          for (var i = 0; i < triggers.length; i++) {
+            if (/^\d{1,3}%$/.test((triggers[i].textContent || '').trim())) {
+              var n = triggers[i]
+              while (n.parentElement !== null && !n.parentElement.matches('[class*="_row"]')) n = n.parentElement
+              meter = n
+              break
+            }
+          }
         }
-        if (anchor !== null) trailing.insertBefore(meter, anchor.nextSibling)
-        else trailing.appendChild(meter)
+        if (meter !== null && !meter.hasAttribute('data-dsh-claude-context-meter')) {
+          meter.setAttribute('data-dsh-claude-context-meter', '')
+        }
       }
 
       // Re-insert when a re-render swapped the host row, then mirror the running preset.
@@ -559,8 +492,7 @@
       ui.permissions = {
         sync: function () {
           syncAttachmentState()
-          mergeStatsIntoRow()
-          mergeContextMeterIntoRow()
+          stampContextMeter()
           stats.sync()
           syncSegments()
           syncChatTabComposer()
