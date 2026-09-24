@@ -496,6 +496,12 @@ const PROBE = `(function () {
     r.stylesheet = !!document.getElementById('dsh-claude-style-style')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
+    // The host's own account row, when the host has one: the skin marks it and
+    // repaints it as a Claude row, so the teardown has to hand it back exactly as
+    // the host rendered it (D12).
+    r.hostRowPresent = document.getElementById('host-account') !== null
+    var hostRowAtRest = document.getElementById('host-account')
+    r.hostRowMarked = !!(hostRowAtRest && hostRowAtRest.hasAttribute('data-dsh-claude-account-host-row'))
     var banRow = document.querySelector('[data-dsh-claude-ban-row]')
     if (banRow) banRow.click()
     var toast = document.querySelector('.dsh-claude-ban-toast-text')
@@ -524,6 +530,13 @@ const PROBE = `(function () {
       r.leftMarkers = document.querySelectorAll('[data-dsh-claude-footer-entry], [data-dsh-claude-footer-hidden], [data-dsh-claude-footer-overlay], [data-dsh-claude-model-host], [data-dsh-claude-account-host-row]').length
       r.leftAttrs = Array.prototype.filter.call(document.body.attributes, function (a) { return /^data-dsh-(claude|window)/.test(a.name) }).map(function (a) { return a.name })
       r.leftStylesheet = !!document.getElementById('dsh-claude-style-style')
+      var hostRowEnd = document.getElementById('host-account')
+      r.hostRowEnd = hostRowEnd === null ? null : {
+        visibility: getComputedStyle(hostRowEnd).visibility,
+        pointerEvents: getComputedStyle(hostRowEnd).pointerEvents,
+        display: getComputedStyle(hostRowEnd).display,
+        width: hostRowEnd.getBoundingClientRect().width,
+      }
     }
     return r
   })()
@@ -574,6 +587,10 @@ function commonChecks(r) {
     r.leftNodes === 0 && r.leftMarkers === 0 && r.leftAttrs.length === 0 && !r.leftStylesheet,
     `nodes ${r.leftNodes}, markers ${r.leftMarkers}, attrs ${JSON.stringify(r.leftAttrs)}, stylesheet ${r.leftStylesheet}`)
   check('no pass runs after teardown', r.passesAfterTeardown === 0, `${r.passesAfterTeardown} passes`)
+  check("the host's own account row is handed back visible and clickable",
+    !r.hostRowPresent || (r.hostRowEnd !== null && r.hostRowEnd.visibility === 'visible' &&
+      r.hostRowEnd.pointerEvents === 'auto' && r.hostRowEnd.display !== 'none' && r.hostRowEnd.width > 0),
+    JSON.stringify(r.hostRowEnd))
 }
 
 const CASES = {
@@ -620,6 +637,8 @@ const CASES = {
     check("the host's own account row stays visible; the skin builds no trigger",
       r.hostRowVisible === true && r.hostRowDisplay !== 'none' && r.syntheticBtn === false,
       JSON.stringify({ visible: r.hostRowVisible, display: r.hostRowDisplay, synthetic: r.syntheticBtn }))
+    check('the takeover marks the host account row for the stylesheet',
+      r.hostRowMarked === true, JSON.stringify(r.hostRowMarked))
     check('the host trigger row is not hidden', r.triggerRowDisplay !== 'none', JSON.stringify(r.triggerRowDisplay))
     check("our container is injected as the list's first child",
       r.injectInViewport === true && r.injectFirst === true,
