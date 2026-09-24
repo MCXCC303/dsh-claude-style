@@ -6,13 +6,21 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 [中文](#cn-unreleased) | [English](#en-unreleased)
 
-<h3 id="cn-unreleased">移除</h3>
+<h3 id="cn-unreleased">问题修复</h3>
 
-- **移除插件自带的 Ctrl+, 设置快捷键**：账号抽屉的设置行保留（点击仍可打开设置），但不再显示快捷键提示，该组合键也不再被插件拦截。
+- 修复 **关闭插件或关掉「折叠侧栏设置区」后，桌面端自带的账号区没有还原**：交出页脚时摘掉皮肤打在宿主账号行上的标记，宿主行恢复自带的外观与点击。
 
-<h3 id="en-unreleased">Removals</h3>
+### 移除
 
-- **Remove the plugin's Ctrl+, settings shortcut**: the drawer's settings row stays (a click still opens settings), but it no longer shows the shortcut hint and the key combination is no longer intercepted.
+- **移除插件自带的 Ctrl+, 快捷键提示**：账号抽屉的设置行保留（点击仍可打开设置），但不再显示快捷键提示。
+
+<h3 id="en-unreleased">Bug Fixes</h3>
+
+- Fix **the desktop's own account area not coming back after the plugin is disabled or "Collapse the sidebar settings area" is turned off**: handing the footer back drops the skin's marker from the host's account row, which returns to its shipped look and click behavior.
+
+### Removals
+
+- **Remove the plugin's Ctrl+, shortcut hint**: the drawer's settings row stays (a click still opens settings) but no longer shows the hint.
 
 ## [0.5.2] - 2026-09-23
 
