@@ -55,10 +55,9 @@
       var items = null
       var loading = false
       /**
-       * Whether this host archives conversations at all. DSH 0.1.5 has no archive
-       * feature and no `workspaceRegistry` remote, so the section keeps its plain
-       * label there instead of growing a control that can only ever show an empty
-       * list. `null` = not known yet.
+       * Whether this host archives conversations at all. Until the archive
+       * service answers, the section keeps its plain label instead of growing a
+       * control that can only ever show an empty list. `null` = not known yet.
        */
       var supported = null
       var disposed = false
@@ -82,10 +81,9 @@
       }
 
       /**
-       * The tree's rows. `data-row-key` is what 0.1.7 stamps on them, but the
-       * bundled 0.1.5 has no such attribute at all — matching only that made the
-       * whole section bail out on 0.1.5, control and all. The row CLASSES are
-       * stable across both, and the skin's own stylesheet already keys off them.
+       * The tree's rows. `data-row-key` is what the host stamps on them; the row
+       * CLASSES are the stable fallback, and the skin's own stylesheet already
+       * keys off them.
        */
       var TREE_ROW_SELECTOR = '[data-row-key], [class*="sessionRow"], [class*="projectRow"]'
 
@@ -145,8 +143,8 @@
         }
         function retry() {
           if (disposed || attempt >= 4) {
-            // No archive service answered: this host does not have one (0.1.5), so
-            // the section goes back to being a plain label.
+            // No archive service answered: this host does not have one, so the
+            // section goes back to being a plain label.
             supported = false
             items = []
             loading = false

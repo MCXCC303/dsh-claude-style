@@ -1,16 +1,14 @@
     var STYLE_ID = 'dsh-claude-style-style'
 
     /**
-     * Settings identity, for both host generations.
+     * Settings identity.
      *
-     * 0.1.5-rc.2 and earlier let a plugin own a namespace by name
-     * (`claude-style`, registered host-side). 0.1.7 dropped that registry: a
-     * settings namespace IS a profile entry id and its schema IS the entry's
+     * A settings namespace IS a profile entry id and its schema IS the entry's
      * Config, so the id below is what both halves address — read off the
      * running loader entry where possible, with the id `cordis.patch.yml`
      * inserts as the fallback.
      *
-     * PACKAGE_NAME is the other half of the 0.1.7 contract: a bundle's own
+     * PACKAGE_NAME is the other half of the contract: a bundle's own
      * configuration is a `plugins.bundle.config` entry keyed by the bundle's
      * package name, which is what makes it render on this plugin's page.
      */
@@ -159,10 +157,11 @@
     var SEGMENT_CLASS = 'dsh-claude-segment'
 
     /**
-     * Preferences, persisted in the host settings namespace `claude-style`
-     * (lib/index.js owns it; src/context/prefs.js reads and writes it). Each value is
-     * mirrored onto the document as an attribute so the stylesheet decides what
-     * a preference means, and the defaults here are the shipped behaviour.
+     * Preferences, persisted in the profile entry's settings namespace (the
+     * exported Config in lib/index.js declares the fields; src/context/prefs.js
+     * reads and writes them). Each value is mirrored onto the document as an
+     * attribute so the stylesheet decides what a preference means, and the
+     * defaults here are the shipped behaviour.
      */
 
     /** Brand marks selectable from the settings page. `claude` is the default. */
@@ -236,8 +235,6 @@
     var AUTO_POPOVER_ALL = 'all'
     var AUTO_POPOVER_SCOPES = [AUTO_POPOVER_OFF, AUTO_POPOVER_ACCOUNT, AUTO_POPOVER_ALL]
     var DEFAULT_AUTO_POPOVER = AUTO_POPOVER_ALL
-    /** Route the browser half reads and writes preferences through (lib/index.js). */
-    var PREFS_ROUTE = '/dsh-claude-style/prefs'
     /** Route that resolves the host OS user once; never polled. */
     var USERNAME_ROUTE = '/dsh-claude-style/username'
     /** Longest accepted custom username; mirrored by lib/index.js. */

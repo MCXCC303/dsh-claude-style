@@ -3,12 +3,11 @@
  * smoke.cjs — zero-dependency smoke test of the BUILT plugin (`lib/`); no running
  * DSH instance is needed.
  *
- * Host half, in Node: `lib/index.js` is applied to a fake cordis context and its
- * private routes get the request shapes that matter (docs/architecture.md D11) —
- * a cross-site page, a LAN peer, a DNS-rebound page, the browser's own
- * same-origin fetch and the desktop shell's forwarded request — once through a
- * host that offers `connection.requestRejection()` and once through the local
- * stand-in.
+ * Host half, in Node: `lib/index.js` is applied to a fake cordis context and the
+ * username route gets the request shapes that matter (docs/architecture.md D11) —
+ * a cross-site page, a LAN peer and the browser's own same-origin fetch — once
+ * through a host that offers `connection.requestRejection()` and once through
+ * the local stand-in.
  *
  * Browser half, in headless Chrome/Edge over CDP: `lib/client.js` is loaded into
  * a page that stands in for the host (module loader, ctx, a sidebar footer with
@@ -62,13 +61,7 @@ function check(label, ok, detail) {
 /** lib/index.js applied to a fake cordis context; `fenced` offers the host's own request check. */
 function fakeHost(mod, fenced) {
   const routes = {}
-  const store = { brand: 'claude', username: '', quickProviders: [] }
-  let revision = 1
-  const settings = {
-    configure: () => () => {},
-    describe: () => [{ ns: 'ui-skin-claude-style', value: { ...store }, revision }],
-    async update(ns, patch) { Object.assign(store, patch); revision += 1 },
-  }
+  const settings = { configure: () => () => {} }
   // Modelled on the host's connection.requestRejection(): the Host/Origin fence
   // (loopback, no cross-site marker, Origin naming the Host), then the cookie.
   const connection = {
@@ -83,7 +76,7 @@ function fakeHost(mod, fenced) {
   const ctx = {
     fiber: { entry: { id: 'include:ui-skin-claude-style' } },
     logger: { warn() {} },
-    get: (name) => (name === 'settings' ? settings : name === 'connection' && fenced ? connection : undefined),
+    get: (name) => (name === 'connection' && fenced ? connection : undefined),
     effect: (fn) => fn(),
     inject: (deps, cb) => cb({
       effect: (fn) => fn(),
@@ -93,7 +86,7 @@ function fakeHost(mod, fenced) {
     }),
   }
   mod.apply(ctx)
-  return { routes, store }
+  return { routes }
 }
 
 /** One request through a registered route; resolves with `{ status, body }`. */
@@ -114,41 +107,20 @@ async function hostHalf() {
   const mod = await import(pathToFileURL(HOST).href)
   const PREFS = '/dsh-claude-style/prefs'
   const USER = '/dsh-claude-style/username'
-  const json = (value) => JSON.stringify(value)
-  const browser = { host: '127.0.0.1:43120', origin: 'http://127.0.0.1:43120', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json', cookie: 'dsh-auth-x=1' }
-  const desktop = { host: '127.0.0.1:51234', 'content-type': 'application/json', cookie: 'dsh-auth-x=1' }
-  const crossSite = { host: '127.0.0.1:43120', origin: 'https://attacker.example', 'sec-fetch-site': 'cross-site', 'content-type': 'text/plain;charset=UTF-8' }
-  const lanPeer = { host: '192.168.1.23:43120', 'content-type': 'application/json' }
-  const rebound = { host: 'attacker.example:43120', origin: 'http://attacker.example:43120', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' }
+  const browser = { host: '127.0.0.1:43120', origin: 'http://127.0.0.1:43120', 'sec-fetch-site': 'same-origin', cookie: 'dsh-auth-x=1' }
+  const crossSite = { host: '127.0.0.1:43120', origin: 'https://attacker.example', 'sec-fetch-site': 'cross-site' }
+  const lanPeer = { host: '192.168.1.23:43120' }
+  const rebound = { host: 'attacker.example:43120', origin: 'http://attacker.example:43120', 'sec-fetch-site': 'same-origin' }
 
   for (const fenced of [true, false]) {
     console.log(`\nhost half — ${fenced ? "through the host's connection.requestRejection()" : 'through the local stand-in (no connection service)'}`)
     const host = fakeHost(mod, fenced)
-    for (const [label, headers] of [['cross-site page (text/plain)', crossSite], ['LAN peer', lanPeer], ['DNS-rebound page', rebound]]) {
-      const r = await request(host, PREFS, 'POST', json({ username: 'intruder' }), headers)
-      check(`${label}: write refused`, (r.status === 401 || r.status === 403) && host.store.username === '', `HTTP ${r.status}, stored ${json(host.store.username)}`)
+    check('the preferences route is gone', host.routes[PREFS] === undefined)
+    for (const [label, headers] of [['cross-site page', crossSite], ['LAN peer', lanPeer], ['DNS-rebound page', rebound]]) {
+      const r = await request(host, USER, 'GET', '', headers)
+      check(`${label}: username read refused`, r.status === 401 || r.status === 403, `HTTP ${r.status}`)
     }
-    let r = await request(host, PREFS, 'POST', json({ username: 'Ada' }), browser)
-    check('browser same-origin write accepted', r.status === 200 && host.store.username === 'Ada', `HTTP ${r.status}`)
-    r = await request(host, PREFS, 'POST', json({ brand: 'anthropic' }), desktop)
-    check('desktop-shell forwarded write accepted', r.status === 200 && host.store.brand === 'anthropic', `HTTP ${r.status}`)
-    if (fenced) {
-      const { cookie, ...noCookie } = browser
-      r = await request(host, PREFS, 'POST', json({ username: 'x' }), noCookie)
-      check("host's own verdict is used (no session cookie → 401)", r.status === 401, `HTTP ${r.status}`)
-    }
-    r = await request(host, PREFS, 'POST', json({ username: 'x' }), { ...browser, 'content-type': 'text/plain' })
-    check('non-JSON write refused (415)', r.status === 415, `HTTP ${r.status}`)
-    r = await request(host, PREFS, 'POST', json({ username: 'x'.repeat(20 * 1024) }), browser)
-    check('oversized body refused (413)', r.status === 413, `HTTP ${r.status}`)
-    r = await request(host, PREFS, 'POST', 'null', browser)
-    check('non-object body refused (400)', r.status === 400, `HTTP ${r.status}`)
-    const ids = ['y'.repeat(200)].concat(Array.from({ length: 300 }, (_, i) => `provider-${i}`))
-    r = await request(host, PREFS, 'POST', json({ quickProviders: ids }), browser)
-    check('quick providers capped (64 short ids)', r.status === 200 && host.store.quickProviders.length === 64 && host.store.quickProviders[0] === 'provider-0', `stored ${host.store.quickProviders.length}`)
-    r = await request(host, USER, 'GET', '', { host: '127.0.0.1:43120', 'sec-fetch-site': 'cross-site' })
-    check('cross-site username read refused', r.status === 401 || r.status === 403, `HTTP ${r.status}`)
-    r = await request(host, USER, 'GET', '', browser)
+    const r = await request(host, USER, 'GET', '', browser)
     check('browser username read answered', r.status === 200 && JSON.parse(r.body).ok === true, `HTTP ${r.status}`)
   }
 }

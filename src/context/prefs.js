@@ -1,20 +1,11 @@
     /**
      * Skin preferences.
      *
-     * The authoritative store is the host settings namespace, reached one of two
-     * ways depending on the host generation:
-     *
-     *   * 0.1.7+ serves every registered namespace to the browser through
-     *     `ctx.configForms`, whose per-entry controller carries the values, the
-     *     write queue and the revision fence. That is the transport used
-     *     whenever the service is present.
-     *   * 0.1.5-rc.2 and earlier expose only the namespaces the api-proxy lists,
-     *     and a plugin's own is not among them, so this side falls back to the
-     *     route its host half registers (`lib/index.js`).
-     *
-     * Both transports carry the same eight fields, so everything below stays
-     * transport-agnostic: `loadPrefs`/`savePrefs` pick one, and the rest of the
-     * skin keeps reading the mirrored `prefs` object.
+     * The authoritative store is the host settings namespace, reached through
+     * `ctx.configForms`: it serves every registered namespace to the browser,
+     * and its per-entry controller carries the values, the write queue and the
+     * revision fence. The namespace is this plugin's profile entry id and its
+     * schema is the Config `lib/index.js` exports.
      *
      * Every value is mirrored onto the document as an attribute, so the
      * stylesheet — not this module — decides what a preference means visually.
@@ -78,18 +69,16 @@
       username: '',
       banLocale: fallbackBanLocale || DEFAULT_BAN_LOCALE,
     }
-    var prefsRevision
     var prefsAvailable = false
     var prefsListeners = []
 
     /**
-     * The official settings form, when this host has one.
+     * The official settings form.
      *
-     * 0.1.7 replaced the imperative namespace registry with Config-derived
-     * forms: `ctx.configForms.get(entryId)` hands back a controller carrying the
+     * `ctx.configForms.get(entryId)` hands back a controller carrying the
      * values, a write queue and a revision fence, and the namespace is this
-     * plugin's profile entry id. The older host has no such service, so this
-     * stays null there and the route below is the transport instead.
+     * plugin's profile entry id. It stays null until the service serves that
+     * namespace; until then the defaults hold.
      */
     var prefsForm = null
 
@@ -141,11 +130,11 @@
             }
           }
         }
-      } catch (error) { /* mirror unreadable: caller falls back to the route */ }
+      } catch (error) { /* mirror unreadable: nothing is bound yet */ }
       return null
     }
 
-    /** Whether this host serves namespaces to the browser (0.1.7+). */
+    /** Whether the host serves namespaces to the browser. */
     function hostConfigForms(ctx) {
       try {
         if (!ctx || typeof ctx.get !== 'function') return null
@@ -170,11 +159,12 @@
     }
 
     /**
-     * Bind the official form when the host offers one.
+     * Bind the official form.
      *
-     * Called once per install, before the first read. A host that serves the
-     * service later (or never) simply keeps the route transport, so this never
-     * blocks or fails the skin.
+     * Called once per install, before the first read, and again when the
+     * settings page installs — the service may mount after this plugin. A
+     * namespace the host does not serve yet leaves `prefsForm` null and the
+     * defaults in place, so this never blocks or fails the skin.
      */
     function adoptSettingsForm(ctx) {
       if (prefsForm !== null) return true
@@ -182,7 +172,8 @@
       if (forms === null) return false
       // Only bind a namespace the host actually serves; a generated loader id
       // would yield a controller for nobody's namespace (reads stuck at the
-      // defaults, every write refused). Not served yet -> keep the route.
+      // defaults, every write refused). Not served yet -> leave it unbound and
+      // let the next install try again.
       var namespace = servedNamespace(forms, settingsNamespaceCandidates(ctx))
       if (namespace === null) return false
       var form = null
@@ -293,52 +284,19 @@
      * Read the preferences once. A failure keeps the defaults and leaves the
      * settings page to report that the store is unavailable.
      *
-     * The official form is read first when it exists: its subscription already
-     * re-reads on every host change, so this call only has to cover the case
-     * where the values are ready before the subscription settles.
+     * The form's subscription re-reads on every host change, so this call only
+     * covers the case where the values are ready before the subscription
+     * settles.
      */
     function loadPrefs() {
-      if (prefsForm !== null) {
-        var formValue = readFormValue()
-        if (formValue !== null) {
-          prefsAvailable = true
-          var formName = typeof formValue.username === 'string' ? formValue.username.trim() : ''
-          if (formName) setFallbackUsername('')
-          adoptPrefs(normalizePrefs(formValue))
-          replayPendingBanLocale(formValue)
-          return
-        }
-        // The bound form is not ready yet (namespace not served at bind time, or
-        // the mirror is still loading): fall through to the route instead of
-        // returning with the defaults, which is what froze the settings page.
-      }
-      if (typeof fetch !== 'function') return
-      try {
-        fetch(PREFS_ROUTE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: '{}',
-        })
-          .then(function (response) {
-            return response.json()
-          })
-          .then(function (data) {
-            if (!data || data.ok !== true) return
-            prefsRevision = data.revision
-            // No availability gate on the READ. The host registers the namespace a
-            // moment after the page loads, and deciding once here froze the
-            // settings UI in "unavailable" for the whole session even though the
-            // same route answered 200 seconds later (measured on 0.1.7-rc.1). The
-            // controls stay enabled; only a WRITE that actually fails flips the
-            // message.
-            var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
-            if (hostName) setFallbackUsername('')
-            adoptPrefs(normalizePrefs(data.value))
-            replayPendingBanLocale(data.value)
-          })
-          .catch(function () { /* defaults stay */ })
-      } catch (error) { /* no fetch: defaults stay */ }
+      if (prefsForm === null) return
+      var formValue = readFormValue()
+      if (formValue === null) return
+      prefsAvailable = true
+      var formName = typeof formValue.username === 'string' ? formValue.username.trim() : ''
+      if (formName) setFallbackUsername('')
+      adoptPrefs(normalizePrefs(formValue))
+      replayPendingBanLocale(formValue)
     }
 
     /**
@@ -441,7 +399,7 @@
       return run.then(function (accepted) {
         if (accepted === false) {
           // Refused (a stale revision, or a field this Config does not carry):
-          // re-read rather than guess, the way the route path does.
+          // re-read rather than guess.
           loadPrefs()
           return null
         }
@@ -468,74 +426,11 @@
     /**
      * Write a partial preference change.
      *
-     * The revision travels with the write so a concurrent move of the namespace
-     * is rejected rather than silently overwritten; on that rejection the
-     * authoritative value is re-read.
-     *
      * @param patch - preference keys to change.
-     * @returns a promise for the resolved preferences, or null when unavailable.
+     * @returns a promise for the resolved preferences, or null while the form
+     *          does not carry values yet.
      */
     function savePrefs(patch) {
-      // The official form only when it actually carries values; otherwise (and
-      // whenever it refuses the write) the route is the transport, so a
-      // not-ready form can never swallow a save.
-      if (prefsForm !== null && readFormValue() !== null) {
-        return savePrefsViaForm(patch).then(function (result) {
-          return result === null ? savePrefsViaRoute(patch) : result
-        })
-      }
-      return savePrefsViaRoute(patch)
-    }
-
-    /**
-     * Write a partial preference change through the plugin's own route.
-     *
-     * The revision travels with the write so a concurrent move of the namespace
-     * is rejected rather than silently overwritten; on that rejection the
-     * authoritative value is re-read.
-     *
-     * @param patch - preference keys to change.
-     * @returns a promise for the resolved preferences, or null when unavailable.
-     */
-    function savePrefsViaRoute(patch) {
-      if (typeof fetch !== 'function') return Promise.resolve(null)
-      var body = { revision: prefsRevision }
-      for (var key in patch) body[key] = patch[key]
-      return fetch(PREFS_ROUTE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      })
-        .then(function (response) {
-          return response.json().then(function (data) {
-            return { status: response.status, data: data }
-          })
-        })
-        .then(function (result) {
-          var data = result.data
-          if (data && data.ok === true) {
-            prefsRevision = data.revision
-            prefsAvailable = data.available === true
-            if (typeof patch.username === 'string') {
-              var hostName = data.value && typeof data.value.username === 'string' ? data.value.username.trim() : ''
-              setFallbackUsername(hostName ? '' : patch.username)
-            }
-            // The host echoing the value back is the only proof it knows the
-            // field; anything else (no value at all, or a different one) means
-            // the write did not land and the local fallback has to keep it.
-            if (typeof patch.banLocale === 'string') {
-              var hostLocale = data.value && typeof data.value.banLocale === 'string' ? data.value.banLocale : ''
-              setFallbackBanLocale(hostLocale === patch.banLocale ? '' : patch.banLocale)
-            }
-            adoptPrefs(normalizePrefs(data.value))
-            return prefs
-          }
-          // Conflict or refusal: re-read rather than guess.
-          loadPrefs()
-          return null
-        })
-        .catch(function () {
-          return null
-        })
+      if (prefsForm === null || readFormValue() === null) return Promise.resolve(null)
+      return savePrefsViaForm(patch)
     }

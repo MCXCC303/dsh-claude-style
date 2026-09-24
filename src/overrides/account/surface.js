@@ -9,7 +9,7 @@
      * The list is content-matched (account/host-menu.js), so the permission
      * control's menu and the model picker's submenu are never touched.
      *
-     * A host without one (Web / 0.1.5) gets a self-built trigger and popover
+     * A host without one (Web) gets a self-built trigger and popover
      * (account-footer.js); that popover's body is the container.
      *
      * A closed list leaves no reference behind: the next open builds a fresh

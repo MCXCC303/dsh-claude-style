@@ -85,8 +85,8 @@
             if (keyHandle && typeof keyHandle.onKey === 'function') keyHandle.onKey(e)
           }
         }
-        // Enter is deliberately NOT handled here. The host's composer keymap (every
-        // supported host, 0.1.5-rc.2 on) already sends on Enter, and first picks
+        // Enter is deliberately NOT handled here. The host's composer keymap
+        // already sends on Enter, and first picks
         // the highlighted item of an open `/` or `@` menu, holds back for IME
         // (including Safari's late keydown) and ignores key repeat. This listener
         // runs in the capture phase, before the editor: clicking Send from here

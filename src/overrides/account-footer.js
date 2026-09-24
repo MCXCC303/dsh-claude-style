@@ -3,8 +3,8 @@
      *
      * One row model, two mount points (account/surface.js): on a host that has
      * an account row (Desktop 0.1.7+) that row is the entry and our container is
-     * injected into the host's own account menu; on a host without one (Web /
-     * 0.1.5) the skin self-builds the trigger and the popover and the popover's
+     * injected into the host's own account menu; on a host without one (Web)
+     * the skin self-builds the trigger and the popover and the popover's
      * body is the container. The rows themselves — the account header with the
      * hold-screen easter egg, the plugin footer entries (account/footer-mirror.js)
      * and, on the self-built path only, the settings row — are shared.

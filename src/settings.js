@@ -331,7 +331,7 @@
       loadModelCopy()
       // The settings services are up by now even when they were not at apply
       // time, so retry the official-form binding before choosing a seat. It is
-      // idempotent: a host without `configForms` keeps the plugin's own route.
+      // idempotent.
       adoptSettingsForm(ctx)
       if (ui) {
         ui.settingsNav = {

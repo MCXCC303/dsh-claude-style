@@ -4,6 +4,16 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 ## [Unreleased]
 
+[中文](#cn-unreleased) | [English](#en-unreleased)
+
+<h3 id="cn-unreleased">移除</h3>
+
+- **移除 0.1.5 及更早宿主的适配**：偏好读写只走宿主官方的 `configForms` 表单，删掉插件自建的 `/prefs` 路由；最低宿主版本提高到 0.1.7。
+
+<h3 id="en-unreleased">Removals</h3>
+
+- **Remove the adaptation for hosts 0.1.5 and earlier**: preference reads and writes go only through the host's `configForms` form, dropping the plugin's own `/prefs` route; the minimum host version rises to 0.1.7.
+
 ## [0.5.3] - 2026-09-23
 
 [中文](#cn-0.5.3) | [English](#en-0.5.3)

@@ -13,7 +13,7 @@
 
 ## Behavioral Red Lines
 
-- Import needed libraries directly; never guard imports with try/catch. Recorded exception: the dual-generation settings layer in docs/architecture.md D10; any new exception must be written into that file first.
+- Import needed libraries directly; never guard imports with try/catch. Recorded exception: the settings layer's guarded schemastery import in docs/architecture.md D10; any new exception must be written into that file first.
 - Never enter plan mode on your own initiative.
 - Never use Git to roll back any code. When the user says "roll back", it always means manually restoring code to its previous state with the edit tools.
 - Never read from or write to the system temp directory; intermediate artifacts go to `.debug/` (gitignored).

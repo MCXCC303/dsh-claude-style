@@ -72,20 +72,20 @@
 - **落地**：已执行完毕。仍未消除的结构感知 `:has()` 只剩 placeholder 那条（`card` 上的 `:not(:has([data-composer-placeholder]))`）：`copy.js` 本就管理 placeholder，可在它的 sync 里同步写 `data-has-placeholder` 再改 CSS，属可选的后续优化。
 - **重审条件**：实测证明 :has() 不再是热点，或宿主提供 hero/inline 的稳定属性契约。
 
-## D10. 设置按宿主世代分流：官方 Config 表单 + 旧版命名空间注册
+## D10. 设置传输只走官方 Config 表单
 
-- **背景**：0.1.7 删掉了 `settings.register(ns, schema)`——命名空间不再是插件自取的名字，而是 profile entry id，schema 就是插件导出的 `Config`，只有 `.volatile()` 字段进表单，值写进 profile 的 Cordis patch；客户端服务 `settingsScope` 改名 `configForms`，插件设置席位从 `settings.plugin.item` 变成 `plugins.bundle.config`（键 = 包名）/ `plugins.row.config`。旧宿主（0.1.5-rc.2，桌面端内置）仍是注册制，且其 schemastery 3.18.2 没有 `.volatile()`——两套 API 互斥，`.volatile()` 在旧版上会直接抛错。
-- **决定**：设置层按宿主世代走两条路，探测点各只有一个——宿主半边看 `settings.register` 是否存在，客户端看 `ctx.get('configForms')` 是否可用。
-  - 宿主半边导出 `Config`：八个偏好字段，`volatileField()` 逐字段探测 `.volatile()` 存在才加标记；schemastery 用顶层 await 守卫导入，解析不到就让 `Config` 为 `undefined`，皮肤照常加载。新宿主把命名空间取成 `ctx.fiber.entry.id`（读不到回落 patch 里的常量），只调 `settings.configure({ auto: false }, ctx.fiber)` 声明自带页面；旧宿主仍 `register('claude-style', schema)`。两条路共用同一个可变命名空间，`describePrefs/updatePrefs` 与自建 prefs 路由都读它。
-  - 客户端：`ctx.configForms.get(entryId)` 可用就用官方表单（值 + 写队列 + revision 栅栏），否则回落到自建路由；设置界面在 0.1.7 注册成 `plugins.bundle.config`（键 = 包名，渲染在插件页上），旧宿主注册成 `settings.section` 整页。分流靠 `slots.inject` 的「槽被声明才触发」语义（旧宿主从不声明前者），再用 `configForms` 是否存在否决后者在 0.1.7 上的重复注册。
-- **代价**：设置层有两套传输与两套席位，回归必须覆盖两种宿主形态（`.debug/settings-bridge-check.cjs` 跑宿主半边两代，`.debug/client-settings-check.cjs` 在无头浏览器里跑客户端两代）；`Config` 的顶层 await 让宿主半边模块求值晚一步（loader 本就 await 导入，无实际影响）。
-- **重审条件**：不再支持 0.1.5-rc.2（桌面端内置升级到 0.1.7+）时，删掉旧路径与两处探测，只留 `Config` + `plugins.bundle.config`。
+- **背景**：0.1.7 删掉了 `settings.register(ns, schema)` 的旧契约——命名空间是 profile entry id，schema 就是插件导出的 `Config`，只有 `.volatile()` 字段进表单，值写进 profile 的 Cordis patch；客户端服务 `settingsScope` 改名 `configForms`，插件设置席位从 `settings.plugin.item` 变成 `plugins.bundle.config`（键 = 包名）。没有 `configForms` 的旧宿主曾让客户端保留一条自建 `/prefs` 路由作为第二传输。
+- **决定**：客户端只有 `configForms` 一条传输——`ctx.configForms.get(entryId)` 绑定官方表单，读、写都走控制器（值 + 写队列 + revision 栅栏），插件自建的 `/prefs` 路由与其回退分支一并删除。
+  - 宿主半边导出 `Config` 作为命名空间的 schema：八个偏好字段，`volatileField()` 逐字段探测 `.volatile()` 存在才加标记；schemastery 用顶层 await 守卫导入，解析不到就让 `Config` 为 `undefined`，皮肤照常加载。命名空间取成 `ctx.fiber.entry.id`（读不到回落 patch 里的常量），并调 `settings.configure({ auto: false }, ctx.fiber)` 声明自带页面。`configForms` 只服务宿主已注册的命名空间，所以这个导出是偏好可用的前提。宿主仍拥有旧的命令式注册表时，保留 `settings.register('claude-style', schema)` 分支，当前宿主不走它。
+  - 设置席位：当前宿主注册成 `plugins.bundle.config`（键 = 包名，渲染在插件页上）；`settings.section` 整页席位保留，但只在宿主没有 `configForms` 时注册。
+- **代价**：`Config` 的顶层 await 让宿主半边模块求值晚一步（loader 本就 await 导入，无实际影响）；schemastery 的守卫导入是 AGENTS 记录在案的那条例外，它要在解析不到时保住皮肤，不让整包失败。
+- **重审条件**：宿主重新提供不需要 `Config` 的设置注册方式时，或 `configForms` 契约再变时，重写这一层。
 
 ## D11. 插件自有路由借宿主的请求栅栏；宿主/用户来源的字符串只以文本上屏
 
-- **背景**：`webServer.register()` 交给插件的是裸请求。宿主自己的 `/api` 挂在 Host/Origin 栅栏与浏览器会话 cookie 之后（`connection.requestRejection()`），插件路由不在其内。本插件的 `/prefs`（写设置）与 `/username`（读系统用户名）因此曾经完全无鉴权：跨站页面用 `text/plain` 发 POST 无需预检即可写入设置，`dsh web` 绑定 `0.0.0.0` 时局域网里任何人都能直接写。写进去的用户名又被客户端拼进 `innerHTML`——实测在 GUI 页面里执行了脚本，而这个页面能驱动执行 shell 命令的智能体。
-- **决定**：两层各守一道。宿主半边：`/prefs` 与 `/username` 处理前先调 `ctx.get('connection').requestRejection(req)`（0.1.5-rc.2 起即有），拒绝即回 401/403；`/prefs` 另要求 `Content-Type: application/json`（跨站页面发不出不经预检的 JSON）、请求体上限 16 KiB、快捷供应商至多 64 个短 id。宿主没有该服务时，插件自带的替身只服务回环（回环 Host、无跨站标记、Origin 与 Host 一致）。模型文案与字体等静态资产保持公开。客户端：一切来自设置、账号服务、系统或第三方插件的字符串只用 `textContent` / 元素属性写入，图标复制节点而非重新解析 markup。
-- **代价**：路由依赖宿主的 connection 服务。已核对两种壳都能通过：浏览器同源请求带会话 cookie；0.1.7 桌面壳经 `forwardWebRequest` 转发到回环 Host、剥掉页面 Origin 并自带 cookie（宿主真实的 `isTrustedApiRequest` 对这两种请求放行，对跨站与 DNS 重绑定请求拒绝）。0.1.5-rc.2 桌面端根本不把插件路径路由到 webServer（非 `/api` 一律走静态资产），不受影响。
+- **背景**：`webServer.register()` 交给插件的是裸请求。宿主自己的 `/api` 挂在 Host/Origin 栅栏与浏览器会话 cookie 之后（`connection.requestRejection()`），插件路由不在其内。本插件的 `/username`（读系统用户名）因此曾经完全无鉴权：`dsh web` 绑定 `0.0.0.0` 时局域网里任何人都能直接读。读到的用户名又被客户端拼进 `innerHTML`——实测在 GUI 页面里执行了脚本，而这个页面能驱动执行 shell 命令的智能体。
+- **决定**：宿主半边 `/username` 处理前先调 `ctx.get('connection').requestRejection(req)`，拒绝即回 401/403。宿主没有该服务时，插件自带的替身只服务回环（回环 Host、无跨站标记、Origin 与 Host 一致）。模型文案与字体等静态资产保持公开。客户端：一切来自设置、账号服务、系统或第三方插件的字符串只用 `textContent` / 元素属性写入，图标复制节点而非重新解析 markup。
+- **代价**：路由依赖宿主的 connection 服务。已核对两种壳都能通过：浏览器同源请求带会话 cookie；0.1.7 桌面壳经 `forwardWebRequest` 转发到回环 Host、剥掉页面 Origin 并自带 cookie（宿主真实的 `isTrustedApiRequest` 对这两种请求放行，对跨站与 DNS 重绑定请求拒绝）。
 - **重审条件**：宿主为插件提供自带鉴权的路由注册（如 `connection.fetch.register`）时，迁移过去并删掉本地替身。
 
 ## D12. 特性级失败隔离：一个特性出错只关掉它自己
@@ -112,7 +112,7 @@
 ## D14. 账号表面：一套行模型，两个挂载点
 
 - **背景**：DSH 0.1.7 的桌面端自带账号区——侧栏页脚里的账号行，以及它自己的账号弹层。此前的做法是隐藏宿主账号行、由插件自建抽屉，并把宿主菜单里的条目读出来镜像进抽屉：隐形点开宿主菜单、等它的 portal 出现、复制文案与图标、再把点击转发回去。这套驱动依赖宿主菜单的渲染时序与双语标签，先后出过图标逃逸、文案过期、行重复等问题。
-- **决定**：插件的行（账号头部、其它插件的页脚条目、设置行）只在弹层里出现，弹层有两个挂载点，由 `overrides/account/surface.js` 每轮判定。宿主有账号区时，宿主账号行就是入口（插件只给它打标记，供样式表重绘），插件把容器追加到宿主账号菜单列表的首位，宿主自己渲染它那几行；宿主没有账号区（Web、0.1.5）时，插件自建账号行与弹层，容器就是弹层主体。宿主的行不复制、不移动、不转发点击；插件的行被点击后需要收起菜单时，派发一次 Escape 交给宿主的菜单处理。卡片与行的外观由插件的样式表按标记重绘，两条路径共用同一套样式。
+- **决定**：插件的行（账号头部、其它插件的页脚条目、设置行）只在弹层里出现，弹层有两个挂载点，由 `overrides/account/surface.js` 每轮判定。宿主有账号区时，宿主账号行就是入口（插件只给它打标记，供样式表重绘），插件把容器追加到宿主账号菜单列表的首位，宿主自己渲染它那几行；宿主没有账号区（Web）时，插件自建账号行与弹层，容器就是弹层主体。宿主的行不复制、不移动、不转发点击；插件的行被点击后需要收起菜单时，派发一次 Escape 交给宿主的菜单处理。卡片与行的外观由插件的样式表按标记重绘，两条路径共用同一套样式。
 - **理由**：宿主的菜单自带定位、动画、键盘遍历、Esc 与外部点击关闭，追加进去的行会加入同一套键盘遍历；删除驱动与镜像之后，账号区不再依赖宿主菜单的渲染时序与标签文案。
 - **代价**：宿主菜单关闭即卸载，容器每轮重新确认并追加；宿主的列表是 React 管理的子树，追加位置固定在列表首位，宿主重渲染后由每轮同步自愈。
 - **重审条件**：宿主为账号菜单提供追加行的插槽时，改用插槽注册，去掉 DOM 追加。

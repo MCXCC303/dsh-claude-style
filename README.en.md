@@ -2,7 +2,7 @@
 
 # DSH Claude Style
 
-**A theme plugin that recreates the look and feel of Claude Code Desktop for the DeepSeek Harness Web GUI.**
+**A theme plugin that brings the look and feel of Claude Code Desktop to the DeepSeek Harness Web GUI.**
 
 > **Claude Code Desktop, right inside DSH.**
 
@@ -25,11 +25,11 @@
   </tr>
 </table>
 
-> Light: ivory canvas `#FCFCFB` with a pale sidebar `#FBFBF9`; dark: warm black `#141413`. The theme follows the system light/dark mode, and ember orange `#D97757` is the single action accent on both canvases.
+> Light mode pairs an ivory canvas `#FCFCFB` with a pale sidebar `#FBFBF9`; dark mode uses warm black `#141413`. The theme follows your system's light/dark setting, and ember orange `#D97757` is the single action accent across both canvases.
 
 ## Fonts
 
-> **Important: the Anthropic fonts are not distributed with the npm package — they live in this repository under [`fonts/`](fonts/).** You can install them system-wide, or skip the install entirely: drop the two `.ttf` files into the plugin package's `fonts/` directory and the host serves them as webfonts the same way (identical files, identical result). Either way, refresh / restart the web UI.
+> **Important: the Anthropic fonts are not bundled with the npm package.** They are available for download in this repository under [`fonts/`](fonts/). You can either install them on your system, or skip the install entirely — drop the two `.ttf` files into the plugin package's `fonts/` directory and the host will serve them as webfonts (the files are identical, so the result is the same). Either way, refresh or restart the web UI for the fonts to take effect.
 
 | Font | Used for | File |
 |---|---|---|
@@ -37,19 +37,19 @@
 | Anthropic Serif Web Text | Conversation body / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | Code / code blocks | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf), [`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
-Enabling the Anthropic fonts (pick one):
+To enable the Anthropic fonts, choose one of the following:
 
-① Install system-wide — on Windows, double-click the `.ttf` → "Install"; on macOS, import it with Font Book.
+① Install them on your system — on Windows, double-click each `.ttf` and choose "Install"; on macOS, import them with Font Book.
 
-② No install — copy the `.ttf` files into the plugin package's `fonts/` directory. Refresh the page afterwards.
+② Skip the install — copy the `.ttf` files into the plugin package's `fonts/` directory, then refresh the page.
 
-> The Anthropic Sans/Serif fonts are copyright Anthropic, licensed for personal use only, and are not covered by the MIT license.
+> The Anthropic Sans and Serif fonts are the property of Anthropic, licensed for personal use only, and are not covered by this project's MIT license.
 
 ## Installation
 
-> Requires dsh ≥ 0.1.5-rc.2
+> Requires dsh ≥ 0.1.7
 
-1. From a terminal
+1. From a terminal:
 
 ```bash
 dsh plugin --profile web add dsh-claude-style                  # npm package (recommended)
@@ -58,49 +58,49 @@ dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub source
 
 2. From the [plugin market](https://github.com/dsh-market/dsh-market)
 
-Keep only one theme enabled at a time. After installing, **restart `dsh web`** and refresh the page.
+Keep only one theme enabled at a time. After installation, **restart `dsh web`** and refresh the page.
 
 ## Features
 
-1. **Theme** — global the moment it is installed, nothing to configure. Ivory `#FCFCFB` in light mode, warm black `#141413` in dark mode, with the same ember orange `#D97757` action accent on both; light/dark follows the system colour mode.
-2. **Composer** — the input box is rebuilt end to end: a permission segment control (Full access / Read only / …), a model trigger carrying the vendor lockup, and the tool row and the stats sharing one line, with the send and stop keys unified into a 7px rounded rectangle. The stats sentence and the model trigger share one type size and colour.
-3. **Model picker** — a new two-level popover: level one lists the official service plus the quick providers picked in settings, and the "More models" second level groups the rest by provider. Every row carries its vendor lockup and description; the foot holds the reasoning-effort slider (stepless — it settles on the nearest level when you let go) and the "More models" entry. Level two is bottom-aligned with level one, providers already shown in level one are not repeated, and a model without thinking support draws no slider at all. Hover opens after a 50ms dwell and closes after 150ms, and the sliver between the two cards does not count as leaving.
-4. **Workspace** — the sidebar's "Workspace" heading becomes an **Active / Archived** segment control: Active keeps the host's own session tree, while Archived is the skin's own flat list (title, time, and an unarchive plus a delete button on every row). The rows line up with the host's own session rows item by item (row x=12 / width 251 / height 28 / title x=36). On a host without archiving support the control is not drawn and the plain heading stays.
-5. **Sidebar** — the New session and Plugins rows take Claude's own shape: no plate at rest, a plate on hover, the "＋" of New session set in a circular chip, and both icons turning 90° clockwise on hover (four-fold symmetric glyphs, so they land back on themselves); the account drawer and the ban-screen easter egg stay as they were.
-6. **Account area** — after a desktop sign-in the row shows the **real avatar and nickname** (read from the server only at startup, on hot reload, and on sign-in and sign-out — never polled); the account popover is the host's own: the host's account row is the entry, and the popover lists the account header, the other plugins' footer entries and the host's own Settings / Feedback / Sign out, each keeping its shipped copy, order and click behavior. On a host without an account area (Web, 0.1.5) the plugin builds a popover of the same look. The card uses a pure white background and spans the sidebar's width.
-7. **Conversation views** — in the desktop Windows titlebar mode the Conversation / Trajectory control sits centred and always visible on the titlebar row (the same row as the New session button); on a wide window with a short title it stays on the title's row, and otherwise it keeps its own row under the title.
+1. **Theme** — applies globally the moment it is installed, with nothing to configure. Light mode uses ivory `#FCFCFB`, dark mode warm black `#141413`, and both share the same ember orange `#D97757` action accent; light/dark follows the system color mode.
+2. **Composer** — the input box is rebuilt from the ground up: a permission segmented control (Full access / Read only / …), a model trigger carrying the vendor lockup, and the toolbar and status stats laid out on a single line, with the send and stop buttons unified into 7px rounded rectangles. The stats sentence and the model trigger share the same font size and color.
+3. **Model picker** — a new two-level popover. The first level lists the official service plus the quick providers selected in settings; "More models" opens a second level grouped by provider. Every row carries its vendor lockup and a description, and the footer holds the reasoning-effort slider (stepless — it snaps to the nearest level on release) together with the "More models" entry. The second level aligns its bottom edge with the first, providers already shown on the first level are not repeated, and models without thinking support get no slider. Hovering opens the popover after a 50 ms dwell and closes it after 150 ms; the gap between the two cards does not count as leaving.
+4. **Workspace** — the sidebar's "Workspace" heading becomes an **Active / Archived** segmented control. Active keeps the host's session tree, while Archived is the skin's own flat list (title, time, and per-row unarchive and delete icon buttons). Rows match the host's session rows measurement for measurement (row x=12 / width 251 / height 28 / title x=36).
+5. **Sidebar** — the New session and Plugins rows take Claude's real shape: no background at rest, a background on hover, the "＋" of New session set inside a circular chip, and both icons rotating 90° clockwise on hover (four-fold symmetric glyphs, so they land back on themselves). The account drawer and the ban-screen easter egg remain as they were.
+6. **Account area** — after signing in on desktop, the row shows your **real avatar and nickname** (fetched from the server only at startup, on hot reload, and on sign-in and sign-out — never polled; a hand-drawn starburst is the fallback). The account popover remains the host's own: the host's account row is the entry point, and the popover lists the account header, the other plugins' footer entries, and the host's own Settings / Feedback / Sign out, each keeping its original copy, order, and click behavior. On hosts without an account area (Web), the plugin builds a popover with the same look. The card uses a pure white background and spans the sidebar's width.
+7. **Conversation views** — in the desktop Windows titlebar mode, the Conversation / Trajectory control sits centered and always visible on the titlebar row (the same row as the New session button). On wide windows with a short title it stays on the title's row; otherwise it keeps its own row below the title.
 
 ## Disabling and uninstalling
 
-To pause the theme without uninstalling it, add this to the profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
+To pause the theme without uninstalling it, add the following to the profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
 
 ```yaml
 - id: ui-skin-claude-style
   disabled: true
 ```
 
-It takes effect within about a second; refresh the page to get the stock look back.
+The change takes effect within about a second — refresh the page to restore the stock appearance.
 
 ```bash
 dsh plugin --profile web remove dsh-claude-style   # uninstall
 ```
 
-Then restart `dsh web`; if you added this theme's entry to `cordis.patch.yml` by hand, remove that too.
+Then restart `dsh web`. If you previously added this theme's entry to `cordis.patch.yml` by hand, remove it as well.
 
 ## Documentation
 
-| Document | What it covers |
+| Document | Contents |
 | --- | --- |
-| [Design tokens](docs/STYLE.md) | Palette, fonts, shapes, source layout and the host-selector discipline (in English) |
-| [Architecture decisions](docs/architecture.md) | Single-file bundling, the one-scheduler rule, the feature contract, the account surface, and their trade-offs |
+| [Design tokens](docs/STYLE.md) | Palette, typography, shapes, source layout, and host-selector discipline (in English) |
+| [Architecture decisions](docs/architecture.md) | Single-file bundling, the single-scheduler rule, the feature contract, the account surface, and their trade-offs |
 | [Changelog](CHANGELOG.md) | Version history |
-| [Contributing](CONTRIBUTING.md) | Building from `src/`, commit conventions, screenshot and regression tooling (in English) |
+| [Contributing](CONTRIBUTING.md) | Building from `src/`, commit conventions, and the screenshot and regression tooling (in English) |
 
-## Friends
+## Related projects
 
-> Running several themes at once? Try [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) — it switches between every installed theme from one settings page.
+> Running several themes at once? Try [dsh-skin-manager](https://github.com/xiaoyangcheng84-svg/dsh-skin-manager) — it switches between all installed themes from a single settings page.
 
-> Want to bring your Claude Code / Codex sessions into DSH and keep chatting? Try the author's other plugin, [dsh-chat-import](https://github.com/Nwflower/dsh-chat-import).
+> Want to import your Claude Code / Codex session history into DSH and keep the conversation going? Try the author's other plugin, [dsh-chat-import](https://github.com/Nwflower/dsh-chat-import).
 
 ## Star History
 
