@@ -18,12 +18,11 @@
  *
  * The launch token comes from the `dsh web` banner (GUI URL `/?token=…`) or
  * the DSH_WEB_TOKEN env var. Chrome is launched headless with a throwaway
- * profile and killed on exit.
+ * profile (scripts/chrome.cjs) and stopped when the run ends.
  */
-const { spawn } = require('child_process')
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { findChrome, launchChrome, connectTab } = require('./chrome.cjs')
 
 const args = process.argv.slice(2)
 const argOf = (name) => {
@@ -32,7 +31,6 @@ const argOf = (name) => {
 }
 const TOKEN = argOf('token') || process.env.DSH_WEB_TOKEN
 const BASE = (argOf('url') || 'http://127.0.0.1:4390').replace(/\/+$/, '')
-const CDP_PORT = Number(argOf('cdp-port') || 9334)
 const OUT = path.resolve(argOf('out') || path.join(__dirname, '..', 'docs'))
 const WIDTH = 1440
 const HEIGHT = 900
@@ -81,63 +79,13 @@ if (!new RegExp(`${USERNAME_RE_SOURCE}|${PATH_RE_SOURCE}`, 'i').test('C:\\Users\
   process.exit(2)
 }
 
-const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-].filter(Boolean)
-const chrome = CHROME_CANDIDATES.find((p) => fs.existsSync(p))
-if (!chrome) {
+const browser = findChrome()
+if (!browser) {
   console.error('shoot: no Chrome/Edge found; set CHROME_PATH')
   process.exit(2)
 }
 
-let chromeProc = null
-let chromeDir = null
-const cleanup = () => {
-  if (chromeProc) { try { chromeProc.kill() } catch {} }
-  if (chromeDir) { try { fs.rmSync(chromeDir, { recursive: true, force: true }) } catch {} }
-}
-process.on('exit', cleanup)
-process.on('SIGINT', () => { cleanup(); process.exit(130) })
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
-async function connect() {
-  chromeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-claude-shoot-'))
-  chromeProc = spawn(chrome, [
-    '--headless=new',
-    '--remote-debugging-port=' + CDP_PORT,
-    '--user-data-dir=' + chromeDir,
-    `--window-size=${WIDTH},${HEIGHT}`,
-    'about:blank',
-  ], { stdio: 'ignore' })
-  await sleep(3000)
-
-  const target = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' })).json()
-  const ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise((ok, err) => { ws.onopen = ok; ws.onerror = err })
-
-  let seq = 0
-  const pending = new Map()
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data)
-    if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id) }
-  }
-  const send = (method, params = {}) => new Promise((resolve) => {
-    const id = ++seq
-    pending.set(id, resolve)
-    ws.send(JSON.stringify({ id, method, params }))
-  })
-  const evalJs = async (expression) => {
-    const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
-    if (r.result && r.result.exceptionDetails) throw new Error('page eval failed: ' + JSON.stringify(r.result.exceptionDetails).slice(0, 300))
-    return r.result && r.result.result ? r.result.result.value : undefined
-  }
-  return { send, evalJs }
-}
 
 /** Replace sidebar titles with stand-ins; swap the username nodes for static
  *  ones under a different class — the theme's footer sync re-writes any node
@@ -250,11 +198,15 @@ async function captureOnce({ send, evalJs }, scheme, outFile) {
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true })
-  const conn = await connect()
-  await captureOnce(conn, 'light', path.join(OUT, 'light.png'))
-  await captureOnce(conn, 'dark', path.join(OUT, 'dark.png'))
+  const chrome = await launchChrome(browser, { name: 'shoot', width: WIDTH, height: HEIGHT })
+  try {
+    const conn = await connectTab(chrome.port)
+    await captureOnce(conn, 'light', path.join(OUT, 'light.png'))
+    await captureOnce(conn, 'dark', path.join(OUT, 'dark.png'))
+  } finally {
+    await chrome.close()
+  }
   console.log('\nSCREENSHOTS CAPTURED')
-  process.exit(0)
 }
 
-main().catch((e) => { console.error(e.message || e); process.exit(1) })
+main().catch((e) => { console.error(e.message || e); process.exitCode = 1 })

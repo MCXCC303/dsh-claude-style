@@ -22,10 +22,7 @@
  * The launch token comes from the GUI URL (`/?token=…`) of the running DSH
  * instance; it may also be passed via the DSH_WEB_TOKEN env var.
  */
-const { spawn } = require('child_process')
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+const { findChrome, launchChrome, connectTab } = require('./chrome.cjs')
 
 const args = process.argv.slice(2)
 const argOf = (name) => {
@@ -34,71 +31,32 @@ const argOf = (name) => {
 }
 const TOKEN = argOf('token') || process.env.DSH_WEB_TOKEN
 const BASE = (argOf('url') || 'http://127.0.0.1:43120').replace(/\/+$/, '')
-const CDP_PORT = Number(argOf('cdp-port') || 9334)
 
 if (!TOKEN) {
   console.error('usage: node scripts/probe-timing.cjs --token <launch-token> [--url <base>]')
   process.exit(2)
 }
 
-const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-].filter(Boolean)
-const chrome = CHROME_CANDIDATES.find((p) => fs.existsSync(p))
-if (!chrome) {
+const browser = findChrome()
+if (!browser) {
   console.error('probe-timing: no Chrome/Edge found; set CHROME_PATH')
   process.exit(2)
 }
 
-let chromeProc = null
-let chromeDir = null
-const cleanup = () => {
-  if (chromeProc) { try { chromeProc.kill() } catch {} }
-  if (chromeDir) { try { fs.rmSync(chromeDir, { recursive: true, force: true }) } catch {} }
-}
-process.on('exit', cleanup)
-process.on('SIGINT', () => { cleanup(); process.exit(130) })
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function main() {
-  chromeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-claude-timing-'))
-  chromeProc = spawn(chrome, [
-    '--headless=new',
-    '--remote-debugging-port=' + CDP_PORT,
-    '--user-data-dir=' + chromeDir,
-    '--window-size=1440,900',
-    'about:blank',
-  ], { stdio: 'ignore' })
-  await sleep(3000)
-
-  const target = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' })).json()
-  const ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise((ok, err) => { ws.onopen = ok; ws.onerror = err })
-
-  let seq = 0
-  const pending = new Map()
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data)
-    if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id) }
+  const chrome = await launchChrome(browser, { name: 'timing', width: 1440, height: 900 })
+  try {
+    await measure(chrome.port)
+  } finally {
+    await chrome.close()
   }
-  const send = (method, params = {}) => new Promise((resolve) => {
-    const id = ++seq
-    pending.set(id, resolve)
-    ws.send(JSON.stringify({ id, method, params }))
-  })
-  const evalJs = async (expression) => {
-    const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
-    if (r.result && r.result.exceptionDetails) {
-      const detail = JSON.stringify(r.result.exceptionDetails).slice(0, 200)
-      throw new Error(`page eval failed: ${detail}\n  expression: ${expression.replace(/\s+/g, ' ').slice(0, 160)}`)
-    }
-    return r.result && r.result.result ? r.result.result.value : undefined
-  }
+}
+
+/** Take every measurement in a fresh tab and print it. */
+async function measure(port) {
+  const { send, evalJs } = await connectTab(port)
 
   await send('Page.enable')
   await send('Runtime.enable')
@@ -270,9 +228,6 @@ async function main() {
   console.log('    than once per process. It does NOT yet separate the host\'s catalog')
   console.log('    build from the client-side work: both start empty on a reload. To')
   console.log('    attribute it, time the modelCatalog frames themselves (CDP Network).')
-
-  cleanup()
-  process.exit(0)
 }
 
-main().catch((error) => { cleanup(); console.error('probe-timing failed:', error.message); process.exit(1) })
+main().catch((error) => { console.error('probe-timing failed:', error.message); process.exitCode = 1 })

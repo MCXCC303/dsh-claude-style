@@ -17,12 +17,10 @@
  *
  * The launch token comes from the GUI URL (`/?token=…`) of the running DSH
  * instance; it may also be passed via the DSH_WEB_TOKEN env var. Chrome is
- * launched headless with a throwaway profile and killed on exit.
+ * launched headless with a throwaway profile (scripts/chrome.cjs) and stopped
+ * when the probe ends.
  */
-const { spawn } = require('child_process')
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+const { findChrome, launchChrome, connectTab } = require('./chrome.cjs')
 
 const args = process.argv.slice(2)
 const argOf = (name) => {
@@ -31,68 +29,32 @@ const argOf = (name) => {
 }
 const TOKEN = argOf('token') || process.env.DSH_WEB_TOKEN
 const BASE = (argOf('url') || 'http://127.0.0.1:43120').replace(/\/+$/, '')
-const CDP_PORT = Number(argOf('cdp-port') || 9333)
 
 if (!TOKEN) {
   console.error('usage: node scripts/probe.cjs --token <launch-token> [--url <base>]')
   process.exit(2)
 }
 
-const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-].filter(Boolean)
-const chrome = CHROME_CANDIDATES.find((p) => fs.existsSync(p))
-if (!chrome) {
+const browser = findChrome()
+if (!browser) {
   console.error('probe: no Chrome/Edge found; set CHROME_PATH')
   process.exit(2)
 }
 
-let chromeProc = null
-let chromeDir = null
-const cleanup = () => {
-  if (chromeProc) { try { chromeProc.kill() } catch {} }
-  if (chromeDir) { try { fs.rmSync(chromeDir, { recursive: true, force: true }) } catch {} }
-}
-process.on('exit', cleanup)
-process.on('SIGINT', () => { cleanup(); process.exit(130) })
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function main() {
-  chromeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-claude-probe-'))
-  chromeProc = spawn(chrome, [
-    '--headless=new',
-    '--remote-debugging-port=' + CDP_PORT,
-    '--user-data-dir=' + chromeDir,
-    '--window-size=1440,900',
-    'about:blank',
-  ], { stdio: 'ignore' })
-  await sleep(3000)
-
-  const target = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT' })).json()
-  const ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise((ok, err) => { ws.onopen = ok; ws.onerror = err })
-
-  let seq = 0
-  const pending = new Map()
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data)
-    if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id) }
+  const chrome = await launchChrome(browser, { name: 'probe', width: 1440, height: 900 })
+  try {
+    return await probe(chrome.port)
+  } finally {
+    await chrome.close()
   }
-  const send = (method, params = {}) => new Promise((resolve) => {
-    const id = ++seq
-    pending.set(id, resolve)
-    ws.send(JSON.stringify({ id, method, params }))
-  })
-  const evalJs = async (expression) => {
-    const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
-    if (r.result && r.result.exceptionDetails) throw new Error('page eval failed: ' + JSON.stringify(r.result.exceptionDetails).slice(0, 300))
-    return r.result && r.result.result ? r.result.result.value : undefined
-  }
+}
+
+/** Run the checks in a fresh tab; resolves with the number that failed. */
+async function probe(port) {
+  const { send, evalJs } = await connectTab(port)
 
   let failures = 0
   const check = (label, ok, detail) => {
@@ -106,9 +68,12 @@ async function main() {
 
   check('skin applied', await evalJs(`!!document.body.hasAttribute('data-dsh-claude-style')`))
 
-  // open the most recent session
-  await evalJs(`(() => {
-    const rows = document.querySelectorAll('[class*="sessionRow"]')
+  // Open the most recent existing session. The sidebar's "new session" row
+  // opens the hero, which has no session composer, and sessions can sit under
+  // collapsed projects.
+  const openSession = `(() => {
+    const rows = Array.from(document.querySelectorAll('[class*="sessionRow"]'))
+      .filter((r) => !/^(新会话|New session)$/.test((r.textContent || '').trim()))
     if (!rows.length) return false
     const t = rows[0].closest('[role="treeitem"]') || rows[0]
     t.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
@@ -117,7 +82,16 @@ async function main() {
     t.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
     t.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
     return true
-  })()`)
+  })()`
+  if (!(await evalJs(openSession))) {
+    await evalJs(`(() => {
+      for (const p of document.querySelectorAll('[class*="projectRow"]')) {
+        if (p.getAttribute('aria-expanded') !== 'true') p.click()
+      }
+    })()`)
+    await sleep(2000)
+    if (!(await evalJs(openSession))) throw new Error('no existing session to open')
+  }
   await sleep(7000)
 
   const state = () => evalJs(`(() => {
@@ -157,9 +131,11 @@ async function main() {
   const s2 = await state()
   check('clears back to one line', s2.inputH === 24, 'inputH=' + s2.inputH)
 
-  ws.close()
   console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
-  process.exit(failures === 0 ? 0 : 1)
+  return failures
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().then(
+  (failures) => { process.exitCode = failures === 0 ? 0 : 1 },
+  (e) => { console.error(e); process.exitCode = 1 },
+)

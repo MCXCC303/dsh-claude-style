@@ -18,6 +18,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 ### 其他变更
 
 - **内部结构整理，行为无变化**：输入区的布局工作收进独立的 composer 特性，推理强度滑块的点阵与账号行各自拆成独立碎片，重复的宿主查询与残留节点清理合并成共用函数；调度器不再点名具体特性。
+- **回归脚本共用一套无头浏览器启动**：smoke / probe / probe-timing / shoot 的浏览器配置目录改放 `.debug/`，调试端口由浏览器自选，`--cdp-port` 参数取消；probe 打开已有会话，跳过「新会话」。
 
 <h3 id="en-unreleased">Bug Fixes</h3>
 
@@ -31,6 +32,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 ### Chores
 
 - **Internal restructuring, no behavior change**: the composer's layout work moves into a composer feature of its own, the reasoning-effort slider's dot matrix and the account rows move into fragments of their own, and repeated host lookups and leftover-node sweeps merge into shared helpers; the scheduler no longer names individual features.
+- **One headless-browser launcher for the regression scripts**: smoke / probe / probe-timing / shoot keep the browser profile under `.debug/` and let the browser pick its own debugging port (the `--cdp-port` option is gone); probe opens an existing session and skips "New session".
 
 ## [0.5.3] - 2026-09-23
 

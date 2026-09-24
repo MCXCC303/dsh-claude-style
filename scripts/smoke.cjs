@@ -32,13 +32,12 @@
  * Exit:  0 every check passed · 1 a check failed · 2 the browser half could not run
  */
 'use strict'
-const { spawn } = require('child_process')
 const fs = require('fs')
 const http = require('http')
-const os = require('os')
 const path = require('path')
 const { Readable } = require('stream')
 const { pathToFileURL } = require('url')
+const { findChrome, launchChrome, connectTab } = require('./chrome.cjs')
 
 const ROOT = path.resolve(__dirname, '..')
 const CLIENT = path.join(ROOT, 'lib', 'client.js')
@@ -766,67 +765,26 @@ const CASES = {
   },
 }
 
-function findBrowser() {
-  return [
-    process.env.CHROME_PATH,
-    'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-    'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-  ].filter(Boolean).find((candidate) => fs.existsSync(candidate))
-}
-
-/** The DevTools port Chrome picked for `--remote-debugging-port=0`. */
-async function devtoolsPort(profile) {
-  const file = path.join(profile, 'DevToolsActivePort')
-  for (let i = 0; i < 150; i++) {
-    try {
-      const port = Number(fs.readFileSync(file, 'utf8').split('\n')[0])
-      if (port > 0) return port
-    } catch { /* not written yet */ }
-    await sleep(100)
-  }
-  throw new Error('the browser never opened its DevTools port')
-}
-
 /** Load one case in a fresh tab and return the page's report. */
 async function runCase(port, base, name) {
-  const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json()
-  const ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
-  let seq = 0
-  const pending = new Map()
-  ws.onmessage = (message) => {
-    const data = JSON.parse(message.data)
-    if (data.id && pending.has(data.id)) { pending.get(data.id)(data); pending.delete(data.id) }
-  }
-  const send = (method, params = {}) => new Promise((resolve) => {
-    const id = ++seq
-    pending.set(id, resolve)
-    ws.send(JSON.stringify({ id, method, params }))
-  })
+  const tab = await connectTab(port)
   try {
-    await send('Page.enable')
-    await send('Page.navigate', { url: `${base}/${name}` })
+    await tab.send('Page.enable')
+    await tab.send('Page.navigate', { url: `${base}/${name}` })
     for (let i = 0; i < 100; i++) {
-      const out = await send('Runtime.evaluate', { expression: 'window.__smoke', awaitPromise: true, returnByValue: true })
+      const out = await tab.send('Runtime.evaluate', { expression: 'window.__smoke', awaitPromise: true, returnByValue: true })
       const result = out.result && out.result.result
       if (result && result.type === 'object') return result.value
       await sleep(100)
     }
     throw new Error(`case "${name}" never reported`)
   } finally {
-    ws.close()
-    await fetch(`http://127.0.0.1:${port}/json/close/${target.id}`).catch(() => {})
+    await tab.close()
   }
 }
 
 async function browserHalf() {
-  const browser = findBrowser()
+  const browser = findChrome()
   if (!browser) {
     console.log('\nbrowser half — skipped: no Chrome/Edge found (set CHROME_PATH)')
     return false
@@ -846,21 +804,16 @@ async function browserHalf() {
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-claude-smoke-'))
-  const chrome = spawn(browser, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`,
-    '--no-first-run', '--no-default-browser-check', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
+  const chrome = await launchChrome(browser, { name: 'smoke', width: 1280, height: 800 })
   try {
-    const port = await devtoolsPort(profile)
     for (const name of Object.keys(CASES)) {
       console.log(`\nbrowser half — ${name}`)
-      CASES[name](await runCase(port, base, name))
+      CASES[name](await runCase(chrome.port, base, name))
     }
     return true
   } finally {
-    chrome.kill()
     server.close()
-    await sleep(500)
-    try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* the browser may still hold a file */ }
+    await chrome.close()
   }
 }
 
