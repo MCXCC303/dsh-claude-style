@@ -256,9 +256,6 @@
           if (stopped) return
           for (var i = 0; i < PASS_FEATURES.length; i++) runSync(PASS_FEATURES[i])
           try {
-            // Covers the rail toggle (and any reflow) while the popover is open:
-            // its anchor moved without a window resize or a page scroll.
-            if (ui.footer && ui.footer.isOpen()) ui.footer.reposition()
             if (composerCardObserver) {
               var currentCard = document.querySelector('[data-composer-card]')
               if (currentCard !== observedCard) {

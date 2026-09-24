@@ -467,6 +467,11 @@
         }
 
         syncPopoverItems(footArea)
+        // The rail toggle (and any reflow) moves the anchor without a window
+        // resize or a page scroll, so an open drawer re-resolves its position at
+        // the end of its own pass. (The scheduler used to do this after every
+        // pass; folding it here keeps it in the same frame at the same point.)
+        if (accountPopover && accountPopover.getAttribute('data-open') === 'true') positionAccountPopover()
       }
       ui.footer = {
         sync: syncAccountFooter,
