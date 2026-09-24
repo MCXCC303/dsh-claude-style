@@ -236,6 +236,11 @@
         }
         var info = effortInfo()
         if (info === null) {
+          // A catalog that cannot name the seat (the current selection is not in
+          // its snapshot yet) has said nothing about that seat's levels: the
+          // trigger stays as it is, the way the in-flight branch above keeps it.
+          // Only a named model without a ladder takes it away.
+          if (ui.model && typeof ui.model.named === 'function' && !ui.model.named()) return
           // No ladder on this seat: the trigger goes away with it, exactly as the
           // model card drew no effort row for such a model. The margin the
           // trigger reserved on the model button goes with it, or the gap

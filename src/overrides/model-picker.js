@@ -584,6 +584,13 @@
         seat: function () { return modelSlot },
         effort: function () { return modelCatalog.effort(modelCatalog.snapshot()) },
         /**
+         * Whether the catalog can match the current selection to a group and
+         * model. FALSE is "cannot name the seat" (the snapshot is still arriving,
+         * or the provider group is not in it), which is not the same as "the seat
+         * has no levels".
+         */
+        named: function () { return modelCatalog.current(modelCatalog.snapshot()) !== null },
+        /**
          * Whether the catalog is currently able to name the seat. FALSE means
          * "in flight": the host re-enumerates the whole directory for seconds
          * after every selection, and during that window the snapshot can have no
