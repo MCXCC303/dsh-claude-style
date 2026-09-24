@@ -423,6 +423,21 @@ const PROBE = `(function () {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true, cancelable: true }))
       await sleep(600)
       r.dialogAfterShortcut = document.querySelectorAll('[class*="settingsArea"] [role="dialog"]').length
+      // Esc closes an open drawer.
+      if (accountBtn) accountBtn.click()
+      await sleep(300)
+      r.drawerOpenBeforeEsc = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+      await sleep(300)
+      r.drawerOpenAfterEsc = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
+      // A press on the body — outside the drawer and its trigger — closes a
+      // reopened drawer.
+      if (accountBtn) accountBtn.click()
+      await sleep(300)
+      r.drawerOpenBeforeOutside = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))
+      await sleep(300)
+      r.drawerOpenAfterOutside = !!document.querySelector('.dsh-claude-account-popover[data-open="true"]')
     }
     await sleep(1200)
     var from = window.__passes
@@ -582,6 +597,12 @@ const CASES = {
       r.dialogAfterRowClick === 1 && r.hostAccountMenusAfterRowClick === 0,
       JSON.stringify({ dialogs: r.dialogAfterRowClick, accountMenus: r.hostAccountMenusAfterRowClick }))
     check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
+    check('Esc closes an open drawer',
+      r.drawerOpenBeforeEsc === true && r.drawerOpenAfterEsc === false,
+      JSON.stringify({ before: r.drawerOpenBeforeEsc, after: r.drawerOpenAfterEsc }))
+    check('a press outside the drawer and its trigger closes it',
+      r.drawerOpenBeforeOutside === true && r.drawerOpenAfterOutside === false,
+      JSON.stringify({ before: r.drawerOpenBeforeOutside, after: r.drawerOpenAfterOutside }))
     check('the first account frame reads the profile exactly once',
       r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
     check('a repeated same-state frame reads nothing more',
