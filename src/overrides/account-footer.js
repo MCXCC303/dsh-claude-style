@@ -470,7 +470,16 @@
       }
       ui.footer = {
         sync: syncAccountFooter,
-        close: closePopover,
+        /**
+         * The drawer's dismiss routes: 'outside' (a press the footer does not
+         * own), 'escape' and 'composer'. The shipped scheduler only closed an
+         * OPEN drawer on an outside press, so that reason keeps the open check;
+         * Esc and composer focus close regardless.
+         */
+        close: function (reason) {
+          if (reason === 'outside' && !(accountPopover && accountPopover.getAttribute('data-open') === 'true')) return
+          closePopover()
+        },
         openSettings: hostMenu.openSettings,
         owns: function (target) {
           if (!target) return false

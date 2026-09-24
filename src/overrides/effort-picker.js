@@ -248,7 +248,15 @@
 
       ui.effort = {
         sync: syncEffortControl,
-        close: closeEffortPopover,
+        /**
+         * The effort card closes on an outside press and on Esc. Composer focus
+         * is NOT one of its dismiss routes (the model picker closes there, this
+         * one does not), so that reason is ignored.
+         */
+        close: function (reason) {
+          if (reason === 'composer') return
+          closeEffortPopover()
+        },
         owns: ownsEffort,
         reposition: function () { positionEffortTrigger(); positionEffortPopover() },
         teardown: teardown,

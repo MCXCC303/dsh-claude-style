@@ -840,7 +840,13 @@
 
       ui.model = {
         sync: syncModelControl,
-        close: closeModelPopovers,
+        /**
+         * Close both levels of the picker. The scheduler calls this for every
+         * dismiss reason ('outside', 'escape', 'composer') and the picker acts
+         * on all of them, so the reason is ignored; other features (the effort
+         * picker) call it with none.
+         */
+        close: function () { closeModelPopovers() },
         /**
          * The seat slot, the effort descriptor and the commit call: the effort
          * picker (a separate fragment) owns the level's trigger and card, and

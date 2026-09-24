@@ -47,20 +47,19 @@
     function installScheduler(ctx, ui, passFeatures, hookFeatures) {
       function onGlobalPointerDown(e) {
         var target = e.target
-        // The model picker is hover-driven; a press anywhere outside its
-        // trigger and both levels closes it (same discipline as the perm menu).
-        if (target && ui.model && !ui.model.owns(target)) {
-          ui.model.close()
+        // A press a feature does not own closes it: the model picker and the
+        // effort card are hover-driven popovers, the account drawer a click one.
+        // Features without an `owns` keep their own dismiss route — permissions
+        // runs its own outside-press listener, and quickProviders closes only on
+        // composer focus — so none gains a route it did not have.
+        for (var i = 0; i < HOOK_FEATURES.length; i++) {
+          var handle = ui[HOOK_FEATURES[i]]
+          if (!handle || typeof handle.owns !== 'function' || typeof handle.close !== 'function') continue
+          if (target && !handle.owns(target)) handle.close('outside')
         }
-        // The effort card is its own popover with its own trigger, so it closes
-        // on the same press-anywhere-outside rule.
-        if (target && ui.effort && !ui.effort.owns(target)) {
-          ui.effort.close()
-        }
+        // settingsNav's class changes are outside the observer's attributeFilter,
+        // so its sync runs on the press itself. It is last, in feature order.
         if (ui.settingsNav) ui.settingsNav.sync()
-        if (!ui.footer || !ui.footer.isOpen()) return
-        if (target && ui.footer.owns(target)) return
-        ui.footer.close()
       }
 
       function onGlobalKeyDown(e) {
