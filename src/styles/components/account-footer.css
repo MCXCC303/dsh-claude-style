@@ -269,3 +269,96 @@ body[data-dsh-claude-style] .dsh-claude-account-inject {
   padding: 0 !important;
 }
 
+/* ---------- Host account menu: the skin's popover language ---------- */
+/* On a host with an account area (Desktop 0.1.7+) the host renders its own
+   account menu and the skin injects only its header and plugin rows into the
+   list. overrides/account/surface.js marks that menu while it is open, and the
+   rules below repaint the host's card, rows and separators with the same card /
+   row / hairline language as the self-built drawer (components/popover.css).
+   Only appearance is touched: the host keeps its row order, copy and click
+   behaviour. The marker sits on the card itself, so every selector is scoped to
+   it and no other host menu is reached. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] {
+  min-width: 220px !important;
+  max-width: min(340px, calc(100vw - 16px)) !important;
+  padding: 6px !important;
+  border: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+  border-radius: 12px !important;
+  background: var(--dsw-alias-bg-overlay, #ffffff) !important;
+  box-shadow: 0 8px 30px rgba(20, 20, 19, 0.12), 0 2px 8px rgba(20, 20, 19, 0.06) !important;
+  /* The card's visible fill is the MenuSurface material layer, not this box:
+     the surface token is rebound here so that layer paints the same overlay
+     colour, and its backdrop blur is dropped for the flat skin card. */
+  --dsw-menu-surface-fill: var(--dsw-alias-bg-overlay, #ffffff);
+  --dsw-menu-backdrop-filter: none;
+  font-family: var(--dsw-font-family) !important;
+}
+body[data-dsh-claude-style][data-ds-dark-theme] [%%ACCOUNT_MENU_ATTR%%] {
+  background: #1e1e1d !important;
+  border-color: #2e2c29 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  --dsw-menu-surface-fill: #1e1e1d;
+}
+
+/* The host's rows. itemWrap is the shared Menu's row wrapper; the bare item
+   fragment would reach unrelated class names, so the longest stable piece is
+   used. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemWrap"] > [role="menuitem"] {
+  min-height: 32px !important;
+  padding: 2px 7px !important;
+  gap: 8px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  line-height: 20px !important;
+  font-weight: 400 !important;
+  color: var(--dsw-alias-label-primary, #141413) !important;
+  transition: background-color 0.12s ease !important;
+}
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemWrap"] > [role="menuitem"]:hover:not(:disabled),
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemWrap"] > [role="menuitem"]:focus-visible:not(:disabled) {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+/* The selected row keeps the skin's fill rather than the host's stronger
+   accent: the account menu's rows are actions, not a persistent choice. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="selected"] {
+  background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;
+}
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemLabel"] {
+  font-size: 13px !important;
+  line-height: 20px !important;
+}
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemIcon"] {
+  width: 16px !important;
+  height: 16px !important;
+  color: var(--dsw-alias-label-secondary, #787672) !important;
+}
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="itemIcon"] svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Separators take the skin's hairline and bleed across the card's padding the
+   way the drawer's own divider does. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [role="separator"] {
+  height: 1px !important;
+  margin: 2px -6px !important;
+  background: var(--dsw-alias-border-l1, #e8e6dc) !important;
+}
+
+/* The list and its pinned footer sit inside the card's 6px padding; the footer
+   keeps a hairline but takes the skin's spacing. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="viewport"] {
+  padding: 0 !important;
+}
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] [class*="footer"] {
+  margin-top: 2px !important;
+  padding-top: 2px !important;
+  border-top: 1px solid var(--dsw-alias-border-l1, #e8e6dc) !important;
+}
+
+/* Our injected container and header already use the shared popover rules; the
+   host's viewport is a flex column, so the container only needs to fill it. */
+body[data-dsh-claude-style] [%%ACCOUNT_MENU_ATTR%%] .dsh-claude-account-inject {
+  width: 100% !important;
+}
+

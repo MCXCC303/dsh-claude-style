@@ -19,6 +19,8 @@
     function createAccountSurface(options) {
       var mode = null
       var hostContainer = null
+      /** The account menu last marked for the stylesheet, so the marker can move. */
+      var markedMenu = null
 
       function detect() {
         return options.hostTrigger() !== null ? 'host' : 'synthetic'
@@ -28,13 +30,28 @@
         return mode === 'host' ? hostContainer : options.syntheticContainer()
       }
 
+      /**
+       * Stamp the open account menu so the stylesheet can tell the host's
+       * hashed card from its other menus, and clear the stamp when it is gone.
+       * Value-change only: the attribute is written on the transition, never
+       * once per pass.
+       */
+      function markMenu(menu) {
+        if (markedMenu === menu) return
+        if (markedMenu !== null) markedMenu.removeAttribute(ACCOUNT_MENU_ATTR)
+        markedMenu = menu
+        if (menu !== null) menu.setAttribute(ACCOUNT_MENU_ATTR, '')
+      }
+
       function syncHost() {
         var menu = options.findMenu()
         if (menu === null) {
           // Closed: the host unmounted the list, and our node is dead to us.
+          markMenu(null)
           hostContainer = null
           return
         }
+        markMenu(menu)
         var viewport = options.menuViewport(menu)
         if (viewport === null) {
           hostContainer = null
@@ -59,6 +76,7 @@
       return {
         mode: function () { return mode },
         container: container,
+        clearMenu: function () { markMenu(null) },
         sync: sync
       }
     }

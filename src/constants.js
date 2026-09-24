@@ -190,6 +190,14 @@
     /** Present while the composer restyle applies to the page currently shown. */
     var COMPOSER_ATTR = 'data-dsh-claude-composer-active'
     /**
+     * Stamped on the host's own account menu card while it is open (Desktop
+     * 0.1.7+). That card is the host's shared Menu portal and its class names
+     * are hashed, so src/overrides/account/surface.js stamps this attribute and
+     * components/account-footer.css repaints the card, its rows and its
+     * separators with the skin's popover language.
+     */
+    var ACCOUNT_MENU_ATTR = 'data-dsh-claude-account-menu'
+    /**
      * Stamped on the host's shared menu card while it is the hero row's picker
      * (the workspace chip or the agent-preset seat opened it). The host portals
      * that card to <body> with no marker of its own, so the stylesheet cannot

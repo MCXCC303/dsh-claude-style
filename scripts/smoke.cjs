@@ -427,6 +427,11 @@ const PROBE = `(function () {
       await sleep(500)
       var viewport = document.querySelector('body > [role="menu"] [role="presentation"]')
       var inject = document.querySelector('.dsh-claude-account-inject')
+      // The marker the stylesheet hangs the skin's card on. It sits on the
+      // host's own role=menu card, derived from the list it injected into so a
+      // hidden menu portal elsewhere in the page cannot answer for it.
+      var accountMenu = viewport ? viewport.closest('[role="menu"]') : null
+      r.accountMenuMarked = !!(accountMenu && accountMenu.hasAttribute('data-dsh-claude-account-menu'))
       r.injectInViewport = !!(viewport && inject && inject.parentElement === viewport)
       r.injectFirst = !!(viewport && viewport.firstElementChild === inject)
       r.injectRows = inject ? Array.prototype.map.call(inject.children, function (c) {
@@ -455,6 +460,7 @@ const PROBE = `(function () {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
       await sleep(400)
       r.injectAfterClose = document.querySelectorAll('.dsh-claude-account-inject').length
+      r.accountMenuMarkAfterClose = document.querySelectorAll('[data-dsh-claude-account-menu]').length
       // The model picker keeps a hidden role=menu portal in the page, so the
       // account menu is counted by content (its Sign out row), not by role.
       r.hostMenuAfterClose = Array.prototype.filter.call(document.querySelectorAll('body > [role="menu"]'), function (m) {
@@ -640,6 +646,8 @@ const CASES = {
     check('the takeover marks the host account row for the stylesheet',
       r.hostRowMarked === true, JSON.stringify(r.hostRowMarked))
     check('the host trigger row is not hidden', r.triggerRowDisplay !== 'none', JSON.stringify(r.triggerRowDisplay))
+    check('the open host account menu carries the skin marker',
+      r.accountMenuMarked === true, JSON.stringify(r.accountMenuMarked))
     check("our container is injected as the list's first child",
       r.injectInViewport === true && r.injectFirst === true,
       JSON.stringify({ inViewport: r.injectInViewport, first: r.injectFirst }))
@@ -654,6 +662,8 @@ const CASES = {
     check('closing the host menu leaves no injected container behind',
       r.injectAfterClose === 0 && r.hostMenuAfterClose === 0,
       JSON.stringify({ containers: r.injectAfterClose, menus: r.hostMenuAfterClose }))
+    check('closing the host menu clears the skin marker',
+      r.accountMenuMarkAfterClose === 0, JSON.stringify(r.accountMenuMarkAfterClose))
     check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
     check('the first account frame reads the profile exactly once',
       r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))

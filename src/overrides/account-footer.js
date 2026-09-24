@@ -423,6 +423,9 @@
       function dropAccountFooter(footArea) {
         cancelClosePopover()
         dropSynthetic()
+        // The menu marker goes with the takeover: an open host menu must not
+        // keep the skin's card styling after the footer is handed back.
+        surface.clearMenu()
         var injected = document.querySelectorAll('.dsh-claude-account-inject')
         for (var i = 0; i < injected.length; i++) {
           if (injected[i].parentElement) injected[i].parentElement.removeChild(injected[i])
