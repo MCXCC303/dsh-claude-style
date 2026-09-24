@@ -211,9 +211,22 @@
         if (sessions !== undefined && sessions !== null && typeof sessions.open === 'function') sessions.open(id)
       }
 
-      function removeArchived(id) {
+      /**
+       * The route that can delete a stored session, or null when the host offers
+       * none. DSH 0.1.7 gives the browser no session-deletion API of its own: the
+       * workspace controller exposes archive and unarchive, and the agent
+       * protocol's session delete is where the harness delegates to an ACP agent
+       * that owns the storage. The archived row therefore carries a delete button
+       * only while such a provider is on the page.
+       */
+      function deleteProvider() {
         var registry = service('remote.workspaceRegistry')
-        if (registry === undefined || registry === null || typeof registry.deleteSession !== 'function') return
+        return registry !== undefined && registry !== null && typeof registry.deleteSession === 'function' ? registry : null
+      }
+
+      function removeArchived(id) {
+        var registry = deleteProvider()
+        if (registry === null) return
         registry.deleteSession(id).then(function (result) {
           if (!result || result.ok !== true) return
           if (items !== null) items = items.filter(function (row) { return row.id !== id })
@@ -283,10 +296,12 @@
           event.stopPropagation()
           restoreArchived(item.id)
         }))
-        row.appendChild(actionButton('delete', copyLabel('archiveDelete', 'Delete conversation'), DELETE_SVG, function (event) {
-          event.stopPropagation()
-          removeArchived(item.id)
-        }))
+        if (deleteProvider() !== null) {
+          row.appendChild(actionButton('delete', copyLabel('archiveDelete', 'Delete conversation'), DELETE_SVG, function (event) {
+            event.stopPropagation()
+            removeArchived(item.id)
+          }))
+        }
         row.addEventListener('click', function () { openArchived(item.id) })
         return row
       }
