@@ -2,6 +2,20 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
+## [0.7.1] - 2026-09-25
+
+[中文](#cn-0.7.1) | [English](#en-0.7.1)
+
+<h3 id="cn-0.7.1">体验优化</h3>
+
+- **默认首页版面改为工作台**：没在设置里选过版面时，新会话页用工作台版面——问候在左上、输入卡片贴住窗口底边、中间是用量面板、卡片上沿站着像素螃蟹，也就是 Claude Code 自己的首页。经典版面仍可在设置页随时切回，已经选过版面的不受影响。
+
+<h3 id="en-0.7.1">Improvements</h3>
+
+- **Studio is the default home layout**: without a layout chosen in the settings, the new-conversation page opens in the Studio layout — the greeting at the top left, the composer on the window's bottom edge, the usage panel in between and the pixel crab on the card, Claude Code's own home. Classic stays one switch away in the settings page, and a layout already chosen is kept.
+
+**Full Changelog**: [v0.7.0...v0.7.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.7.0...v0.7.1)
+
 ## [0.7.0] - 2026-09-25
 
 [中文](#cn-0.7.0) | [English](#en-0.7.0)
