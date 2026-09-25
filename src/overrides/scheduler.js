@@ -33,6 +33,7 @@
      * Cross-feature reads outside the scheduler stay direct handle reads:
      *   copy, permissions → composer.{isHero, isActive}
      *   heroMenu → composer.isActive
+     *   mascot → composer.heroCard
      *   effort → model.{seat, trigger, effort, named, settled, pickEffort, close}
      *   model → effort.close, composer.isActive
      *   quickProviders → model.{providers, onProviders}
