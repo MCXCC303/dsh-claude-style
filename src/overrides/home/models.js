@@ -2,15 +2,16 @@
      * The panel's Models tab: Claude Code's own shape — a per-day stacked chart
      * over a ranked list of the models that spent those tokens.
      *
-     * The chart stacks each day's per-model totals (the host half's fold
-     * attributes a sample to its route when the event names one), so a model's
+     * The chart stacks each day's per-model totals (the ledger's per-provider
+     * split, or the fold's route attribution when the event names one), so a model's
      * colour is its rank in the list below: the biggest spender is the darkest
      * blue, the ramp walks down to grey, and the list's swatches repeat it. A day
      * whose samples are all unattributed draws no stack.
      *
      * The list is a rank, a name, the input and output sides of its tokens, and
      * its share of the models shown; past HOME_MODEL_ROWS rows it folds behind
-     * one "show more" row, the way Claude Code's does. The chart keeps its own
+     * one "show more" row, the way Claude Code's does, and the open list ends in
+     * a "show less" row that folds it back. The chart keeps its own
      * HOME_CHART_DAYS window while the list follows the range pills, which is the
      * same split the Overview tab's heat grid already uses.
      *
@@ -31,10 +32,26 @@
         return step * magnitude
       }
 
-      /** A day key as the axis writes it: "8/26". */
-      function shortDate(day) {
+      /** A day key as the axis writes it, in the shell's language: "Aug 26". */
+      function shortDate(format, day) {
         var parts = day.split('-')
-        return String(Number(parts[1])) + '/' + String(Number(parts[2]))
+        return format.format(new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])))
+      }
+
+      /**
+       * One token count the way Claude Code's chart and list write it: one
+       * decimal at most, a whole number without its ".0", and a lowercase k —
+       * "109M", "4.4M", "963.6k". The unit is picked on the rounded value, so a
+       * count just under a million reads "1M", never "1000k".
+       */
+      function compactTokens(count) {
+        var value = Number(count) || 0
+        var units = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']]
+        for (var u = 0; u < units.length; u++) {
+          var scaled = Math.round(value / units[u][0] * 10) / 10
+          if (scaled >= 1) return String(scaled) + units[u][1]
+        }
+        return String(Math.round(value))
       }
 
       /** The four buckets' two sides, as the list writes them. */
@@ -64,6 +81,7 @@
           if (total > peak) peak = total
         }
         var top = axisMax(peak)
+        var format = new Intl.DateTimeFormat(activeLocale(), { month: 'short', day: 'numeric' })
         // Four gridlines plus the baseline, Claude Code's own ladder.
         var ticks = [1, 0.75, 0.5, 0.25, 0]
         return React.createElement(
@@ -76,7 +94,7 @@
               return React.createElement(
                 'span',
                 { key: at, className: 'dsh-claude-home-chart-tick', style: { bottom: (at * 100) + '%' } },
-                skeleton || top === 0 ? '' : formatHomeTokens(top * at),
+                skeleton || top === 0 ? '' : compactTokens(top * at),
               )
             }),
             React.createElement(
@@ -89,23 +107,28 @@
                 for (var id in models) {
                   dayTotal += models[id]
                   var rank = rankOf[id]
-                  stack.push({ id: id, tokens: models[id], rank: rank === undefined ? RANK_LAST : rank })
+                  stack.push({ id: id, tokens: models[id], rank: rank === undefined ? Number.MAX_VALUE : rank })
                 }
                 // Biggest first, so the darkest slice sits on the axis.
                 stack.sort(function (left, right) { return left.rank - right.rank })
+                // The column is the day's whole stack, sized against the axis top,
+                // and each slice is its share of the day: both percentages then
+                // resolve against a definite height, and the column's rounding
+                // lands on the top of the stack.
                 return React.createElement(
                   'span',
                   {
                     key: column.date,
                     className: 'dsh-claude-home-chart-col',
-                    title: shortDate(column.date) + ' · ' + formatHomeTokens(dayTotal),
+                    title: shortDate(format, column.date) + ' · ' + compactTokens(dayTotal),
+                    style: { height: (top > 0 ? dayTotal / top * 100 : 0) + '%' },
                   },
                   stack.map(function (slice) {
                     return React.createElement('span', {
                       key: slice.id,
                       className: 'dsh-claude-home-chart-seg',
-                      'data-rank': slice.rank,
-                      style: { height: (top > 0 ? slice.tokens / top * 100 : 0) + '%' },
+                      'data-rank': Math.min(slice.rank, RANK_LAST),
+                      style: { height: (dayTotal > 0 ? slice.tokens / dayTotal * 100 : 0) + '%' },
                     })
                   }),
                 )
@@ -116,9 +139,9 @@
             'div',
             { className: 'dsh-claude-home-chart-axis' },
             list.map(function (column, index) {
-              // Every seventh day, plus the first, so the axis stays readable.
-              var labelled = index === 0 || index % 7 === 0
-              return React.createElement('span', { key: column.date, className: 'dsh-claude-home-chart-label' }, labelled ? shortDate(column.date) : '')
+              // Every third column from the first, Claude Code's own cadence.
+              var labelled = index % 3 === 0
+              return React.createElement('span', { key: column.date, className: 'dsh-claude-home-chart-label' }, labelled ? shortDate(format, column.date) : '')
             }),
           ),
         )
@@ -190,20 +213,24 @@
                   'span',
                   { className: 'dsh-claude-home-model-split' },
                   hasSplit(entry)
-                    ? formatHomeTokens(parts.input) + ' in · ' + formatHomeTokens(parts.output) + ' out'
-                    : formatHomeTokens(entry.tokens),
+                    ? compactTokens(parts.input) + ' in · ' + compactTokens(parts.output) + ' out'
+                    : compactTokens(entry.tokens),
                 ),
                 React.createElement('span', { className: 'dsh-claude-home-model-share' }, share(entry.tokens, total)),
               )
             }),
-            hidden <= 0 ? null : React.createElement(
+            // The fold row turns into its own undo once the list is open.
+            models.length <= HOME_MODEL_ROWS ? null : React.createElement(
               'button',
               {
                 type: 'button',
                 className: 'dsh-claude-home-models-more',
-                onClick: function () { setExpanded(true) },
+                'aria-expanded': expanded,
+                onClick: function () { setExpanded(!expanded) },
               },
-              copyLabel('homeModelsMore', 'Show {count} more', { count: hidden }),
+              expanded
+                ? copyLabel('homeModelsLess', 'Show less')
+                : copyLabel('homeModelsMore', 'Show {count} more', { count: hidden }),
             ),
           ),
         )
