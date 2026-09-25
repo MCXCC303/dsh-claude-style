@@ -229,11 +229,13 @@ theme on its own), an Overview/Models tab pair on the left of its head, and the
 All/30d/7d range pills on the right. The active tab and range pill are a gray
 chip one step below that wash — half the radius the 20px control would round to,
 so it reads as a rounded rectangle rather than a full pill. Overview carries six
-stat cells in a 3×2 grid (sessions, calls, tokens, active days, peak hour, top
-model) whose tiles sit one clear step deeper than the panel (15% of the label
-tone) and set a 12px label over a 13px bold figure — the figure stays barely
-above its own label, which is also what lets a long model id such as
-deepseek-v4.1-flash sit on one line. Once the picked range's total passes one
+stat cells in a 3×2 grid under Claude Code's names (Sessions, Messages, Total
+tokens, Active days, Peak hour, Favorite model) whose tiles sit one clear step
+deeper than the panel (15% of the label tone) and set a 12px label over a 13px
+bold figure — the figure stays barely above its own label, which is also what
+lets a long model id such as deepseek-v4.1-flash sit on one line; the favourite
+model is a name, not a figure, and keeps the regular weight. Messages are the
+settled calls. Once the picked range's total passes one
 book, the yardstick line appears under the grid: eleven books from Animal Farm
 (39k tokens) to In Search of Lost Time (1.6M), each sized at 1.3 tokens a word.
 The book is drawn afresh each time the page comes back to the new-conversation
@@ -243,7 +245,13 @@ grid takes one
 equal column per week (twenty-six weeks), square cells from a 3px gutter, in
 Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
 cell); because the columns are fractions of the panel's own width, the newest
-week can never fall past the edge. Models is Claude Code's own shape: one column
+week can never fall past the edge. Hovering a cell shows Claude Code's day tip at
+once: a solid pill in the label ink with the canvas tone for text (so it inverts
+with the theme), 13px medium, reading the day in the shell's language and its
+messages ("Sep 9 — 15,955"); over the three columns at either end the pill lines
+up with the cell's outer edge so it stays inside the panel. The session list's
+fallback has no per-day message count, and its tip names the day's tokens.
+Models is Claude Code's own shape: one column
 per day of the chart's thirty-day window, stacked from the axis up with each
 model's slice in its rank's colour (ranks past the ramp share its last, grey
 step), four gridlines with their token labels in a 34px left gutter and every
@@ -292,8 +300,9 @@ tertiary label ink. When the crab is clicked, when the pointer leaves it, and on
 seconds while the page is in view, it plays Claude Code's fishing routine
 (about three seconds): a half turn and a wink, the rod raised overhead and cast
 down onto the card's edge, a hop, a spell of fishing side-on, and the rod put
-away as it turns back to face front. With reduced motion requested, it stands
-still. Only the crab takes the pointer; the room the rod swings through does not.
+away as it turns back to face front. With reduced motion requested, only a click
+plays it: the pointer passing by and the idle timer leave it still. Only the crab
+takes the pointer; the room the rod swings through does not.
 
 ## Implementation notes
 
