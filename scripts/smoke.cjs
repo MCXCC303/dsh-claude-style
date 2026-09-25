@@ -951,6 +951,8 @@ const PROBE = `(function () {
         return greetSpan.textContent
       }
       r.greeting = { low: await arrive(0) }
+      // The crab belongs to the studio home page alone.
+      r.classicCrab = document.querySelector('.dsh-claude-mascot') !== null
       document.body.appendChild(document.createElement('i'))
       await sleep(150)
       r.greeting.held = greetSpan.textContent
@@ -1351,6 +1353,7 @@ const CASES = {
         greeting.held === greeting.low && typeof greeting.high === 'string' && greeting.high !== 'Host greeting' &&
         greeting.high !== greeting.low,
       JSON.stringify(greeting))
+    check('the classic hero page carries no crab', r.classicCrab === false, JSON.stringify(r.classicCrab))
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     check('detailed stats keep the merged sentence: host icons hidden, our separator in',
       r.statsMode === 'detailed' && r.statsIcons !== null && r.statsIcons.length === 2 &&

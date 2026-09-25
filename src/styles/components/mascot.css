@@ -1,14 +1,14 @@
 /* ── The composer crab ──────────────────────────────────────────────────────
-   Claude Code's pixel crab standing on the new-conversation card's top edge,
-   near its right end. The canvas is wider and taller than the crab: the room
+   Claude Code's pixel crab standing on the studio home page's card, on its top
+   edge near the right end. The canvas is wider and taller than the crab: the room
    to the crab's left and above it is where the rod swings, and only the crab
    itself takes the pointer. The shell is the clay accent in both themes; the
    rod takes the tertiary label ink, so it stays a quiet warm grey on either
    canvas. */
 
-/* Claude Code's spacing on the single-line card: the right arm 8px inside the
-   card's right edge, so the feet stand where the 18px corner starts to round.
-   The classic hero card rounds at 28px, and the crab steps in to match. */
+/* Claude Code's spacing on the studio page's single-line card: the right arm
+   8px inside the card's right edge, so the feet stand where the 18px corner
+   starts to round. */
 body[data-dsh-claude-style] .dsh-claude-mascot {
   position: absolute;
   right: 8px;
@@ -18,10 +18,6 @@ body[data-dsh-claude-style] .dsh-claude-mascot {
   width: 96px;
   height: 48px;
   pointer-events: none;
-}
-
-body[data-dsh-claude-style] [data-composer-variant="hero"] > .dsh-claude-mascot {
-  right: 18px;
 }
 
 body[data-dsh-claude-style] .dsh-claude-mascot svg {

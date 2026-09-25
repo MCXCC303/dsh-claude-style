@@ -290,11 +290,11 @@ placeholder, a zero day draws the grid's own base tone.
 
 ## The composer crab · 输入卡片上的螃蟹
 
-On the new-conversation page, in both layouts, Claude Code's pixel crab stands on
+On the studio layout's new-conversation page, Claude Code's pixel crab stands on
 the composer card's top edge: 4px cells, a nine-cell shell with two-cell arms
-(52×32px), feet on the card's edge and the right arm 8px inside the card's right
-edge on the single-line card (18px radius) — 18px on the classic hero card, whose
-28px corner starts further in. The shell is the clay accent `#d97757` in both
+(52×32px), feet on the card's edge and the right arm 8px inside the single-line
+card's right edge, so the feet stand where its 18px corner starts to round. The
+classic layout keeps its centred hero without the crab. The shell is the clay accent `#d97757` in both
 themes, the side-on back is `#b9603f`, the eyes `#141413`, and the rod takes the
 tertiary label ink. When the crab is clicked, when the pointer leaves it, and on its own every 25–45
 seconds while the page is in view, it plays Claude Code's fishing routine

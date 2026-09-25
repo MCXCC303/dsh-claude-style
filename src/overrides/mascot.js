@@ -1,6 +1,7 @@
     /**
-     * The crab that sits on the new-conversation composer: Claude Code's own
-     * pixel mascot, perched on the card's top edge near its right end.
+     * The crab that sits on the studio home page's composer: Claude Code's own
+     * pixel mascot, perched on the card's top edge near its right end. The
+     * classic home page keeps its centred hero without it.
      *
      * It stands still facing the reader. When it is clicked, when the pointer
      * leaves it, and now and then on its own while the hero page stays up, it
@@ -320,9 +321,9 @@
         }, IDLE_MIN_MS + Math.random() * IDLE_SPAN_MS)
       }
 
-      /** Each pass: the crab rides the hero card, and leaves with it. */
+      /** Each pass: the crab rides the studio hero's card, and leaves with it. */
       function sync() {
-        var card = ui.composer.heroCard()
+        var card = readPrefs().homeLayout === HOME_LAYOUT_STUDIO ? ui.composer.heroCard() : null
         if (card === null) {
           if (root !== null && root.parentNode !== null) {
             stopRoutine()
