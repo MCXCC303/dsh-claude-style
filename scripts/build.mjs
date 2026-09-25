@@ -98,6 +98,7 @@ const FRAGMENTS = [
   'overrides/theme-flip.js',
   'overrides/workspace-view.js',
   'overrides/view-tabs.js',
+  'overrides/home-layout.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',
@@ -123,6 +124,7 @@ const STYLE_FILES = [
   { file: 'components/footer-takeover.css' },
   { file: 'components/third-party.css' },
   { file: 'components/settings.css' },
+  { file: 'components/home-panel.css' },
   { file: 'components/theme-flip.css' },
 ]
 

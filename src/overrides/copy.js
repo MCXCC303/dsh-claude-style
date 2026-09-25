@@ -10,7 +10,11 @@
       ]
 
       function rewriteHeadline() {
-        var greeting = pickHeroGreeting(getUsername(ctx))
+        // The studio dashboard shows one fixed line; the classic hero keeps the
+        // clock-driven welcomes.
+        var greeting = readPrefs().homeLayout === HOME_LAYOUT_STUDIO
+          ? pickStudioGreeting(getUsername(ctx))
+          : pickHeroGreeting(getUsername(ctx))
         var groups = document.querySelectorAll('[class*="titleGroup"]')
         for (var i = 0; i < groups.length; i++) {
           var spans = groups[i].children

@@ -164,12 +164,26 @@ body[data-dsh-claude-style] .dsh-claude-archive-time {
   color: var(--dsw-alias-label-caption, #a6a094) !important;
   font-size: 11px !important;
 }
-/* The two row actions stay out of the way until the row is hovered: the list is
-   for reading, and a column of buttons reads as a toolbar. Each button lives in
-   the span its React root renders into. */
+/* Hover swaps the trailing time for the two row actions, the way the host's
+   own session rows swap their time cell for the action buttons — so at rest
+   the time right-aligns with the row and nothing sits reserved beside it. */
+body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-time,
+body[data-dsh-claude-style] .dsh-claude-archive-row:focus-visible .dsh-claude-archive-time {
+  display: none !important;
+}
+/* The two row actions follow the host's own session rows: display none while
+   the row is at rest — nothing sits reserved at the row's right end, and the
+   invisible buttons offered phantom click targets there — and on hover, or
+   while the row holds keyboard focus (a display:none button cannot be tabbed
+   to), they take the time's place. Each button lives in the span its React
+   root renders into. */
 body[data-dsh-claude-style] .dsh-claude-archive-action {
-  display: inline-flex !important;
+  display: none !important;
   flex: none !important;
+}
+body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-action,
+body[data-dsh-claude-style] .dsh-claude-archive-row:focus-visible .dsh-claude-archive-action {
+  display: inline-flex !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-delete,
 body[data-dsh-claude-style] .dsh-claude-archive-restore {
@@ -185,14 +199,7 @@ body[data-dsh-claude-style] .dsh-claude-archive-restore {
   background: transparent !important;
   color: var(--dsw-alias-label-caption, #a6a094) !important;
   cursor: pointer !important;
-  opacity: 0 !important;
-  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease !important;
-}
-body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-delete,
-body[data-dsh-claude-style] .dsh-claude-archive-row:hover .dsh-claude-archive-restore,
-body[data-dsh-claude-style] .dsh-claude-archive-delete:focus-visible,
-body[data-dsh-claude-style] .dsh-claude-archive-restore:focus-visible {
-  opacity: 1 !important;
+  transition: background-color 0.12s ease, color 0.12s ease !important;
 }
 body[data-dsh-claude-style] .dsh-claude-archive-restore:hover {
   background: var(--dsh-claude-hover-bg, rgba(0, 0, 0, 0.08)) !important;

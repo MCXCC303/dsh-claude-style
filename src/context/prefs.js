@@ -68,6 +68,7 @@
       quickProviders: [],
       username: '',
       banLocale: fallbackBanLocale || DEFAULT_BAN_LOCALE,
+      homeLayout: DEFAULT_HOME_LAYOUT,
     }
     var prefsAvailable = false
     var prefsListeners = []
@@ -81,6 +82,12 @@
      * namespace; until then the defaults hold.
      */
     var prefsForm = null
+    /** Disposer for the bound form's own change subscription. */
+    var prefsFormUnsubscribe = null
+    /** Disposer for the served-namespace directory watch, while one is open. */
+    var prefsWatchOff = null
+    /** Whether the served-namespace directory is already being watched. */
+    var prefsBinding = false
 
     /**
      * Candidate namespaces, best first: the running loader entry id (host
@@ -159,21 +166,19 @@
     }
 
     /**
-     * Bind the official form.
+     * Bind one namespace the host already serves.
      *
-     * Called once per install, before the first read, and again when the
-     * settings page installs — the service may mount after this plugin. A
-     * namespace the host does not serve yet leaves `prefsForm` null and the
-     * defaults in place, so this never blocks or fails the skin.
+     * The controller waits for its own snapshot, so binding is the only step
+     * here; the value is read once the controller carries it.
+     *
+     * @param forms - the `configForms` service.
+     * @param ctx - the owning context, for the namespace candidates.
+     * @returns whether the form was bound.
      */
-    function adoptSettingsForm(ctx) {
-      if (prefsForm !== null) return true
-      var forms = hostConfigForms(ctx)
-      if (forms === null) return false
+    function bindServedForm(forms, ctx) {
       // Only bind a namespace the host actually serves; a generated loader id
       // would yield a controller for nobody's namespace (reads stuck at the
-      // defaults, every write refused). Not served yet -> leave it unbound and
-      // let the next install try again.
+      // defaults, every write refused).
       var namespace = servedNamespace(forms, settingsNamespaceCandidates(ctx))
       if (namespace === null) return false
       var form = null
@@ -186,7 +191,7 @@
       prefsForm = form
       if (typeof form.subscribe === 'function') {
         try {
-          form.subscribe(function () {
+          prefsFormUnsubscribe = form.subscribe(function () {
             var value = readFormValue()
             if (value === null) return
             prefsAvailable = true
@@ -196,6 +201,76 @@
         } catch (error) { /* no subscribe face: reads stay on demand */ }
       }
       return true
+    }
+
+    /**
+     * Watch the served-namespace directory until this plugin's namespace lands.
+     *
+     * The directory is a wire read: on a cold page it can answer after this
+     * plugin has applied. A one-shot decision at apply time then left the store
+     * unbound for the rest of the session, and the settings page reported the
+     * store unavailable on the first change. The mirror is subscribed and asked
+     * for its first read, so the form binds whenever the answer arrives.
+     *
+     * @param forms - the `configForms` service.
+     * @param ctx - the owning context, for the namespace candidates.
+     */
+    function watchNamespace(forms, ctx) {
+      if (prefsBinding) return
+      var mirror = null
+      try {
+        mirror = typeof forms.describe === 'function' ? forms.describe() : null
+      } catch (error) {
+        mirror = null
+      }
+      if (mirror === null) return
+      prefsBinding = true
+      var attempt = function () {
+        if (prefsForm === null && !bindServedForm(forms, ctx)) return
+        if (prefsWatchOff !== null) {
+          try { prefsWatchOff() } catch (error) { /* already gone */ }
+          prefsWatchOff = null
+        }
+        loadPrefs()
+      }
+      try {
+        if (typeof mirror.subscribe === 'function') prefsWatchOff = mirror.subscribe(attempt)
+        if (typeof mirror.ensure === 'function') mirror.ensure()
+      } catch (error) { /* the mirror may already be gone */ }
+      attempt()
+    }
+
+    /**
+     * Bind the official form.
+     *
+     * Called once per install, before the first read, and again when the
+     * settings page installs — the service may mount after this plugin. A
+     * namespace the host does not serve yet leaves `prefsForm` null and the
+     * defaults in place, so this never blocks or fails the skin.
+     */
+    function adoptSettingsForm(ctx) {
+      if (prefsForm === null) {
+        var forms = hostConfigForms(ctx)
+        if (forms === null) return false
+        if (!bindServedForm(forms, ctx)) watchNamespace(forms, ctx)
+      }
+      if (prefsForm === null) return false
+      loadPrefs()
+      return true
+    }
+
+    /** Release the form and directory subscriptions this module opened. */
+    function disposePrefsBinding() {
+      if (prefsFormUnsubscribe !== null) {
+        try { prefsFormUnsubscribe() } catch (error) { /* already gone */ }
+        prefsFormUnsubscribe = null
+      }
+      if (prefsWatchOff !== null) {
+        try { prefsWatchOff() } catch (error) { /* already gone */ }
+        prefsWatchOff = null
+      }
+      prefsBinding = false
+      prefsForm = null
     }
 
     /**
@@ -342,6 +417,7 @@
         quickProviders: normalizeQuickProviders(section.quickProviders),
         username: (typeof section.username === 'string' ? section.username.trim().slice(0, USERNAME_MAX) : '') || fallbackUsername,
         banLocale: resolveBanLocale(section.banLocale),
+        homeLayout: HOME_LAYOUTS.indexOf(section.homeLayout) === -1 ? DEFAULT_HOME_LAYOUT : section.homeLayout,
       }
     }
 

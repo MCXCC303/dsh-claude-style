@@ -17,6 +17,8 @@
       var hero = false
       /** Whether the composer restyle applies to the page shown, as of the last reading. */
       var active = false
+      /** Whether the studio home layout owns the hero page, as of the last reading. */
+      var studioHome = false
 
       /**
        * Read the page's composer state. The host marks the conversation root
@@ -29,6 +31,7 @@
         hero = document.querySelector('[data-phase="hero"]') !== null
         var scope = readPrefs().composerScope
         active = !composerRestyleRetired && (scope === 'all' || (hero ? scope === 'hero' : scope === 'conversation'))
+        studioHome = hero && readPrefs().homeLayout === HOME_LAYOUT_STUDIO
       }
 
       /**
@@ -37,9 +40,12 @@
        * through :has() on every DOM mutation. Write only when the value differs
        * (re-setting the same value still invalidates the element's styles), and
        * once per stack even when several cards share one.
+       *
+       * The studio home layout draws its composer in the conversation's
+       * single-line form, so a studio hero page stamps `inline`, not `hero`.
        */
       function syncVariant(cards) {
-        var value = hero ? 'hero' : 'inline'
+        var value = hero && !studioHome ? 'hero' : 'inline'
         var syncedStacks = []
         for (var c = 0; c < cards.length; c++) {
           var card = cards[c]

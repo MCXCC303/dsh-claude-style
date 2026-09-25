@@ -20,7 +20,23 @@
     "archiveJustNow": { "zh": "刚刚", "en": "Just now" },
     "archiveMinutes": { "zh": "{count} 分钟", "en": "{count} min" },
     "archiveHours": { "zh": "{count} 小时", "en": "{count} h" },
-    "archiveDays": { "zh": "{count} 天", "en": "{count} d" }
+    "archiveDays": { "zh": "{count} 天", "en": "{count} d" },
+    "homeTabOverview": { "zh": "概览", "en": "Overview" },
+    "homeTabModels": { "zh": "模型", "en": "Models" },
+    "homeRangeAll": { "zh": "全部", "en": "All" },
+    "homeRange30d": { "zh": "30 天", "en": "30d" },
+    "homeRange7d": { "zh": "7 天", "en": "7d" },
+    "homePeakHour": { "zh": "高峰时段", "en": "Peak hour" },
+    "homeHourAm": { "zh": "上午 {hour} 点", "en": "{hour} AM" },
+    "homeHourPm": { "zh": "下午 {hour} 点", "en": "{hour} PM" },
+    "homeFunHobbit": { "zh": "你的累计用量相当于 {count} 本《霍比特人》。", "en": "You've used ~{count}× more tokens than The Hobbit." },
+    "homeModelSessions": { "zh": "{count} 个会话", "en": "{count} sessions" },
+    "homeModelsEmpty": { "zh": "暂无模型数据", "en": "No model data yet" },
+    "homeTokens": { "zh": "Token", "en": "Tokens" },
+    "homeCalls": { "zh": "调用次数", "en": "Calls" },
+    "homeSessions": { "zh": "会话数", "en": "Sessions" },
+    "homeActiveDays": { "zh": "活跃天数", "en": "Active days" },
+    "homeTopModel": { "zh": "常用模型", "en": "Top model" }
   },
   "settings": {
     "title": { "zh": "Claude Style", "en": "Claude Style" },
@@ -47,6 +63,13 @@
       "zh": "重绘输入区，可选新会话页、对话内或两者。",
       "en": "Which input area the skin restyles: the new-conversation page, the conversation, or both. The hero brand mark and headline are unaffected."
     },
+    "homeTitle": { "zh": "首页版面", "en": "Home layout" },
+    "homeDesc": {
+      "zh": "新会话页的排布：「经典」是居中大标题加输入卡片；「工作台」把标题移到左上、输入卡片贴住窗口底部，中间显示用量统计。",
+      "en": "The new-conversation page: the centered hero, or the dashboard form with the greeting at the top left, the composer at the bottom edge and the usage panel in between."
+    },
+    "homeClassic": { "zh": "经典", "en": "Classic" },
+    "homeStudio": { "zh": "工作台", "en": "Studio" },
     "pickerTitle": { "zh": "重做模型选择器", "en": "Redraw the model picker" },
     "pickerDesc": {
       "zh": "把输入框的模型席位换成 Claude 风格的两级弹层。关闭后交回系统自己的模型菜单，输入区其余改动不受影响。",

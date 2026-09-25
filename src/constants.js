@@ -71,6 +71,15 @@
     }
 
     /**
+     * The studio dashboard's greeting, à la Claude Code's desktop home: one
+     * fixed line naming the signed-in user, no clock. The classic hero keeps
+     * the rotating welcomes.
+     */
+    function pickStudioGreeting(username) {
+      return "What's up next, " + (username || 'User') + '?'
+    }
+
+    /**
      * Claude Code's 185 playful spinner verbs displayed while thinking / executing.
      * Recreates the iconic CLI waiting experience in the DSH web interface.
      */
@@ -151,15 +160,8 @@
       }
     ]
 
-    /** The presets the shipped UI gates behind its risk-confirmation dialog. */
-    var GATED_PRESET = 'danger-full-access'
+    /** The preset the auto-review integration registers, offered only while it is live. */
     var AUTO_REVIEW_PRESET = 'auto'
-    /** Shipped risk-gated row labels, used to find those rows in the shipped menu. */
-    var FULL_ACCESS_LABELS = ['完全权限', 'Full access']
-    var AUTO_REVIEW_LABELS = ['Auto review', 'Auto review EXP']
-    /** Fallback prompts, used only when the shipped menu cannot be reached. */
-    var GATED_PROMPT = '启用完全权限（Yolo）？\n\n智能体将减少确认步骤，可直接执行敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。'
-    var AUTO_REVIEW_PROMPT = '启用 Auto review（实验）？\n\nAuto review 不使用沙箱。每次原生工具调用和 PTC 内层调用前，都会由与当前 agent 相同的模型进行审查。此功能仍属实验性，可能误放行或误拒绝，并会消耗额外 token。'
 
     /** Skin-owned class names, so nothing couples to hashed CSS-module classes. */
     var SEGMENTS_CLASS = 'dsh-claude-segments'
@@ -241,6 +243,12 @@
      */
     var WINDOW_BLUR_ATTR = 'data-dsh-window-blur'
     /**
+     * Which home layout is in force. The stylesheet branches on it, and the two
+     * layouts differ only in arrangement — the hero's own markup is the host's
+     * either way, so the switch is one attribute plus the panel registration.
+     */
+    var HOME_LAYOUT_ATTR = 'data-dsh-claude-home-layout'
+    /**
      * The host half's session-deletion route (lib/index.js, SESSION_DELETE_PATH).
      * The harness gives the browser half no deletion API of its own, so the
      * archived row's delete button posts the session id here and the host half
@@ -248,6 +256,22 @@
      * half.
      */
     var SESSION_DELETE_ROUTE = '/dsh-claude-style/session-delete'
+    /**
+     * The host half's cross-session usage roll-up (lib/index.js, USAGE_PATH).
+     * The browser half cannot read the session logs or the cost-meter ledger, so
+     * the day buckets behind the home dashboard's panel arrive from here.
+     */
+    var USAGE_ROUTE = '/dsh-claude-style/usage'
+    /**
+     * Home-page layouts. `classic` is the centered hero the skin has always
+     * drawn; `studio` is the dashboard form: the greeting sits at the top left,
+     * the composer hugs the window's bottom edge, and the usage panel fills the
+     * space between them.
+     */
+    var HOME_LAYOUT_CLASSIC = 'classic'
+    var HOME_LAYOUT_STUDIO = 'studio'
+    var HOME_LAYOUTS = [HOME_LAYOUT_CLASSIC, HOME_LAYOUT_STUDIO]
+    var DEFAULT_HOME_LAYOUT = HOME_LAYOUT_CLASSIC
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /**

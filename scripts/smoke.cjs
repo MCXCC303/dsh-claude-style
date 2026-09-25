@@ -280,6 +280,31 @@ const STAND_IN = `(function () {
     closeHostMenu()
   }, true)
 
+  // The hero row's workspace trigger and the host menu its click toggles, for the
+  // popovers case: the skin opens this menu by pressing the trigger once the
+  // dwell has passed, and folds it the same way when another card opens.
+  if (CASE === 'popovers') {
+    var heroTrigger = document.getElementById('hero-workspace')
+    var heroMenu = null
+    function closeHeroMenu() {
+      if (heroMenu && heroMenu.parentElement) heroMenu.parentElement.removeChild(heroMenu)
+      heroMenu = null
+      heroTrigger.setAttribute('aria-expanded', 'false')
+    }
+    heroTrigger.addEventListener('click', function () {
+      if (heroMenu) { closeHeroMenu(); return }
+      heroMenu = document.createElement('div')
+      heroMenu.setAttribute('role', 'menu')
+      heroMenu.innerHTML = '<div class="itemWrap"><button type="button" role="menuitem">Workspace A</button></div>'
+      document.body.appendChild(heroMenu)
+      heroTrigger.setAttribute('aria-expanded', 'true')
+    })
+    document.addEventListener('keydown', function (e) {
+      if (heroMenu && e.key === 'Escape') closeHeroMenu()
+    })
+    window.__heroMenuOpen = function () { return heroMenu !== null }
+  }
+
   window.__keys = []
   var menuOpen = true
   document.getElementById('editor').addEventListener('keydown', function (e) {
@@ -297,7 +322,7 @@ const STAND_IN = `(function () {
   }
   var username = CASE === 'markup' ? MARKUP : CASE === 'desktop' || CASE === 'hdsl' ? '' : 'Tester'
   var form = {
-    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true } } },
+    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true, homeLayout: CASE === 'studio' || CASE === 'late-forms' ? 'studio' : 'classic' } } },
     subscribe: function () { return function () {} },
     set: function () { return Promise.resolve(true) },
   }
@@ -403,13 +428,44 @@ const STAND_IN = `(function () {
   var sessions = CASE === 'sync-fault'
     ? { list: { getSnapshot: function () { throw new Error('session list unavailable') } }, binding: function () { return null } }
     : undefined
+  // The served-namespace directory. The late-forms case starts empty and gains
+  // the namespace after apply, the way a cold page sees the host's wire read
+  // answer after this plugin has already installed.
+  var formsView = { namespaces: CASE === 'late-forms' ? [] : [{ ns: 'ui-skin-claude-style' }] }
+  var formsListeners = []
   var forms = {
     get: function () { return form },
-    // The served-namespace mirror: the skin binds only a namespace listed here.
     describe: function () {
-      return { getSnapshot: function () { return { view: { namespaces: [{ ns: 'ui-skin-claude-style' }] } } } }
+      return {
+        getSnapshot: function () { return { view: formsView } },
+        subscribe: function (listener) {
+          formsListeners.push(listener)
+          return function () {
+            var at = formsListeners.indexOf(listener)
+            if (at !== -1) formsListeners.splice(at, 1)
+          }
+        },
+        ensure: function () { return Promise.resolve() },
+      }
     },
   }
+  window.__serveNamespace = function () {
+    formsView = { namespaces: [{ ns: 'ui-skin-claude-style' }] }
+    for (var fi = 0; fi < formsListeners.length; fi++) formsListeners[fi]()
+  }
+  // The studio case needs the slot registry: the home panel is an entry in the
+  // dock list seat (a list seat, so it carries an id), and the registration is
+  // the whole wiring — the seat's own rendering is the host's.
+  var slotRegistry = CASE === 'studio' ? {
+    inject: function (key, callback) {
+      return key === 'conversation.input.dock' ? callback() : function () {}
+    },
+    register: function (spec, component) {
+      window.__slots = window.__slots || []
+      window.__slots.push({ key: spec.name, id: spec.id, order: spec.order, component: typeof component })
+      return function () {}
+    },
+  } : undefined
   window.__ctx = {
     fiber: { entry: { id: 'ui-skin-claude-style' } },
     get: function (name) {
@@ -418,15 +474,17 @@ const STAND_IN = `(function () {
       if (name === 'remote.permissionPresets') return permissionPresets
       if (name === 'remote') return CASE === 'desktop' ? remote : undefined
       if (name === 'sessions') return sessions
+      if (name === 'slots') return slotRegistry
       return undefined
     },
     effect: function (fn) { window.__dispose = fn() },
   }
   // The desktop account service mounts after this plugin does, so the skin waits
-  // for it through ctx.inject; the other cases keep no inject, which is what
-  // makes them read synchronously at install (the install-fault case depends on
-  // that read throwing).
-  if (CASE === 'desktop') {
+  // for it through ctx.inject; the studio case waits for the slot registry the
+  // same way. The other cases keep no inject, which is what makes them read
+  // synchronously at install (the install-fault case depends on that read
+  // throwing).
+  if (CASE === 'desktop' || CASE === 'studio') {
     window.__ctx.inject = function (deps, cb) {
       var disposers = []
       cb({
@@ -527,6 +585,53 @@ const PROBE = `(function () {
         }
       }
       return false
+    }
+    if (window.SMOKE_CASE === 'late-forms') {
+      // The directory has not answered yet: the skin holds the defaults.
+      r.lateBefore = document.body.getAttribute('data-dsh-claude-home-layout')
+      window.__serveNamespace()
+      // A pass is driven by a mutation, the way the live page drives one.
+      document.body.appendChild(document.createElement('i'))
+      await sleep(200)
+      r.lateAfter = document.body.getAttribute('data-dsh-claude-home-layout')
+    }
+    if (window.SMOKE_CASE === 'popovers') {
+      // The shared popover rule (popover-utils.js): the dwell keeps a pointer that
+      // merely crosses a trigger from unfolding anything, and only one card is up
+      // at a time — whichever opens last folds the one before it.
+      // The controls are built by the first scheduler pass, not by apply().
+      await sleep(500)
+      var permTrigger = document.querySelector('.dsh-claude-perm-btn')
+      var drawerTrigger = document.querySelector('.dsh-claude-account-btn')
+      var heroTrigger = document.getElementById('hero-workspace')
+      function permUp() { return document.querySelectorAll('.dsh-claude-perm-popover[data-open="true"]').length }
+      function drawerUp() { return document.querySelectorAll('.dsh-claude-account-popover[data-open="true"]').length }
+      // The dwell is 100 ms: at 50 ms a crossing pointer has opened nothing, and
+      // by 250 ms a pointer that stayed has the card.
+      permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(50)
+      r.permOpenAtDwell = permUp()
+      await sleep(200)
+      r.permOpenPastDwell = permUp()
+      // The drawer opens over the permission card and folds it.
+      drawerTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(250)
+      r.drawerUp = drawerUp()
+      r.permFoldedByDrawer = permUp()
+      // The hero row's host menu opens on the same dwell, over the drawer.
+      heroTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.heroUp = window.__heroMenuOpen()
+      r.drawerFoldedByHero = drawerUp()
+      // ...and the permission card folds the host menu on its way back.
+      permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(250)
+      r.permReopened = permUp()
+      r.heroFoldedByPerm = window.__heroMenuOpen()
+      permTrigger.dispatchEvent(new MouseEvent('mouseleave'))
+      drawerTrigger.dispatchEvent(new MouseEvent('mouseleave'))
+      await sleep(250)
+      r.cardsLeftAfterLeave = permUp() + drawerUp()
     }
     if (window.SMOKE_CASE === 'sync-fault') {
       // A sync is retired after failing three passes in a row: drive four.
@@ -727,6 +832,9 @@ const PROBE = `(function () {
     // skin must leave the body marker off and keep its measured placement.
     r.titlebarTabs = document.body.hasAttribute('data-dsh-titlebar-tabs')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
+    r.homeLayoutAttr = document.body.getAttribute('data-dsh-claude-home-layout')
+    r.homeLayoutExpected = window.SMOKE_CASE === 'studio' || window.SMOKE_CASE === 'late-forms' ? 'studio' : null
+    r.slotRegistrations = window.__slots || null
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
     // The host's own access-mode button: the permission control stands in for
     // it while installed, and hands it back when switched off.
@@ -834,6 +942,13 @@ function page(name) {
         '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="105 tok · Cache hit 90%">' +
           '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">105 tok · Cache hit 90%</span></button></span>' +
       '</div>'
+  // The hero row's workspace trigger, only where the popovers case drives it: the
+  // host's own menu there is opened and closed by pressing this button.
+  var heroRow = name === 'popovers'
+    ? '<div class="_x_heroWorkspaceRow_1">' +
+        '<button type="button" id="hero-workspace" aria-haspopup="menu" aria-expanded="false">workspace</button>' +
+      '</div>'
+    : ''
   // Two of the host's own controls, painted the way the host paints them: the
   // chat's "load earlier" chip (secondary ink on the solid hover fill) and a
   // filled anchor button (AccountSection's "充值", `_linkButton _primary`). The
@@ -859,6 +974,7 @@ ${footer}
   <div class="_x_sessionRow_1" role="treeitem"><span class="_x_slot_1"><svg data-state="ongoing" viewBox="0 0 16 16" width="10" height="10"></svg></span><span class="_x_title_1">running session</span></div>
 </div>
 <div data-composer-card>
+${heroRow}
   <div class="_x_toolbar_1"><button aria-label="Access mode: Edit">Edit</button></div>
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
   <button aria-label="Send" id="send">Send</button>
@@ -887,6 +1003,9 @@ function contrast(a, b) {
 
 /** Checks every case shares: a clean teardown and an idle scheduler. */
 function commonChecks(r) {
+  check('the home layout attribute follows the preference',
+    r.homeLayoutAttr === r.homeLayoutExpected,
+    JSON.stringify({ attribute: r.homeLayoutAttr, expected: r.homeLayoutExpected }))
   check("the host's solid hover chip keeps its label readable on its fill",
     r.chipInk !== null && r.chipFill !== null && contrast(r.chipInk, r.chipFill) >= 4.5,
     JSON.stringify({ ink: r.chipInk, fill: r.chipFill }))
@@ -997,6 +1116,29 @@ const CASES = {
     check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Tester', JSON.stringify(r.accountUser))
     commonChecks(r)
   },
+  studio(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('the studio preference reaches the document',
+      r.homeLayoutAttr === 'studio', JSON.stringify(r.homeLayoutAttr))
+    check('the usage panel registers into the dock list seat with an id',
+      Array.isArray(r.slotRegistrations) && r.slotRegistrations.length === 1 &&
+        r.slotRegistrations[0].key === 'conversation.input.dock' &&
+        r.slotRegistrations[0].id === 'claude-style-usage' &&
+        r.slotRegistrations[0].component === 'function',
+      JSON.stringify(r.slotRegistrations))
+    check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
+    commonChecks(r)
+  },
+  'late-forms'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('the store stays on the defaults until the namespace is served',
+      r.lateBefore === null, JSON.stringify(r.lateBefore))
+    check('a namespace served after apply still binds the form and its value',
+      r.lateAfter === 'studio' && r.homeLayoutAttr === 'studio',
+      JSON.stringify({ after: r.lateAfter, final: r.homeLayoutAttr }))
+    commonChecks(r)
+  },
   'no-auto-review'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
@@ -1009,6 +1151,26 @@ const CASES = {
       Array.isArray(r.permRows) && r.permRows.length === 4 &&
         r.permRows.every(function (row) { return row.preset === 'auto' ? row.display === 'none' : row.display !== 'none' }),
       JSON.stringify(r.permRows))
+    commonChecks(r)
+  },
+  popovers(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('a pointer crossing a trigger opens nothing before the dwell elapses',
+      r.permOpenAtDwell === 0, `${r.permOpenAtDwell} open at 50 ms`)
+    check('a pointer that stays the dwell out opens the card',
+      r.permOpenPastDwell === 1, `${r.permOpenPastDwell} open past the dwell`)
+    check('opening the account drawer folds the permission card',
+      r.drawerUp === 1 && r.permFoldedByDrawer === 0,
+      JSON.stringify({ drawer: r.drawerUp, permission: r.permFoldedByDrawer }))
+    check("opening the hero row's host menu folds the drawer",
+      r.heroUp === true && r.drawerFoldedByHero === 0,
+      JSON.stringify({ hero: r.heroUp, drawer: r.drawerFoldedByHero }))
+    check('opening the permission card folds the hero menu',
+      r.permReopened === 1 && r.heroFoldedByPerm === false,
+      JSON.stringify({ permission: r.permReopened, hero: r.heroFoldedByPerm }))
+    check('leaving every trigger leaves no card up',
+      r.cardsLeftAfterLeave === 0, `${r.cardsLeftAfterLeave} open`)
     commonChecks(r)
   },
   desktop(r) {
@@ -1074,6 +1236,13 @@ async function runCase(port, base, name) {
     await tab.send('Page.navigate', { url: `${base}/${name}` })
     for (let i = 0; i < 100; i++) {
       const out = await tab.send('Runtime.evaluate', { expression: 'window.__smoke', awaitPromise: true, returnByValue: true })
+      // A probe that throws rejects its promise, which CDP answers as an
+      // exception carrying an empty object as the value: without this the case
+      // would report "no report" instead of the failure that caused it.
+      if (out.result && out.result.exceptionDetails) {
+        const exception = out.result.exceptionDetails.exception
+        throw new Error(`case "${name}" threw: ${(exception && exception.description) || out.result.exceptionDetails.text}`)
+      }
       const result = out.result && out.result.result
       if (result && result.type === 'object') return result.value
       await sleep(100)

@@ -18,10 +18,12 @@
         }
         installed = []
         setHostContext(null)
+        disposePrefsBinding()
         body.removeAttribute('data-dsh-claude-style')
         body.removeAttribute(BRAND_ATTR)
         body.removeAttribute(FOOTER_ATTR)
         body.removeAttribute(COMPOSER_ATTR)
+        body.removeAttribute(HOME_LAYOUT_ATTR)
         body.removeAttribute(WINDOW_BLUR_ATTR)
         var el = document.getElementById(STYLE_ID)
         if (el) el.remove()
@@ -91,6 +93,9 @@
       // the host serves namespaces through `ctx.configForms`. Bound once here,
       // and retried when the settings page installs.
       adoptSettingsForm(ctx)
+      // The service can mount after this plugin: wait for it declaratively and
+      // bind then, so the first settings change never meets an unbound store.
+      if (typeof ctx.inject === 'function') ctx.inject(['configForms'], function () { adoptSettingsForm(ctx) })
       loadModelCopy()
       loadUsername()
       loadHdsl()
@@ -119,6 +124,7 @@
       var FEATURES = [
         { name: 'selection', install: installSelectionFocus },
         { name: 'composer', install: function () { return installComposer(ctx, ui) } }, // 输入区的布局：每轮先读 hero / 重绘状态，写形态、闸门、附件与上下文圆环
+        { name: 'homeLayout', install: function () { return installHomeLayout(ctx, ui) } }, // 首页版面：打版面属性 + 注册用量面板（数据来自宿主半边的汇总路由）
         { name: 'copy', install: function () { return installCopy(ctx, ui) } },
         { name: 'permissions', install: function () { return installPermissions(ctx, ui) } },
         { name: 'model', install: function () { return installModelPicker(ctx, ui) } },

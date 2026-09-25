@@ -182,6 +182,70 @@ properties on the card (`--dsh-claude-hero-menu-x` / `--dsh-claude-hero-menu-y`,
 written by the same pass that stamps it) which `components/hero-menu.css` reads
 with `!important`; that declaration outranks the host's plain inline value.
 
+## Home layouts · 首页版面
+
+The new-conversation page has two arrangements. `homeLayout` (settings: Home
+layout) writes `data-dsh-claude-home-layout` onto `<body>` and
+`src/styles/components/home-panel.css` branches on it. Both are the host's own
+hero markup — the greeting, the workspace row, the dock and the composer card
+inside `…_composerStack …_composerHero` — so only the arrangement differs.
+
+| | Classic | Studio |
+|---|---|---|
+| greeting | centred, 44.2px serif, brand mark on its line | top left, one fixed line naming the user ("What's up next, …?") in the 20px sans UI face, a 21px brand mark on its line |
+| composer card | vertically centred in the scroll body | the conversation's single-line inline form, resting on the window's bottom edge (16px foot) |
+| between them | — | the usage panel |
+| workspace / preset row | the card's footer tray | hairline chips directly above the card |
+| column width | the hero's centred box | a 720px composer column; the greeting and the panel form a 480px block against its left edge |
+
+The studio composer is stamped `data-composer-variant="inline"` (composer.js's
+pass reads the same preference), so the home card is drawn by the conversation's
+single-line stylesheet. The classic tray rules in `composer/card.css` are scoped
+away from studio with `:not([data-dsh-claude-home-layout="studio"])`. That is
+deliberate: they set `order: 1` / `order: 2` on the same boxes, and a competing
+rule would have to be out-specified rather than merely reordered — scoping them
+removes the contest.
+
+**The usage panel.** It is a `conversation.input.dock` entry (the host's list
+seat between the greeting and the card; a list seat keys its entries by `id`),
+and it renders only in the hero phase — the host mounts that same seat inside a
+conversation, where the todo, queue and goal bars hang on it.
+
+The panel is Claude Code's dashboard shape: a flat warm-gray wash (a
+`color-mix` of the label tone at 4% over the card tone, which flips with the
+theme on its own), an Overview/Models tab pair on the left of its head, and the
+All/30d/7d range pills on the right. The active tab and range pill are a gray
+chip one step below that wash — half the radius the 20px control would round to,
+so it reads as a rounded rectangle rather than a full pill. Overview carries six
+stat cells in a 3×2 grid (sessions, calls, tokens, active days, peak hour, top
+model) whose tiles sit one clear step deeper than the panel (15% of the label
+tone) and set a 12px label over a 13px bold figure — the figure stays barely
+above its own label, which is also what lets a long model id such as
+deepseek-v4.1-flash sit on one line. Once the all-time total passes one copy of
+The Hobbit (123k tokens), the yardstick line appears under the grid. The heat
+grid takes one
+equal column per week (twenty-six weeks), square cells from a 3px gutter, in
+Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
+cell); because the columns are fractions of the panel's own width, the newest
+week can never fall past the edge. Models lists the session list's per-model
+totals as share bars in the same blue. A range window filters the tiles and the
+model rows; the heat grid keeps its own twenty-six-week window.
+
+Two sources, in this order: the host half's usage route, then the session list's
+own projection block (`tokenUsage`, `modelSelection`, `sessionListMetadata`).
+The second answers in a few milliseconds and is the model data's only source;
+the first is the accurate per-event fold, and it alone carries the settlement
+hour histogram (a cost-meter answer has no hour dimension, so the peak-hour cell
+is a dash there) and each day's session ids, which a range window unions into
+one distinct session count. The panel names which one it drew from, and a figure
+neither can answer is a dash.
+
+The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
+of a fixed cell count and stand-in share bars on the models tab — and the heat
+grid's empty cell **is** the zero step, so "no data" and "a day with no usage"
+stay different things: a missing value draws a placeholder, a zero day draws the
+grid's own base tone.
+
 ## Implementation notes
 
 - Every rule is scoped under `body[data-dsh-claude-style]`.
