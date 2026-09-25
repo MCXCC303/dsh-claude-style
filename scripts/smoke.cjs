@@ -1182,12 +1182,12 @@ const CASES = {
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
       JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
-    check('the Auto review row is hidden while the catalog lacks the preset',
-      r.permAutoRowDisplay === 'none',
-      JSON.stringify({ popoverRow: r.permAutoRowDisplay, rows: r.permRows }))
-    check('the other permission rows stay offered',
-      Array.isArray(r.permRows) && r.permRows.length === 4 &&
-        r.permRows.every(function (row) { return row.preset === 'auto' ? row.display === 'none' : row.display !== 'none' }),
+    check('a preset the catalog does not carry is not drawn at all',
+      r.permAutoRowDisplay === null &&
+        same(r.permRows.map(function (row) { return row.preset }), ['read-only', 'workspace-write', 'danger-full-access']),
+      JSON.stringify(r.permRows))
+    check('the rows the catalog does carry stay offered',
+      r.permRows.every(function (row) { return row.display !== 'none' }),
       JSON.stringify(r.permRows))
     commonChecks(r)
   },
