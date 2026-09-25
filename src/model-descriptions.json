@@ -32,6 +32,7 @@
     "homeFunHobbit": { "zh": "你的累计用量相当于 {count} 本《霍比特人》。", "en": "You've used ~{count}× more tokens than The Hobbit." },
     "homeModelSessions": { "zh": "{count} 个会话", "en": "{count} sessions" },
     "homeModelsEmpty": { "zh": "暂无模型数据", "en": "No model data yet" },
+    "homeModelsMore": { "zh": "再显示 {count} 个", "en": "Show {count} more" },
     "homeTokens": { "zh": "Token", "en": "Tokens" },
     "homeCalls": { "zh": "调用次数", "en": "Calls" },
     "homeSessions": { "zh": "会话数", "en": "Sessions" },

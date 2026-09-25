@@ -1,7 +1,8 @@
 /* ---------- home layout: the studio (dashboard) form and its usage panel ---------- */
 /* The hero's own markup is the host's either way; this file only rearranges it and
    draws the panel the dock slot carries. Both are keyed on the attribute
-   src/overrides/home-layout.js writes, so the classic layout is untouched. */
+   src/overrides/home-layout.js writes, so the classic layout is untouched.
+   The two tab bodies live in home-overview.css and home-models.css. */
 
 /* The scroll body centres the hero stack; the studio form starts at the top and
    lets the seat take the rest of the column, so the card lands on the bottom edge. */
@@ -180,180 +181,10 @@ body[data-dsh-claude-style] .dsh-claude-home-panel-side {
   min-width: 0;
 }
 
-body[data-dsh-claude-style] .dsh-claude-home-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-}
-
-/* A tile sits one tone deeper than the panel wash, not one tone lighter. */
-body[data-dsh-claude-style] .dsh-claude-home-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  box-sizing: border-box;
-  min-width: 0;
-  padding: 5px 8px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 15%, var(--dsw-alias-bg-layer-2, #fbfbf9));
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-stat-label {
-  color: var(--dsw-alias-label-tertiary, #8f8a7e);
-  font-size: 12px;
-  line-height: 16px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-stat-value {
-  color: var(--dsw-alias-label-primary, #141413);
-  /* Claude's tile keeps the figure barely above its own label: 13px bold, which
-     is also what lets a long model id such as deepseek-v4.1-flash sit on one
-     line instead of being cut off. */
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The heat grid keeps its geometry whether or not the numbers have landed: an
-   empty cell IS the zero step, so the skeleton and the data look like one grid
-   and nothing shifts when the value arrives. */
-/* The grid fills the panel's inner width: one equal column per week, square
-   cells, so the newest week never falls past the edge and the whole block
-   scales with the card instead of with a fixed cell size. */
-body[data-dsh-claude-style] .dsh-claude-home-heat {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(7, 1fr);
-  grid-auto-columns: 1fr;
-  gap: 3px;
-  align-content: start;
-}
-
-/* Claude Code's heat grid is a blue data ramp, not the brand ember: the empty
-   cell stays the neutral base tone, and the four steps mix in the data blue. */
-body[data-dsh-claude-style] .dsh-claude-home-heat-cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 11%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-level="1"] {
-  background: color-mix(in srgb, #3b6ecf 20%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-level="2"] {
-  background: color-mix(in srgb, #3b6ecf 40%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-level="3"] {
-  background: color-mix(in srgb, #3b6ecf 65%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-level="4"] {
-  background: #3b6ecf;
-}
-
-/* The one-liner under the grid: a plain caption, no emphasis of its own. */
-body[data-dsh-claude-style] .dsh-claude-home-fun {
-  color: var(--dsw-alias-label-tertiary, #8f8a7e);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-/* ---------- the models tab: one row per model, share bar in the data blue ---------- */
-body[data-dsh-claude-style] .dsh-claude-home-models {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-model {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-model-name {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--dsw-alias-label-primary, #141413);
-  font-size: 13px;
-  line-height: 18px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-model-track {
-  flex: 1 0 60px;
-  height: 6px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 7%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-model-fill {
-  display: block;
-  min-width: 2px;
-  height: 100%;
-  border-radius: 3px;
-  background: #3b6ecf;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-model-value {
-  color: var(--dsw-alias-label-tertiary, #8f8a7e);
-  font-size: 12px;
-  line-height: 18px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-models-empty {
-  padding: 18px 0;
-  color: var(--dsw-alias-label-tertiary, #8f8a7e);
-  font-size: 12px;
-  line-height: 16px;
-  text-align: center;
-}
-
-/* Skeleton: the label stays, the number is a placeholder of the value's own
-   height, and the grid breathes instead of pretending to hold zeroes. */
-body[data-dsh-claude-style] .dsh-claude-home-stat[data-skeleton] .dsh-claude-home-stat-value {
-  display: block;
-  width: 42px;
-  height: 13px;
-  margin: 2px 0;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 9%, transparent);
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-heat[data-skeleton] .dsh-claude-home-heat-cell {
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 5%, transparent);
-}
-
-/* A skeleton model row is only its share bar at a stand-in width. */
-body[data-dsh-claude-style] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-name,
-body[data-dsh-claude-style] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-value {
-  display: none;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-track {
-  flex-basis: auto;
-}
-
-body[data-dsh-claude-style] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-fill {
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 9%, transparent);
-}
-
+/* While the host half is still folding, every skeleton surface breathes together:
+   the tiles' stand-in figures, the heat grid, and the models tab's stand-in rows. */
 body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-stat[data-skeleton] .dsh-claude-home-stat-value,
-body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-fill,
+body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-swatch,
 body[data-dsh-claude-style] .dsh-claude-home-heat[data-skeleton] .dsh-claude-home-heat-cell {
   animation: dsh-claude-home-pulse 1.6s ease-in-out infinite;
 }
@@ -365,16 +196,8 @@ body[data-dsh-claude-style] .dsh-claude-home-heat[data-skeleton] .dsh-claude-hom
 
 @media (prefers-reduced-motion: reduce) {
   body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-stat[data-skeleton] .dsh-claude-home-stat-value,
-  body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-fill,
+  body[data-dsh-claude-style] .dsh-claude-home-panel[data-computing] .dsh-claude-home-models[data-skeleton] .dsh-claude-home-model-swatch,
   body[data-dsh-claude-style] .dsh-claude-home-heat[data-skeleton] .dsh-claude-home-heat-cell {
     animation: none;
-  }
-}
-
-/* A narrow window stacks the stat cells rather than squeezing three of them;
-   the heat grid follows the panel on its own. */
-@media (max-width: 760px) {
-  body[data-dsh-claude-style] .dsh-claude-home-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

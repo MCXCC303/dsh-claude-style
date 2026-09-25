@@ -227,18 +227,25 @@ grid takes one
 equal column per week (twenty-six weeks), square cells from a 3px gutter, in
 Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
 cell); because the columns are fractions of the panel's own width, the newest
-week can never fall past the edge. Models lists the session list's per-model
-totals as share bars in the same blue. A range window filters the tiles and the
-model rows; the heat grid keeps its own twenty-six-week window.
+week can never fall past the edge. Models is Claude Code's own shape: one column
+per day of the chart's thirty-day window, stacked from the axis up with each
+model's slice in its rank's colour, four gridlines with their token labels in a
+34px left gutter and every seventh day's date under its column, and beneath it
+the ranked list — swatch, model name, the input/output split, and the share of
+the models shown — folding past six rows behind one "show more" row. The list
+reads the fold's per-model buckets; the chart reads its per-day per-model map, so
+a day whose samples name no route draws no stack. A range window filters the
+tiles and the model list; the heat grid and the chart keep their own windows.
 
 Two sources, in this order: the host half's usage route, then the session list's
 own projection block (`tokenUsage`, `modelSelection`, `sessionListMetadata`).
-The second answers in a few milliseconds and is the model data's only source;
-the first is the accurate per-event fold, and it alone carries the settlement
-hour histogram (a cost-meter answer has no hour dimension, so the peak-hour cell
-is a dash there) and each day's session ids, which a range window unions into
-one distinct session count. The panel names which one it drew from, and a figure
-neither can answer is a dash.
+The second answers in a few milliseconds and carries per-model totals without the
+four buckets, which is what the list falls back to when the first has no model
+dimension (a cost-meter answer); the first is the accurate per-event fold, and it
+alone carries the settlement hour histogram (a cost-meter answer has no hour
+dimension, so the peak-hour cell is a dash there) and each day's session ids,
+which a range window unions into one distinct session count. The panel names
+which one it drew from, and a figure neither can answer is a dash.
 
 The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
 of a fixed cell count and stand-in share bars on the models tab — and the heat

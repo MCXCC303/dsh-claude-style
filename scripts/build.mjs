@@ -98,6 +98,9 @@ const FRAGMENTS = [
   'overrides/theme-flip.js',
   'overrides/workspace-view.js',
   'overrides/view-tabs.js',
+  'overrides/home/data.js',
+  'overrides/home/overview.js',
+  'overrides/home/models.js',
   'overrides/home-layout.js',
   'overrides/scheduler.js',
   'settings.js',
@@ -125,6 +128,8 @@ const STYLE_FILES = [
   { file: 'components/third-party.css' },
   { file: 'components/settings.css' },
   { file: 'components/home-panel.css' },
+  { file: 'components/home-overview.css' },
+  { file: 'components/home-models.css' },
   { file: 'components/theme-flip.css' },
 ]
 
