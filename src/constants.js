@@ -220,9 +220,6 @@
      */
     var PERMISSION_CURRENT_LABELS = { custom: 'Custom' }
 
-    /** The preset the auto-review integration registers, offered only while it is live. */
-    var AUTO_REVIEW_PRESET = 'auto'
-
     /** Skin-owned class names, so nothing couples to hashed CSS-module classes. */
     var SEGMENTS_CLASS = 'dsh-claude-segments'
     var SEGMENT_CLASS = 'dsh-claude-segment'

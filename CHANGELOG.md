@@ -8,31 +8,13 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 <h3 id="cn-unreleased">新增功能</h3>
 
-- **账号位置的头像改为玩家自己的皮肤**：启动器记下了玩家导入的皮肤，宿主半边把那张规范化贴图以只读路由发给浏览器，浏览器按启动器账号列表相同的裁法取头部——脸的 8×8 贴图块按盒子的 1/18 内缩，帽子层铺满整个盒子。头部按**方形**绘制，不用账号头像那条路径的圆形遮罩：它画到盒子边缘，任何圆角都会切掉它的像素。没有头像、头像文件已删、图取不到时一律回退，先回退到宿主账号头像，再回退到手绘标记。
+- **账号位置的头像改为玩家自己的皮肤**：启动器记下了玩家导入的皮肤，宿主半边把那张规范化贴图以只读路由发给浏览器，浏览器按启动器账号列表相同的裁法取头部——脸的 8×8 贴图块按盒子的 1/18 内缩，帽子层铺满整个盒子。头部按**方形**绘制，不用账号头像那条路径的圆形遮罩：它画到盒子边缘，任何圆角都会切掉它的像素。没有头像、头像文件已删、图取不到时显示 Claude 徽标。
 - **权限档位改为跟随宿主目录**：权限控件（输入框分段控件与它的弹层）不再写死四档，段位与行都按宿主的 `permissionPresets` 目录构建——目录里有的档位才画，宿主没提供的整条不出现，第三方插件注册的档位因此成为一等公民：auto mode 插件的 `auto-mode` 会以 **Auto mode** 出现在弹层里，并在分段控件里占用 **Auto** 那一格（部署同时提供宿主内置 Auto review 时，内置档退居弹层、把格子让给部署自己的自动档）。档位名与说明仍由皮肤给（皮肤不认识的档位用宿主自己的名字与说明，机器值不上屏），行保持纯文字——预设声明的 `icon` 也不画，档位列表读起来是一份清单。切换仍走宿主的 `/permission <preset>`。
-
-### 体验优化
-
-- **接入启动器的账号契约**：启动器启动实例时发布的账号（`HDSL_ACCOUNT_*`）现在被插件使用：宿主半边读 harness 启动时填好的启动环境快照，只接受进程环境与用户 home 两层（项目目录里的 `.env` 会随仓库被克隆，没有资格声明玩家是谁），契约版本号不是 `1` 时整组忽略。没有账号时一切照旧。浏览器只拿到名字、供应商、账号种类与「有没有头像」，皮肤文件的路径不出进程。
-- **昵称收敛成一条回退顺序**：玩家在设置里填的昵称优先，其次是官方账号昵称、启动器发布的账号名、上次探测到的系统用户名，最后是新探测到的系统用户名；欢迎语与账号行读同一处，不会各自漂移。启动器账号名由宿主半边读出，不经过设置表单，所以设置服务在启动瞬间不可用也不会让名称退回系统用户名。
-
-### 其他变更
-
-- **新增回归用例**：宿主半边覆盖账号契约的取值、头像路由的字节与拒绝路径（跨站 / 局域网 / DNS 重绑定 / 读请求栅栏 / 文件被删），浏览器半边新增三个启动器用例（用地标图形——红脸块、两个绿帽子像素、其余灰色——断言裁脸几何，并覆盖「契约在但没有图」与「图取不到」两种回退）与四个权限用例（第三方档位进目录后的清单与切换命令、会话处于该档位时的名字与激活标记、分段控件的 Auto 格绑定、主页往返一圈后档位列表仍在）。
 
 <h3 id="en-unreleased">New Features</h3>
 
-- **The account row's mark becomes the player's own skin**: the launcher stores every imported skin as a normalized texture atlas, and the host half serves it over a read-only route. The browser crops the head the way the launcher's own account list does — the face's 8×8 texel block inset by 1/18 of the box, with the hat layer over the whole box. The head is drawn **square** rather than under the round mask the avatar-photo path uses, because it reaches the box's edges and any rounding would shave its pixels off. With no picture, a deleted file, or a picture that cannot be served, it falls back: first to the host account's avatar, then to the hand-drawn mark.
+- **The account row's mark becomes the player's own skin**: the launcher stores every imported skin as a normalized texture atlas, and the host half serves it over a read-only route. The browser crops the head the way the launcher's own account list does — the face's 8×8 texel block inset by 1/18 of the box, with the hat layer over the whole box. The head is drawn **square** rather than under the round mask the avatar-photo path uses, because it reaches the box's edges and any rounding would shave its pixels off. With no picture, a deleted file, or a picture that cannot be served, the Claude mark shows.
 - **The permission ladder now follows the host catalog**: the permission control (the composer's segmented group and its popover) no longer hardcodes four tiers. Both the segments and the rows are built from the host's `permissionPresets` catalog, so a deployment offers exactly the tiers it configures and a tier no one serves is absent rather than drawn dead. A tier a third-party plugin registers is therefore a first-class entry: the auto mode plugin's `auto-mode` appears as **Auto mode** in the popover and takes the **Auto** slot of the segmented group (when the deployment also serves the host's built-in Auto review, that one stays in the popover and the slot goes to the deployment's own tier). Names and descriptions still come from the skin — a tier it does not know reads with the host's own name and description, never with its machine id — and the rows stay text-only: a preset's declared `icon` is not drawn either, so the ladder reads as one list. Switching still goes through the host's `/permission <preset>`.
-
-### Improvements
-
-- **The launcher's account contract is now used**: the account a launcher publishes when it starts an instance (`HDSL_ACCOUNT_*`) now reaches the skin. The host half reads the launch-environment snapshot the harness fills, trusting only the process environment and the user's own home layer (a project directory's `.env` travels with a cloned repository and has no standing to say who the player is), and ignores the whole group for any contract version other than `1`. Without an account nothing changes. The browser receives the name, vendor, account kind and whether a picture exists — the skin file's path never leaves the process.
-- **One fallback order for the nickname**: a nickname typed in the settings wins, then the signed-in account's name, the name the launcher published, the last probed system user, and the fresh probe last. The greeting and the account row read that one place, so they cannot drift apart. The launcher's name is read by the host half rather than through the settings form, so a settings service that is not ready at startup no longer drops the name back to the system user.
-
-### Chores
-
-- **New regression coverage**: the host half covers the contract's values, the avatar route's bytes and its refusals (cross-site, LAN, DNS rebinding, the read fence, a file that was deleted), and the browser half gains three launcher cases (the crop geometry asserted against the fixture's landmark texels — a red face block, two green hat pixels, grey elsewhere — plus both fallbacks) and four permission cases (the third-party tier's place in the ladder and the command it sends, the name and active mark of a session running it, the segmented group's Auto slot binding, and the ladder surviving a round trip through the home view).
 
 ## [0.7.1] - 2026-09-25
 

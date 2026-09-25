@@ -15,8 +15,8 @@
       /**
        * The profile picture's address, or null when there is none usable. It
        * comes from the account service or from the plugin's own HDSL route, so
-       * only http(s) and that route are accepted, and it is handed to an `<img>`
-       * as a property — never written into markup.
+       * only http(s) and that route are accepted, and it is set as a property —
+       * never written into markup.
        */
       function accountPhotoUrl(raw) {
         if (raw === HDSL_SKIN_ROUTE) return raw
@@ -114,26 +114,25 @@
       /**
        * Paint the player's own head. What the launcher serves is the normalized
        * skin atlas — a sheet of body parts, not a face — so it is cropped into
-       * a canvas rather than handed to the `<img>` the photo path uses.
-       *
-       * @returns whether the circle is the launcher head's to paint.
+       * a canvas and never handed to the `<img>` the photo path uses. Until the
+       * head is drawn, and when it cannot be, the mark keeps the circle.
        */
       function syncLauncherHead(avatarEl) {
-        if (!headRequested && !headFailed) loadLauncherHead()
-        if (headCanvas === null) return false
+        if (!headRequested) loadLauncherHead()
+        if (headCanvas === null || headFailed) return
         if (headCanvas.parentElement !== avatarEl) {
           if (headCanvas.parentElement !== null) headCanvas.parentElement.removeChild(headCanvas)
           avatarEl.appendChild(headCanvas)
         }
         if (!avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.setAttribute('data-dsh-claude-skin', '')
-        return true
       }
 
       /**
        * Paint (or clear) the picture inside the avatar circle. The address comes
        * from the identity chain (src/context/host.js): the account's own avatar,
-       * then the HDSL launcher's, then nothing — and the brand mark the
-       * stylesheet draws shows through. It is a real `<img>` layered over that
+       * then the HDSL launcher's (drawn as a cropped head), then nothing — and
+       * the brand mark the stylesheet draws shows through. The account's avatar
+       * is a real `<img>` layered over that
        * mark rather than a CSS background: the host's own avatar `<img>` carries
        * `referrerPolicy="no-referrer"`, which is what the picture host expects,
        * and a background cannot drop the referrer. A picture that fails to load
@@ -143,15 +142,12 @@
         if (avatarEl === null) return
         var src = accountPhotoUrl(resolveAvatarUrl())
         if (src === HDSL_SKIN_ROUTE) {
-          // The launcher's picture owns the circle as a cropped head; the
-          // profile photo stands down while it does.
-          if (syncLauncherHead(avatarEl)) {
-            clearAccountPhoto(avatarEl)
-            return
-          }
-        } else {
-          detachLauncherHead(avatarEl)
+          // The launcher's picture only ever shows as the cropped head.
+          clearAccountPhoto(avatarEl)
+          syncLauncherHead(avatarEl)
+          return
         }
+        detachLauncherHead(avatarEl)
         var photo = avatarEl.querySelector('.dsh-claude-account-photo')
         if (src === null) {
           clearAccountPhoto(avatarEl)
