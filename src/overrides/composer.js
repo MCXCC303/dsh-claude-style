@@ -19,8 +19,6 @@
       var active = false
       /** Whether the studio home layout owns the hero page, as of the last reading. */
       var studioHome = false
-      /** The hero page's composer card, or null off the hero page, as of the last pass. */
-      var heroCard = null
 
       /**
        * Read the page's composer state. The host marks the conversation root
@@ -182,7 +180,6 @@
       function syncComposer() {
         readState()
         var cards = document.querySelectorAll('[data-composer-card]')
-        heroCard = hero && cards.length > 0 ? cards[0] : null
         syncVariant(cards)
         if (active !== document.body.hasAttribute(COMPOSER_ATTR)) {
           if (active) document.body.setAttribute(COMPOSER_ATTR, '')
@@ -228,8 +225,6 @@
         sync: syncComposer,
         /** Whether the page shows the hero composer, as of this pass. */
         isHero: function () { return hero },
-        /** The hero page's composer card as of this pass, or null off the hero page. */
-        heroCard: function () { return heroCard },
         /** Whether the composer restyle applies to the page shown, as of this pass. */
         isActive: function () { return active && !composerRestyleRetired },
         /** A copy source changed, the composer-scope preference among them: read again now. */
@@ -244,7 +239,6 @@
 
       return function () {
         active = false
-        heroCard = null
         if (document.body.hasAttribute(COMPOSER_ATTR)) document.body.removeAttribute(COMPOSER_ATTR)
         document.body.removeAttribute('data-dsh-claude-composer-hidden')
         var marks = ['data-composer-variant', 'data-has-attachments', ATTACHMENT_TILE_ATTR, 'data-dsh-claude-context-meter']
