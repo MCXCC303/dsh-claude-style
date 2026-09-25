@@ -29,12 +29,6 @@
     function installHomeLayout(ctx, ui) {
       /** The host's list slot between the hero greeting and the composer card. */
       var DOCK_SLOT = 'conversation.input.dock'
-      /** The range pills: all time, or the last 30/7 calendar days including today. */
-      var HOME_RANGES = [
-        { id: 'all', labelKey: 'homeRangeAll', fallback: 'All', days: 0 },
-        { id: '30d', labelKey: 'homeRange30d', fallback: '30d', days: 30 },
-        { id: '7d', labelKey: 'homeRange7d', fallback: '7d', days: 7 },
-      ]
 
       var layout = DEFAULT_HOME_LAYOUT
       /** Whether the last pass saw the new-conversation hero, as of that reading. */

@@ -33,6 +33,12 @@
     var HOME_CHART_DAYS = 30
     /** Models the ranked list shows before its "show more" row. */
     var HOME_MODEL_ROWS = 6
+    /** The range pills: all time, or the last 30/7 calendar days including today. */
+    var HOME_RANGES = [
+      { id: 'all', labelKey: 'homeRangeAll', fallback: 'All', days: 0 },
+      { id: '30d', labelKey: 'homeRange30d', fallback: '30d', days: 30 },
+      { id: '7d', labelKey: 'homeRange7d', fallback: '7d', days: 7 },
+    ]
 
     /** A local calendar day, matching the host half's day keys. */
     function homeDayKey(date) {
