@@ -317,14 +317,15 @@
     var USAGE_ROUTE = '/dsh-claude-style/usage'
     /**
      * Home-page layouts. `classic` is the centered hero the skin has always
-     * drawn; `studio` is the dashboard form: the greeting sits at the top left,
-     * the composer hugs the window's bottom edge, and the usage panel fills the
-     * space between them.
+     * drawn; `studio` is the dashboard form Claude Code's own home shows: the
+     * greeting sits at the top left, the composer hugs the window's bottom edge,
+     * and the usage panel fills the space between them. Studio is the default,
+     * and a layout already chosen in the settings is kept.
      */
     var HOME_LAYOUT_CLASSIC = 'classic'
     var HOME_LAYOUT_STUDIO = 'studio'
     var HOME_LAYOUTS = [HOME_LAYOUT_CLASSIC, HOME_LAYOUT_STUDIO]
-    var DEFAULT_HOME_LAYOUT = HOME_LAYOUT_CLASSIC
+    var DEFAULT_HOME_LAYOUT = HOME_LAYOUT_STUDIO
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /**

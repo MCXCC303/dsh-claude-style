@@ -340,7 +340,7 @@ const STAND_IN = `(function () {
   }
   var username = CASE === 'markup' ? MARKUP : CASE === 'desktop' || CASE === 'hdsl' ? '' : 'Tester'
   var form = {
-    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true, homeLayout: CASE === 'studio' || CASE === 'late-forms' ? 'studio' : 'classic' } } },
+    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true, homeLayout: CASE === 'studio' ? 'studio' : 'classic' } } },
     subscribe: function () { return function () {} },
     set: function () { return Promise.resolve(true) },
   }
@@ -870,7 +870,7 @@ const PROBE = `(function () {
     r.titlebarTabs = document.body.hasAttribute('data-dsh-titlebar-tabs')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
     r.homeLayoutAttr = document.body.getAttribute('data-dsh-claude-home-layout')
-    r.homeLayoutExpected = window.SMOKE_CASE === 'studio' || window.SMOKE_CASE === 'late-forms' ? 'studio' : null
+    r.homeLayoutExpected = window.SMOKE_CASE === 'studio' ? 'studio' : null
     r.slotRegistrations = window.__slots || null
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
     // The host's own access-mode button: the permission control stands in for
@@ -1170,10 +1170,10 @@ const CASES = {
   },
   'late-forms'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
-    check('the store stays on the defaults until the namespace is served',
-      r.lateBefore === null, JSON.stringify(r.lateBefore))
-    check('a namespace served after apply still binds the form and its value',
-      r.lateAfter === 'studio' && r.homeLayoutAttr === 'studio',
+    check('the store stays on the defaults (the studio home) until the namespace is served',
+      r.lateBefore === 'studio', JSON.stringify(r.lateBefore))
+    check('a namespace served after apply still binds the form and its value (classic)',
+      r.lateAfter === null && r.homeLayoutAttr === null,
       JSON.stringify({ after: r.lateAfter, final: r.homeLayoutAttr }))
     commonChecks(r)
   },
