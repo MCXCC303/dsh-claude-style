@@ -112,6 +112,7 @@ const STYLE_FILES = [
   { file: 'composer/inline.css', gate: true },
   { file: 'composer/inline-bar.css', gate: true },
   { file: 'sidebar.css' },
+  { file: 'components/workspace.css' },
   { file: 'components/permissions.css' },
   { file: 'components/account-footer.css' },
   { file: 'components/ban-screen.css' },
