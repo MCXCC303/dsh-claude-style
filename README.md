@@ -27,7 +27,7 @@
 
 ## 字体
 
-> **重要：Anthropic 字体不随 npm 包分发，仅在仓库 [`fonts/`](fonts/) 供下载**——既可以直接安装到系统，也可以免安装：把两个 `.ttf` 放进插件包的 `fonts/` 目录，宿主会以同样的 webfont 方式提供它们（两种方式的字体文件完全一致，效果相同）。生效均需刷新 / 重启 web。
+> **Anthropic 字体随本构建分发，装好即生效**：源仓库里这两个 `.ttf` 只在 [`fonts/`](fonts/) 供下载、不随 npm 包分发，本整合包把它们一起打进 `.tgz`，宿主会以 webfont 方式提供给页面，因此不需要再安装到系统，装完刷新 / 重启 web 就换上新字面。想改回系统字体时，把插件包 `fonts/` 里的这两个文件删掉即可（渲染随即回落到系统里装的那份或栈里的后备字体）。
 
 | 字体 | 用途 | 文件 |
 |---|---|---|
@@ -35,13 +35,9 @@
 | Anthropic Serif Web Text | 对话正文 / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | 代码 / 代码块 | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf)、[`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
-Anthropic 字体启用（二选一）：
+两个 Anthropic 文件都是静态 Regular 字重，粗体由浏览器合成，界面上的粗细对比因此比系统里装的多字重版本略平。
 
-① 安装到系统——Windows 双击 `.ttf` → 「安装」，macOS 用「字体册」导入；
-
-② 免安装——把 `.ttf` 复制到插件包的 `fonts/` 目录。完成后刷新页面生效。
-
-> Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可。
+> Anthropic Sans/Serif 字体版权归 Anthropic 所有，仅供个人使用，不适用 MIT 许可。本构建只在本机自用，不再对外分发带这两个文件的包。
 
 ## 安装
 

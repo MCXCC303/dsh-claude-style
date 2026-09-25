@@ -41,6 +41,8 @@
     "LICENSE",
     "fonts/JetBrainsMonoVariable.ttf",
     "fonts/JetBrainsMonoItalicVariable.ttf",
+    "fonts/AnthropicSansWebText.ttf",
+    "fonts/AnthropicSerifWebText.ttf",
     "fonts/OFL.txt",
     "fonts/AUTHORS.txt"
   ],

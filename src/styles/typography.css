@@ -23,10 +23,11 @@
   font-display: swap;
 }
 
-/* The Anthropic text faces are NOT in the npm package (they remain Anthropic's
-   property), so these registrations resolve only when the user has dropped the
-   files into the plugin's fonts/ directory; otherwise the request 404s and the
-   stacks fall back to a system-installed copy. Both files are static Regular
+/* The Anthropic text faces are Anthropic's property and stay out of the
+   published package, so these registrations resolve when the files sit in the
+   plugin's fonts/ directory — the local build ships them, and a copy dropped in
+   by hand works the same way; otherwise the request 404s and the stacks fall
+   back to a system-installed copy. Both files are static Regular
    cuts — a single 400 declaration covers them and the browser synthesizes the
    heavier weights, exactly as it does for a system-installed copy. */
 @font-face {

@@ -26,6 +26,7 @@ All notable changes to this plugin are documented here, newest first.
 ### 其他变更
 
 - **整合包的形态**：这一版是 HDSL 整合包使用的构建，包名 `hdsl-claude-style`，以本地 `.tgz` 分发，包内不带 `repository` / `homepage` / `bugs` 字段，因此启动器与 `pnpm` 的任何一条路径都不会用同名上游包替换这份构建。安装见 README 的「安装」一节。设置命名空间（loader 行 id `ui-skin-claude-style`）与浏览器本地存储的键都没变，升级不会丢失已有偏好。
+- **Anthropic 字体随包分发**：包内的 `fonts/` 现在带着 Anthropic Sans Web Text 与 Anthropic Serif Web Text，宿主按 webfont 提供给页面，界面与对话正文装好即用上这两个字面，不必再装到系统。字体版权归 Anthropic 所有、仅供个人使用，不适用 MIT 许可，因此这一份只在本机自用，不再对外分发。
 - **新增回归用例**：宿主半边覆盖账号契约的取值、贴图路由的字节与拒绝路径（跨站 / 局域网 / DNS 重绑定 / 读请求栅栏 / 文件被删），浏览器半边用一张地标贴图（红脸块、两个绿帽子像素、其余灰色）断言裁脸几何并覆盖两种回退，权限用例按宿主的权限目录出数，经典问候用例断言进入新会话页时抽签、其后每轮 pass 不改动已抽的句子；全部 377 项通过。
 
 <h3 id="en-unreleased">Removals</h3>
@@ -48,6 +49,7 @@ All notable changes to this plugin are documented here, newest first.
 ### Chores
 
 - **The shape of this integration build**: this version is the build the HDSL integration pack carries — package name `hdsl-claude-style`, shipped as a local `.tgz`, with no `repository` / `homepage` / `bugs` fields, so no launcher or `pnpm` path can replace this build with a same-named package from a registry. See the README's installation section. The settings namespace (loader row id `ui-skin-claude-style`) and the browser-local storage keys are unchanged, so an upgrade keeps the preferences already set.
+- **The Anthropic fonts ship inside the package**: `fonts/` now carries Anthropic Sans Web Text and Anthropic Serif Web Text, and the host serves them to the page as webfonts, so the interface and the conversation body use those faces the moment the plugin is installed, with nothing installed on the system. The fonts are Anthropic's property and licensed for personal use only, not under MIT, so this copy stays local and is not redistributed.
 - **New regression coverage**: the host half covers the account contract's values, the texture route's bytes and its refusals (cross-site, LAN, DNS rebinding, the read fence, a file that was deleted); the browser half asserts the crop geometry against a fixture's landmark texels (a red face block, two green hat pixels, grey elsewhere) and covers both fallbacks; the permission cases read the host's own catalog directory; and the classic greeting cases assert the draw on arrival and that later passes leave the drawn line alone. All 377 checks pass.
 
 ## [0.7.1] - 2026-09-25

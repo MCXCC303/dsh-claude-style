@@ -27,7 +27,7 @@
 
 ## Fonts
 
-> **Important: the Anthropic fonts are not bundled with the npm package.** They are available for download in this repository under [`fonts/`](fonts/). You can either install them on your system, or skip the install entirely — drop the two `.ttf` files into the plugin package's `fonts/` directory and the host will serve them as webfonts (the files are identical, so the result is the same). Either way, refresh or restart the web UI for the fonts to take effect.
+> **The Anthropic fonts ship with this build and apply on install.** In the source repository the two `.ttf` files exist only as downloads under [`fonts/`](fonts/) and stay out of the npm package; this integration pack carries them inside the `.tgz`, and the host serves them to the page as webfonts, so nothing has to be installed on the system — restart or refresh the web UI after installing. To go back to system fonts, delete those two files from the plugin package's `fonts/` directory and the stacks fall back to a system-installed copy or their own fallbacks.
 
 | Font | Used for | File |
 |---|---|---|
@@ -35,13 +35,9 @@
 | Anthropic Serif Web Text | Conversation body / Markdown | [`fonts/AnthropicSerifWebText.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/AnthropicSerifWebText.ttf) |
 | JetBrains Mono Variable | Code / code blocks | [`fonts/JetBrainsMonoVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoVariable.ttf), [`fonts/JetBrainsMonoItalicVariable.ttf`](https://github.com/Nwflower/dsh-claude-style/raw/main/fonts/JetBrainsMonoItalicVariable.ttf) |
 
-To enable the Anthropic fonts, choose one of the following:
+Both Anthropic files are static Regular cuts, so the browser synthesizes the heavier weights and the contrast between weights reads a little flatter than with a multi-weight system install.
 
-① Install them on your system — on Windows, double-click each `.ttf` and choose "Install"; on macOS, import them with Font Book.
-
-② Skip the install — copy the `.ttf` files into the plugin package's `fonts/` directory, then refresh the page.
-
-> The Anthropic Sans and Serif fonts are the property of Anthropic, licensed for personal use only, and are not covered by this project's MIT license.
+> The Anthropic Sans and Serif fonts are the property of Anthropic, licensed for personal use only, and are not covered by this project's MIT license. This build is for local use and is not redistributed with those two files.
 
 ## Installation
 
