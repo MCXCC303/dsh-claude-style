@@ -32,12 +32,6 @@
         return step * magnitude
       }
 
-      /** A day key as the axis writes it, in the shell's language: "Aug 26". */
-      function shortDate(format, day) {
-        var parts = day.split('-')
-        return format.format(new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])))
-      }
-
       /**
        * One token count the way Claude Code's chart and list write it: one
        * decimal at most, a whole number without its ".0", and a lowercase k —
@@ -81,7 +75,7 @@
           if (total > peak) peak = total
         }
         var top = axisMax(peak)
-        var format = new Intl.DateTimeFormat(activeLocale(), { month: 'short', day: 'numeric' })
+        var format = homeShortDateFormat()
         // Four gridlines plus the baseline, Claude Code's own ladder.
         var ticks = [1, 0.75, 0.5, 0.25, 0]
         return React.createElement(
@@ -120,7 +114,7 @@
                   {
                     key: column.date,
                     className: 'dsh-claude-home-chart-col',
-                    title: shortDate(format, column.date) + ' · ' + compactTokens(dayTotal),
+                    title: homeShortDate(format, column.date) + ' · ' + compactTokens(dayTotal),
                     style: { height: (top > 0 ? dayTotal / top * 100 : 0) + '%' },
                   },
                   stack.map(function (slice) {
@@ -141,7 +135,7 @@
             list.map(function (column, index) {
               // Every third column from the first, Claude Code's own cadence.
               var labelled = index % 3 === 0
-              return React.createElement('span', { key: column.date, className: 'dsh-claude-home-chart-label' }, labelled ? shortDate(format, column.date) : '')
+              return React.createElement('span', { key: column.date, className: 'dsh-claude-home-chart-label' }, labelled ? homeShortDate(format, column.date) : '')
             }),
           ),
         )

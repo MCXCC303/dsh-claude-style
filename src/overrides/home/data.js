@@ -62,6 +62,17 @@
       return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
     }
 
+    /** The short day-label formatter, in the shell's language: "Aug 26", "8月26日". */
+    function homeShortDateFormat() {
+      return new Intl.DateTimeFormat(activeLocale(), { month: 'short', day: 'numeric' })
+    }
+
+    /** One day key as a short label, through `homeShortDateFormat()`'s formatter. */
+    function homeShortDate(format, day) {
+      var parts = day.split('-')
+      return format.format(new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])))
+    }
+
     /** The first day key of a range window; all time has none. */
     function homeRangeStart(windowDays) {
       if (!windowDays) return null
@@ -318,8 +329,16 @@
      */
     function homeHeatGrid(days) {
       var byDate = {}
+      var callsByDate = {}
       var list = days === null || days === undefined ? [] : days
-      for (var i = 0; i < list.length; i++) byDate[list[i].date] = homeDayTokens(list[i])
+      // A day's messages are its settled calls; the session list's fallback has
+      // no per-day count, so its cells carry none.
+      var counted = true
+      for (var i = 0; i < list.length; i++) {
+        byDate[list[i].date] = homeDayTokens(list[i])
+        if (typeof list[i].calls === 'number') callsByDate[list[i].date] = list[i].calls
+        else counted = false
+      }
       var today = new Date()
       today.setHours(0, 0, 0, 0)
       var start = new Date(today)
@@ -331,7 +350,7 @@
         var key = homeDayKey(cursor)
         var tokens = byDate[key] || 0
         if (tokens > peak) peak = tokens
-        cells.push({ date: key, tokens: tokens, level: 0 })
+        cells.push({ date: key, tokens: tokens, messages: counted ? callsByDate[key] || 0 : null, level: 0 })
       }
       for (var c = 0; c < cells.length; c++) {
         if (cells[c].tokens === 0 || peak === 0) continue

@@ -43,6 +43,12 @@ body[data-dsh-claude-style] .dsh-claude-home-stat-value {
   font-variant-numeric: tabular-nums;
 }
 
+/* The favourite model is a name, not a figure: Claude Code sets it at the
+   label's own weight. */
+body[data-dsh-claude-style] .dsh-claude-home-stat[data-stat="model"] .dsh-claude-home-stat-value {
+  font-weight: 400;
+}
+
 /* The heat grid keeps its geometry whether or not the numbers have landed: an
    empty cell IS the zero step, so the skeleton and the data look like one grid
    and nothing shifts when the value arrives. */
@@ -61,9 +67,44 @@ body[data-dsh-claude-style] .dsh-claude-home-heat {
 /* Claude Code's heat grid is a blue data ramp, not the brand ember: the empty
    cell stays the neutral base tone, and the four steps mix in the data blue. */
 body[data-dsh-claude-style] .dsh-claude-home-heat-cell {
+  position: relative;
   aspect-ratio: 1;
   border-radius: 3px;
   background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 11%, transparent);
+}
+
+/* Claude Code's day tip: a solid pill in the label ink over the cell, the day
+   and its messages in the canvas tone, so it inverts with the theme on its own.
+   It appears the moment the pointer is on the cell, and never takes the
+   pointer itself. */
+body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-label-primary, #141413);
+  color: var(--dsw-alias-bg-base, #fcfcfb);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-tip][data-edge="start"]:hover::after {
+  left: 0;
+  transform: none;
+}
+
+body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-tip][data-edge="end"]:hover::after {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 body[data-dsh-claude-style] .dsh-claude-home-heat-cell[data-level="1"] {
