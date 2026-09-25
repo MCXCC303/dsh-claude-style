@@ -2,11 +2,11 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
-## [Unreleased]
+## [0.7.0] - 2026-09-25
 
-[中文](#cn-unreleased) | [English](#en-unreleased)
+[中文](#cn-0.7.0) | [English](#en-0.7.0)
 
-<h3 id="cn-unreleased">新增功能</h3>
+<h3 id="cn-0.7.0">新增功能</h3>
 
 - **两套首页版面，设置页随时切换**：新增「首页版面」设置项。**经典**沿用居中大标题加输入卡片；**工作台**把标题移到左上角并固定为一句「What's up next, 用户名？」（无衬线小字，与品牌标记同一行），输入框改用对话内的单行样式贴住窗口底部、上方一行细边框上下文胶囊，标题与一块 480px 窄栏用量面板贴着输入框左缘排布——概览页签是六个数字格（会话数、消息数、Token 总量、活跃天数、高峰时段、最常用模型）与 26 周按天热力图（等分列方格、蓝色数据色阶）；模型页签是每天一根按模型颜色自下而上堆叠的柱子，下面跟一份模型排行（色块、模型名、输入与输出、占比，超过六行折成「再显示 N 个」，展开后末尾是「收起」），柱与色块共用同一套按名次取色的蓝色色阶；右上角的「全部 / 30 天 / 7 天」范围切换过滤数字格（含高峰时段）、趣味行与模型排行，热力图与柱状图保持自身窗口；所选范围内的用量超过一本书时，热力图下方出现倍数趣味行：书从《动物农场》到《追忆似水年华》共十一本，每次回到新会话页随机换一本，范围内用量还不到这本书时退到已经超过的最长那本。面板只在新会话页出现，进入对话后自动消失。
 - **用量数据在本机汇总**：新增只读路由 `GET /dsh-claude-style/usage`（与用户名路由同一同源护栏）。装了 `dsh-cost-meter` 时直接读它的账本缓存（只读），否则读本机会话日志自行汇总，并按日志文件增量缓存——冷启动首次约两秒，之后每次启动约 3 毫秒。两种来源都给出每个模型的四类 token 与每天按模型拆分的 token（`models` 与 `days[].models`），模型页签的柱状图与排行读它们；账本按「提供方:模型」记账，同一模型经不同提供方的用量合成一行。账本不记小时，读账本时其余数字先出，高峰时段随后由本机会话日志按天算出补上。汇总不可用（旧宿主半边或汇总失败）时，面板改用宿主会话列表自带的投影值出数。
@@ -16,7 +16,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - **经典首页的问候更多了**：经典版面的大标题不再每个时段只有一句，早上、午间、下午、晚上、深夜各有一组问候，另有几句不分时段；每次回到新会话页随机换一句，同一次停留里不会跳动。
 - **接入 HDSL 启动器的账号信息**：由 HDSL 启动的实例，昵称与头像会优先取启动器里的账号。昵称按「自定义昵称 → 官方账号昵称 → HDSL 昵称 → 上次探测到的系统用户名 → 系统用户名 → `User`」回退，头像按「官方账号头像 → HDSL 头像 → Claude 徽标」回退。宿主半边新增两条只读私有路由，与用户名路由同级过宿主请求栅栏：`GET /dsh-claude-style/hdsl` 回账号元数据（不含头像文件的绝对路径），`GET /dsh-claude-style/hdsl-skin.png` 回头像图片。契约版本读不到或不认识时整组忽略；头像文件被删除时回落到徽标。
 
-<h3 id="en-unreleased">New Features</h3>
+<h3 id="en-0.7.0">New Features</h3>
 
 - **Two home layouts, switchable in the settings page**: a new Home layout preference. **Classic** keeps the centered headline over the composer card; **Studio** pins the greeting to the top left as one fixed line ("What's up next, <user>?", in the sans UI face on the brand mark's line), docks the composer in the conversation's single-line form at the window's bottom edge with a row of hairline context chips above it, and sets the greeting and a 480px usage panel against the composer's left edge — an Overview tab with six stat cells (sessions, messages, total tokens, active days, peak hour, favorite model) and a twenty-six-week per-day heat grid of square cells in equal columns, and a Models tab stacking each day's per-model tokens into one bar over a ranked model list (swatch, model name, input and output, share; past six rows it folds behind a "show more" row, and the open list ends in a "show less" row), both reading the same rank-ordered blue ramp. The All / 30d / 7d range pills filter the tiles (the peak hour included), the multiplier line and the model list while the grid and the chart keep their own windows, and once the picked range's total passes one book a multiplier line appears under the grid — eleven books from Animal Farm to In Search of Lost Time, a fresh one drawn each time the new-conversation page comes back, stepping down to the longest book the range has passed when it has not reached the drawn one. The panel appears on the new-conversation page only and steps away once a session is open.
 - **The usage numbers are folded locally**: a new read-only route, `GET /dsh-claude-style/usage`, behind the same same-origin fence as the username route. With `dsh-cost-meter` installed it reads that plugin's ledger cache (read-only); otherwise the host half folds the local session logs itself and caches the result incrementally per log file — about two seconds on the first cold pass, about 3 ms per start afterwards. Both sources answer each model's four token buckets and each day's per-model tokens (`models` and `days[].models`), which the Models tab's chart and ranking read; the ledger books usage per provider and model, and one model served by several providers is one row. The ledger keeps no hours, so with it the other figures land first and the peak hour follows a moment later, folded per day from the local session logs. When the fold cannot answer (an older host half or a failed pass), the panel falls back to the projection block each host session row carries.
@@ -26,17 +26,17 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - **More greetings on the classic home page**: the classic headline no longer has one line per time of day — morning, midday, afternoon, evening and night each have a pool, plus a few lines for any hour; a fresh line is drawn each time the new-conversation page comes back and holds still while you stay.
 - **HDSL launcher accounts are picked up**: an instance started by HDSL prefers the launcher's account for both the nickname and the picture. The nickname falls back through the custom nickname → the signed-in account's name → the HDSL account name → the last probed system user → the system user → `User`; the picture through the account's avatar → the HDSL avatar → the Claude mark. The host half gains two read-only private routes behind the same request fence as the username route: `GET /dsh-claude-style/hdsl` answers the account metadata (never the avatar file's absolute path) and `GET /dsh-claude-style/hdsl-skin.png` answers the image. A contract version that is missing or unknown voids the whole group, and a deleted avatar file falls back to the mark.
 
-<h3 id="cn-unreleased">体验优化</h3>
+<h3 id="cn-0.7.0">体验优化</h3>
 
 - **同时只开一张弹层卡片**：悬停或点击打开模型选择器、推理强度、权限、账户抽屉、会话统计卡片、工作台新会话页的工作区菜单时，之前打开的那张卡片立即收起，两张卡不再叠在同一角；宿主自带的工作区菜单与账户菜单一并参与。
 - **悬停停留由 50ms 延长到 100ms**：指针以平常速度扫过触发器不再展开卡片——工作台版面把上下文行贴在输入卡片正上方，此前指针移向输入框时几乎每次都会展开工作区菜单；停在触发器上仍然立即展开。模型选择器的收起宽限与会话统计卡片的展开停留保持各自的例外值。
 
-<h3 id="en-unreleased">Improvements</h3>
+<h3 id="en-0.7.0">Improvements</h3>
 
 - **One popover card at a time**: opening the model picker, the reasoning-effort card, the permission menu, the account drawer, the session-stats card or the studio new-conversation page's workspace menu now folds whatever card was up before it, so two panels no longer stack over one corner; the host's own workspace and account menus join on the same terms.
 - **The hover dwell goes from 50 ms to 100 ms**: a pointer crossing a trigger at an ordinary pace no longer unfolds a card — the studio layout sets the context row directly above the composer card, where a pointer on its way to the input used to unfold the workspace menu almost every time — while a pointer parked on the trigger still opens at once. The model picker's close grace and the stats card's open dwell keep their own values.
 
-<h3 id="cn-unreleased">问题修复</h3>
+<h3 id="cn-0.7.0">问题修复</h3>
 
 - 修复 **浅色模式下聊天记录顶部「加载更早」按钮几乎看不见**：浅色下的实色悬停底改为浅灰，按钮文字对比度从 2.6:1 回到 4.7:1，深色不变；同族令牌下的工作区重命名输入框在浅色里也不再是深色方块。
 - 修复 **设置页「账号与余额」的「充值」按钮文字与底色几乎同色**：统一的链接色不再覆盖这类实心按钮链接，按钮恢复自身配色（浅色 3.1:1，深色 6.1:1），旁边的「查询用量」回到描边按钮样式。
@@ -48,7 +48,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - 修复 **页面加载后第一次修改设置提示「设置存储不可用，改动不会被保存」**：设置表单现在会等宿主的命名空间登记完成后再绑定，登记晚到时也会在到达后立即绑定并读回取值，第一次修改即可保存。
 - 修复 **新会话页把鼠标从预设模式快速移到工作文件夹时两个弹层同时打开并闪烁**：一行里的两个选择器（工作文件夹与预设模式）现在只会有一个打开，移到另一个触发器时先收起前一个，两个弹窗不再同时出现、也不再闪动；悬停离开收起的是悬停打开的那一个。
 
-<h3 id="en-unreleased">Bug Fixes</h3>
+<h3 id="en-0.7.0">Bug Fixes</h3>
 
 - Fix **the "load earlier" button at the top of the transcript being nearly invisible in light mode**: the light-mode solid hover fill is now a light gray, returning the button's contrast from 2.6:1 to 4.7:1 (dark unchanged); the workspace rename field on the same token family is no longer a dark block in light mode either.
 - Fix **the "Top up" button in Settings → Account & balance showing its label in the same colour as its fill**: the shared link ink no longer overrides filled-button anchors, so the button keeps its own ink (3.1:1 light, 6.1:1 dark) and the neighbouring "View usage" returns to the outlined treatment.
@@ -59,6 +59,8 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - Fix **the archived rows' time being pushed off the row's right edge by the action buttons**: the unarchive and delete buttons reserved their place while transparent, so the time stopped where their reserved space began and hover crowded all three onto one line. The rows now follow the host's own session rows' mechanism: at rest the buttons occupy nothing and the time right-aligns with the row; on hover (or while the row holds keyboard focus) the time steps aside and the two buttons take its place. The invisible buttons also stop answering clicks aimed at that area.
 - Fix **the first settings change after a page load reporting "The settings store is unavailable, so changes will not be saved."**: the settings form now waits for the host's namespace registration before binding, binds as soon as a late registration arrives and reads the value back, so the first change saves.
 - Fix **both popovers on the new-conversation page opening at once, and flickering, when the pointer moved quickly from the preset mode to the workspace folder**: only one of the row's two pickers (the workspace folder and the preset mode) is open at a time — moving to the other trigger folds the first, so the two cards no longer appear together or flicker, and a hover-leave folds the picker the hover opened.
+
+**Full Changelog**: [v0.6.4...v0.7.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.6.4...v0.7.0)
 
 ## [0.6.4] - 2026-09-24
 
