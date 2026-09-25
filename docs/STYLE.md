@@ -233,30 +233,45 @@ stat cells in a 3×2 grid (sessions, calls, tokens, active days, peak hour, top
 model) whose tiles sit one clear step deeper than the panel (15% of the label
 tone) and set a 12px label over a 13px bold figure — the figure stays barely
 above its own label, which is also what lets a long model id such as
-deepseek-v4.1-flash sit on one line. Once the all-time total passes one copy of
-The Hobbit (123k tokens), the yardstick line appears under the grid. The heat
+deepseek-v4.1-flash sit on one line. Once the picked range's total passes one
+book, the yardstick line appears under the grid: eleven books from Animal Farm
+(39k tokens) to In Search of Lost Time (1.6M), each sized at 1.3 tokens a word.
+The book is drawn afresh each time the page comes back to the new-conversation
+hero, and a range that has not reached it steps down to the longest book it has
+passed, so the range pills keep the same book whenever the totals allow. The heat
 grid takes one
 equal column per week (twenty-six weeks), square cells from a 3px gutter, in
 Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
 cell); because the columns are fractions of the panel's own width, the newest
 week can never fall past the edge. Models is Claude Code's own shape: one column
 per day of the chart's thirty-day window, stacked from the axis up with each
-model's slice in its rank's colour, four gridlines with their token labels in a
-34px left gutter and every seventh day's date under its column, and beneath it
+model's slice in its rank's colour (ranks past the ramp share its last, grey
+step), four gridlines with their token labels in a 34px left gutter and every
+third column's date under it in the shell's language ("Aug 26"), and beneath it
 the ranked list — swatch, model name, the input/output split, and the share of
-the models shown — folding past six rows behind one "show more" row. The list
-reads the fold's per-model buckets; the chart reads its per-day per-model map, so
-a day whose samples name no route draws no stack. A range window filters the
-tiles and the model list; the heat grid and the chart keep their own windows.
+the models shown — folding past six rows behind one "show more" row, which turns
+into "show less" once the list is open. The chart
+and the list write counts Claude Code's way: one decimal at most, no trailing
+".0", a lowercase k ("109M", "963.6k"). The list reads the roll-up's per-model
+buckets; the chart reads its per-day per-model map, so a day with nothing
+attributed to a model draws no stack. Each column is sized to its day's total
+against the axis top and each slice to its share of the day, so the column's
+rounding sits on the top of the stack. A range window filters the
+tiles (the peak hour included), the yardstick line and the model list; the heat
+grid and the chart keep their own windows.
 
 Two sources, in this order: the host half's usage route, then the session list's
 own projection block (`tokenUsage`, `modelSelection`, `sessionListMetadata`).
 The second answers in a few milliseconds and carries per-model totals without the
-four buckets, which is what the list falls back to when the first has no model
-dimension (a cost-meter answer); the first is the accurate per-event fold, and it
-alone carries the settlement hour histogram (a cost-meter answer has no hour
-dimension, so the peak-hour cell is a dash there) and each day's session ids,
-which a range window unions into one distinct session count. The panel names
+four buckets, which is what the list falls back to when the first cannot answer.
+The first reads the cost-meter ledger when one covers the newest activity — its
+`<provider>:<model>` split becomes the per-model cells, one model across providers
+merged into one — and otherwise the accurate per-event fold; both carry each day's
+session ids, which a range window unions into one distinct session count. Only
+the fold knows the settlement hours: it keeps one hour histogram per day, which a
+range window sums into its own peak hour, and behind a cost-meter answer it still
+runs for the histograms alone — the ledger's figures land first, and the peak
+hour of the sessions whose logs remain lands a moment later. The panel names
 which one it drew from, and a figure neither can answer is a dash.
 
 The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
@@ -264,6 +279,21 @@ of a fixed cell count, and on the models tab the chart's frame with three
 stand-in rows — and the heat grid's empty cell **is** the zero step, so "no data"
 and "a day with no usage" stay different things: a missing value draws a
 placeholder, a zero day draws the grid's own base tone.
+
+## The composer crab · 输入卡片上的螃蟹
+
+On the new-conversation page, in both layouts, Claude Code's pixel crab stands on
+the composer card's top edge: 4px cells, a nine-cell shell with two-cell arms
+(52×32px), feet on the card's edge and the right arm 8px inside the card's right
+edge on the single-line card (18px radius) — 18px on the classic hero card, whose
+28px corner starts further in. The shell is the clay accent `#d97757` in both
+themes, the side-on back is `#b9603f`, the eyes `#141413`, and the rod takes the
+tertiary label ink. When the crab is clicked, when the pointer leaves it, and on its own every 25–45
+seconds while the page is in view, it plays Claude Code's fishing routine
+(about three seconds): a half turn and a wink, the rod raised overhead and cast
+down onto the card's edge, a hop, a spell of fishing side-on, and the rod put
+away as it turns back to face front. With reduced motion requested, it stands
+still. Only the crab takes the pointer; the room the rod swings through does not.
 
 ## Implementation notes
 
@@ -306,6 +336,7 @@ assembly order itself is authoritative in `scripts/build.mjs`
 | `src/styles/components/home-panel.css` | the studio home layout and the usage panel's shell (keyed on the attribute `home-layout.js` writes) |
 | `src/styles/components/home-overview.css` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
 | `src/styles/components/home-models.css` | the usage panel's Models tab: the stacked chart and the ranked list |
+| `src/styles/components/mascot.css` | the pixel crab: its seat on the card's top edge and its inks |
 | `src/styles/components/theme-flip.css` | theme-flip transition suppression |
 | `src/context/host.js` | host accessors and helpers |
 | `src/context/prefs.js` | preference store |
@@ -340,6 +371,7 @@ assembly order itself is authoritative in `scripts/build.mjs`
 | `src/overrides/home/data.js` | the usage panel's data: the roll-up route, the session list's fallback, and the figures both tabs read |
 | `src/overrides/home/overview.js` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
 | `src/overrides/home/models.js` | the usage panel's Models tab: the stacked chart and the ranked list |
+| `src/overrides/mascot.js` | the pixel crab on the new-conversation card: its poses as one inline SVG, and the fishing routine |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |
