@@ -176,7 +176,11 @@ attribute, so it takes the same fade/scale as a one-shot `0.15s` animation; and
 the host places it *below* its trigger, which is where the composer sits — so
 `src/overrides/hero-menu.js` re-places it beside the trigger (bottom-aligned,
 growing upward into the empty hero space, flipping left when the viewport is
-tight) with an `important` inline write that outranks the host's own.
+tight). The host re-runs its own placement from its anchor geometry on every
+frame while the card is open, so the position is handed over in two custom
+properties on the card (`--dsh-claude-hero-menu-x` / `--dsh-claude-hero-menu-y`,
+written by the same pass that stamps it) which `components/hero-menu.css` reads
+with `!important`; that declaration outranks the host's plain inline value.
 
 ## Implementation notes
 

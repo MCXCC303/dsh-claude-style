@@ -21,9 +21,14 @@
      * composer sits: it would land on the input area and on the controls in it.
      * This row is *above* the composer, so the card belongs beside the trigger
      * instead — bottom-aligned with it and growing upward into the empty hero
-     * space. The host re-places the card on every scroll and resize, so this
-     * position is written with `important` (which beats its inline write) and
-     * re-applied from the scheduler's scroll/resize hook.
+     * space. The host re-places the card from its own geometry on every frame
+     * while the card is open, and an inline `left` / `top` written here would
+     * live only until the host's next frame. The position therefore travels in
+     * two custom properties, which the host's style writes never touch, and
+     * components/hero-menu.css reads them with `!important`: an author
+     * `!important` declaration outranks the host's plain inline value, so the
+     * card holds this position from the pass that stamps it onward. The
+     * scheduler's scroll/resize hook re-applies it when the anchor moves.
      *
      * Hover is the host's own click handler driven from here: the "Open popovers
      * on hover" preference's `all` scope covers these two, and the host offers no
@@ -158,8 +163,8 @@
         left = Math.max(MARGIN, Math.min(left, window.innerWidth - width - MARGIN))
         var top = rect.bottom - height
         top = Math.max(MARGIN, Math.min(top, window.innerHeight - height - MARGIN))
-        card.style.setProperty('left', Math.round(left) + 'px', 'important')
-        card.style.setProperty('top', Math.round(top) + 'px', 'important')
+        card.style.setProperty('--dsh-claude-hero-menu-x', Math.round(left) + 'px')
+        card.style.setProperty('--dsh-claude-hero-menu-y', Math.round(top) + 'px')
       }
 
       /** Re-place an open card after a scroll or a resize moved its anchor. */
