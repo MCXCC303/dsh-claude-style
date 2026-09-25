@@ -4,3 +4,6 @@ node_modules/
 
 # Local debugging scratch (Chrome profile, CDP scripts, screenshots)
 .debug/
+
+# Local plugin tarballs (built with npm pack; installed through HDSL)
+*.tgz
