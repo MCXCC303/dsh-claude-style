@@ -45,11 +45,12 @@
     "homeModelsEmpty": { "zh": "暂无模型数据", "en": "No model data yet" },
     "homeModelsMore": { "zh": "再显示 {count} 个", "en": "Show {count} more" },
     "homeModelsLess": { "zh": "收起", "en": "Show less" },
-    "homeTokens": { "zh": "Token", "en": "Tokens" },
-    "homeCalls": { "zh": "调用次数", "en": "Calls" },
+    "homeTokens": { "zh": "Token 总量", "en": "Total tokens" },
+    "homeCalls": { "zh": "消息数", "en": "Messages" },
     "homeSessions": { "zh": "会话数", "en": "Sessions" },
     "homeActiveDays": { "zh": "活跃天数", "en": "Active days" },
-    "homeTopModel": { "zh": "常用模型", "en": "Top model" }
+    "homeTopModel": { "zh": "最常用模型", "en": "Favorite model" },
+    "homeHeatTipTokens": { "zh": "{date} — {tokens} Token", "en": "{date} — {tokens} tokens" }
   },
   "settings": {
     "title": { "zh": "Claude Style", "en": "Claude Style" },
