@@ -249,6 +249,13 @@
      */
     var HOME_LAYOUT_ATTR = 'data-dsh-claude-home-layout'
     /**
+     * Present while the studio layout owns the page shown: the studio layout is
+     * in force and the page is the new-conversation hero. Every studio rule keys
+     * on it, so the host's hero-phase marker is read once per pass in JS rather
+     * than repeated across the stylesheet.
+     */
+    var HOME_HERO_ATTR = 'data-dsh-claude-home-hero'
+    /**
      * The host half's session-deletion route (lib/index.js, SESSION_DELETE_PATH).
      * The harness gives the browser half no deletion API of its own, so the
      * archived row's delete button posts the session id here and the host half

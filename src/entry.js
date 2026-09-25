@@ -24,6 +24,7 @@
         body.removeAttribute(FOOTER_ATTR)
         body.removeAttribute(COMPOSER_ATTR)
         body.removeAttribute(HOME_LAYOUT_ATTR)
+        body.removeAttribute(HOME_HERO_ATTR)
         body.removeAttribute(WINDOW_BLUR_ATTR)
         var el = document.getElementById(STYLE_ID)
         if (el) el.remove()
