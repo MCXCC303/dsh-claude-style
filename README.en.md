@@ -8,13 +8,11 @@
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
-[![version](https://img.shields.io/npm/v/dsh-claude-style?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![downloads](https://img.shields.io/npm/dm/dsh-claude-style?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
-[![dsh.so install](https://www.dsh.so/badge/install/dsh-claude-style.svg)](https://www.dsh.so/artifact/dsh-claude-style/)
 [![license](https://img.shields.io/badge/license-MIT-2EA44F?style=flat)](LICENSE)
 
 </div>
+
+> This repository is the **HDSL local build** (package name `hdsl-claude-style`): it is not published to npm, and there is no upstream that could replace it. See [Installation](#installation).
 
 ## Preview
 
@@ -49,26 +47,30 @@ To enable the Anthropic fonts, choose one of the following:
 
 > Requires dsh ≥ 0.1.7
 
-1. From a terminal:
+This build ships as a local `.tgz`. Installing from npm or from the plugin market gets you a **different package** (the upstream `dsh-claude-style`), which neither replaces this build nor carries its changes.
+
+1. From HDSL: instance → Plugins → **install plugin from file**, and pick `hdsl-claude-style-0.7.0.tgz`.
+
+2. Or from a terminal (give an absolute path; the launcher copies the tarball into the instance, so the source file can move afterwards):
 
 ```bash
-dsh plugin --profile web add dsh-claude-style                  # npm package (recommended)
-dsh plugin --profile web add Nwflower/dsh-claude-style         # GitHub source
+dsh plugin --profile web add file:/absolute/path/hdsl-claude-style-0.7.0.tgz
 ```
 
-2. From the [plugin market](https://github.com/dsh-market/dsh-market)
-
 Keep only one theme enabled at a time. After installation, **restart `dsh web`** and refresh the page.
+
+Coming from the upstream build, remove that one first (`dsh plugin --profile web remove dsh-claude-style`) so both themes are never active at once.
 
 ## Features
 
 1. **Theme** — applies globally the moment it is installed, with nothing to configure. Light mode uses ivory `#FCFCFB`, dark mode warm black `#141413`, and both share the same ember orange `#D97757` action accent; light/dark follows the system color mode.
-2. **Composer** — the input box is rebuilt from the ground up: a permission segmented control (Read / Edit / Auto / Yolo — the Auto tier appears only when the host has the built-in auto review enabled), a model trigger carrying the vendor lockup, and the toolbar and status stats laid out on a single line, with the send and stop buttons unified into 7px rounded rectangles. The stats sentence and the model trigger share the same font size and color.
+2. **Composer** — the input box is rebuilt from the ground up: a permission segmented control (Read / Edit / Auto / Yolo) with its tier list under it, a model trigger carrying the vendor lockup, and the toolbar and status stats laid out on a single line, with the send and stop buttons unified into 7px rounded rectangles. The stats sentence and the model trigger share the same font size and color. The permission tiers come from the host's own catalog: a deployment draws exactly the tiers it configures, and a tier a third-party plugin registers (the auto mode plugin's `auto-mode`, say) appears in the list and takes the Auto slot; the list stays text-only, so a tier's declared glyph is not drawn.
 3. **Model picker** — a new two-level popover. The first level lists the official service plus the quick providers selected in settings; "More models" opens a second level grouped by provider. Every row carries its vendor lockup and a description, and the footer holds the reasoning-effort slider (stepless — it snaps to the nearest level on release) together with the "More models" entry. The second level aligns its bottom edge with the first, providers already shown on the first level are not repeated, and models without thinking support get no slider. Hovering opens the popover after a 50 ms dwell and closes it after 150 ms; the gap between the two cards does not count as leaving.
 4. **Workspace** — the sidebar's "Workspace" heading becomes an **Active / Archived** segmented control. Active keeps the host's session tree, while Archived is the skin's own flat list (title, time, and per-row unarchive and delete icon buttons). Rows match the host's session rows measurement for measurement (row x=12 / width 251 / height 28 / title x=36).
 5. **Sidebar** — the New session and Plugins rows take Claude's real shape: no background at rest, a background on hover, the "＋" of New session set inside a circular chip, and both icons rotating 90° clockwise on hover (four-fold symmetric glyphs, so they land back on themselves). The account drawer and the ban-screen easter egg remain as they were.
 6. **Account area** — after signing in on desktop, the row shows your **real avatar and nickname** (fetched from the server only at startup, on hot reload, and on sign-in and sign-out — never polled; a hand-drawn starburst is the fallback). The account popover remains the host's own: the host's account row is the entry point, and the popover lists the account header, the other plugins' footer entries, and the host's own Settings / Feedback / Sign out, each keeping its original copy, order, and click behavior. On hosts without an account area (Web), the plugin builds a popover with the same look. The card uses a pure white background and spans the sidebar's width.
-7. **Conversation views** — in the desktop Windows titlebar mode, the Conversation / Trajectory control sits centered and always visible on the titlebar row (the same row as the New session button). On wide windows with a short title it stays on the title's row; otherwise it keeps its own row below the title.
+7. **Launcher account** — an instance started by the launcher hands the player's identity to the plugin: the account row draws **the player's own skin** (cropped to the head the way the launcher's own account list crops it, hat layer included, drawn square so no rounding shaves its pixels), and the greeting and account name use the launcher's account name wherever no custom username is set. Only the name, vendor, account kind and whether a picture exists are read — the skin file's path never leaves the process. With no account, a deleted picture, or a file that is not an image, it falls back to the host account's avatar and then to the hand-drawn mark.
+8. **Conversation views** — in the desktop Windows titlebar mode, the Conversation / Trajectory control sits centered and always visible on the titlebar row (the same row as the New session button). On wide windows with a short title it stays on the title's row; otherwise it keeps its own row below the title.
 
 ## Disabling and uninstalling
 
@@ -82,7 +84,7 @@ To pause the theme without uninstalling it, add the following to the profile's `
 The change takes effect within about a second — refresh the page to restore the stock appearance.
 
 ```bash
-dsh plugin --profile web remove dsh-claude-style   # uninstall
+dsh plugin --profile web remove hdsl-claude-style   # uninstall
 ```
 
 Then restart `dsh web`. If you previously added this theme's entry to `cordis.patch.yml` by hand, remove it as well.

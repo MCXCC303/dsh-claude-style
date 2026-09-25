@@ -1,6 +1,34 @@
 # Changelog
 
-All notable changes to `dsh-claude-style` are documented here, newest first.
+All notable changes to this plugin are documented here, newest first.
+
+## [0.7.0] - 2026-09-25
+
+[中文](#cn-0.7.0) | [English](#en-0.7.0)
+
+<h3 id="cn-0.7.0">新增功能</h3>
+
+- **接入启动器的账号契约**：启动器启动实例时发布的账号（`HDSL_ACCOUNT_*`，经 harness 自带的启动环境读取）现在被插件使用。没有账号时一切照旧。读取只接受进程环境与用户 home 两层，项目目录里的 `.env` 无法冒充玩家身份；契约版本号不是 `1` 时整组忽略。读取发生在宿主半边，浏览器只拿到名字、供应商、账号种类与「有没有头像」这几项，皮肤文件的路径不出进程。
+- **账号位置的头像改为玩家自己的皮肤**：启动器记下了玩家导入的皮肤，插件由宿主半边把那张规范化贴图（64×64，或整数倍）以只读路由发给浏览器，浏览器按启动器账号列表相同的裁法取头部：脸的 8×8 贴图块按盒子的 1/18 内缩，帽子层铺满整个盒子。头部按**方形**绘制，不用账号头像那条路径的圆形遮罩——头部画到盒子边缘，任何圆角都会切掉它的像素。没有头像、头像文件已删、文件不是 PNG 时一律回退——先回退到宿主账号头像，再回退到手绘标记。
+- **新会话问候语与账号名优先用启动器账号名**：玩家自己在设置里填的用户名仍然优先，其次是浏览器本地备份，再是启动器发布的账号名，最后才是系统用户名。这条名字由宿主半边的身份路由回答，不经过设置表单，因此设置服务在启动瞬间不可用时也不会退回系统用户名。
+- **权限档位改为跟随宿主目录**：权限控件（输入框分段控件与它的弹层）不再写死四档，段位与行都按宿主的 `permissionPresets` 目录构建——目录里有的档位才画，宿主没提供的整条不出现，第三方插件注册的档位因此成为一等公民：auto mode 插件的 `auto-mode` 会以 **Auto mode** 出现在弹层里，并在分段控件里占用 **Auto** 那一格（部署同时提供宿主内置 Auto review 时，内置档退居弹层、把格子让给部署自己的自动档）。档位名与说明仍由皮肤给（皮肤不认识的档位用宿主自己的名字与说明，机器值不上屏），行保持纯文字——预设声明的 `icon`（宿主原生会忽略、由第三方补丁开启的那种）也不画，档位列表读起来是一份清单。切换仍走宿主的 `/permission <preset>`；风险确认仍然只覆盖完全权限与内置 Auto review——第三方自动档把沙箱收进工作区、审批收成询问，属于收紧，不需要确认。
+
+### 其他变更
+
+- **包名改为 `hdsl-claude-style`，改为本地 tgz 分发**：插件不再有 npm / GitHub 上游，插件包也不带 `repository` / `homepage` / `bugs` 字段，因此启动器与 `pnpm` 的任何一条路径都不会用同名上游包替换这份构建。安装改用启动器的「从文件安装插件」（`.tgz`）或 `dsh plugin --profile web add file:/绝对路径/hdsl-claude-style-0.7.0.tgz`。设置命名空间（loader 行 id `ui-skin-claude-style`）与浏览器本地存储的键都没变，升级不会丢失已有偏好。
+- **新增回归用例**：宿主半边覆盖账号契约的取值、皮肤路由的字节与拒绝路径（跨站 / 局域网 / DNS 重绑定 / 写请求 / 不是 PNG 的文件），浏览器半边新增三个用例，用地标图形（红脸块、两个绿帽子像素、其余灰色）断言裁脸几何，并覆盖「契约在但没有图」与「图取不到」两种回退；权限档位另加四个用例，分别断言第三方档位进目录后的档位清单与切换命令、会话处于该档位时的名字与激活标记（且档位列表里任何一行都不画图标）、分段控件的 Auto 格绑定部署自己的自动档，以及「主页往返一圈回到会话后档位列表仍在」（首页视图会把触发键与它的弹层移出树，回来时是新造的弹层）。
+
+<h3 id="en-0.7.0">New Features</h3>
+
+- **The launcher's account contract is now used**: an account published by the launcher when it starts an instance (`HDSL_ACCOUNT_*`, read through the harness's own launch environment) now reaches the skin. Without an account nothing changes. Only the process environment and the user's own home layer are trusted, so a project directory's `.env` cannot impersonate the player, and a contract version other than `1` is ignored as a whole. The read happens on the host half; the browser receives the name, vendor, account kind and whether a picture exists — the skin file's path never leaves the process.
+- **The account row's mark becomes the player's own skin**: the launcher stores every imported skin as a normalized texture atlas (64×64, or an integer multiple), and the host half serves it over a read-only route. The browser crops the head the way the launcher's own account list does — the face's 8×8 texel block inset by 1/18 of the box, with the hat layer over the whole box. The head is drawn **square** rather than under the round mask the avatar-photo path uses, because it reaches the box's edges and any rounding would shave its pixels off. With no picture, a deleted file, or a file that is not a PNG, it falls back: first to the host account's avatar, then to the hand-drawn mark.
+- **The greeting and the account name prefer the launcher's account name**: a username typed in the settings page still wins, then the browser-local copy, then the name the launcher published, and the system username last. That name is answered by the host half's identity route rather than by the settings form, so a settings service that is not ready at startup no longer falls back to the system username.
+- **The permission ladder now follows the host catalog**: the permission control (the composer's segmented group and its popover) no longer hardcodes four tiers. Both the segments and the rows are built from the host's `permissionPresets` catalog, so a deployment offers exactly the tiers it configures and a tier no one serves is absent rather than drawn dead. A tier a third-party plugin registers is therefore a first-class entry: the auto mode plugin's `auto-mode` appears as **Auto mode** in the popover and takes the **Auto** slot of the segmented group (when the deployment also serves the host's built-in Auto review, that one stays in the popover and the slot goes to the deployment's own tier). Names and descriptions still come from the skin — a tier it does not know reads with the host's own name and description, never with its machine id — and the rows stay text-only: a preset's declared `icon` (which the host ignores natively, and a third-party patch turns on) is not drawn either, so the ladder reads as one list. Switching still goes through the host's `/permission <preset>`, and the risk confirmation still covers Full access and the built-in Auto review only: a third-party auto tier narrows the sandbox to the workspace and the approval to asking, so it needs none.
+
+<h3 id="en-0.7.0">Chores</h3>
+
+- **The package is renamed `hdsl-claude-style` and ships as a local tarball**: the plugin has no npm or GitHub upstream any more, and its manifest carries no `repository` / `homepage` / `bugs` fields, so no launcher or `pnpm` path can replace this build with a same-named package from a registry. Install it through the launcher's "install plugin from file" (`.tgz`) or `dsh plugin --profile web add file:/absolute/path/hdsl-claude-style-0.7.0.tgz`. The settings namespace (loader row id `ui-skin-claude-style`) and the browser-local storage keys are unchanged, so an upgrade keeps the preferences already set.
+- **New regression coverage**: the host half covers the contract's values and the skin route's bytes and refusals (cross-site, LAN, DNS rebinding, a write, a file that is not a PNG), and the browser half gains three cases that assert the crop geometry against landmark texels (a red face block, two green hat pixels, grey elsewhere) and cover both fallbacks — a contract without a picture, and a picture that never arrives. The permission ladder gains four cases of its own: a third-party tier's place in the ladder and the switch command it sends, the name and active mark of a session running that tier (with no glyph drawn in any row), the segmented group's Auto slot binding to the deployment's own auto tier, and the ladder still being drawn after a round trip through the home view, which takes the trigger and its popover out of the tree and leaves a freshly built one to fill.
 
 ## [0.6.4] - 2026-09-24
 
