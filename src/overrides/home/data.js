@@ -27,8 +27,24 @@
     var HOME_HEAT_WEEKS = 26
     /** A day's heat is bucketed into four steps against the busiest day shown. */
     var HOME_HEAT_STEPS = 4
-    /** The Hobbit's length in tokens, for Claude Code's own yardstick line. */
-    var HOME_HOBBIT_TOKENS = 123000
+    /**
+     * The yardstick line's books, shortest first: each title's copy key, its
+     * English fallback, and its length in tokens (its word count at the same
+     * 1.3 tokens a word The Hobbit's 123k comes from).
+     */
+    var HOME_BOOKS = [
+      { key: 'homeBookAnimalFarm', title: 'Animal Farm', tokens: 39000 },
+      { key: 'homeBookGatsby', title: 'The Great Gatsby', tokens: 61000 },
+      { key: 'homeBookPhilosophersStone', title: "Harry Potter and the Philosopher's Stone", tokens: 100000 },
+      { key: 'homeBook1984', title: 'Nineteen Eighty-Four', tokens: 116000 },
+      { key: 'homeBookHobbit', title: 'The Hobbit', tokens: 123000 },
+      { key: 'homeBookPride', title: 'Pride and Prejudice', tokens: 159000 },
+      { key: 'homeBookMobyDick', title: 'Moby-Dick', tokens: 268000 },
+      { key: 'homeBookLordOfTheRings', title: 'The Lord of the Rings', tokens: 625000 },
+      { key: 'homeBookWarAndPeace', title: 'War and Peace', tokens: 763000 },
+      { key: 'homeBookHarryPotter', title: 'the whole Harry Potter series', tokens: 1409000 },
+      { key: 'homeBookLostTime', title: 'In Search of Lost Time', tokens: 1647000 },
+    ]
     /** The models chart's own window, in days: Claude Code's chart spans a month. */
     var HOME_CHART_DAYS = 30
     /** Models the ranked list shows before its "show more" row. */
@@ -188,8 +204,7 @@
        * `modelSelection` with the route the session last used, and
        * `sessionListMetadata` with the blank flag and the last prompt time.
        * Summing them gives the panel a second, cheaper source — and the model
-       * list's fallback, since the roll-up route reports models only from the
-       * half that folds them.
+       * list's fallback when the roll-up route cannot answer.
        *
        * A session's whole total is bucketed onto its own last-activity day: the
        * list has no per-day split, so this is coarser than the host half's fold,
@@ -382,9 +397,10 @@
      * @param state - the roll-up store's snapshot.
      * @param listed - the session list's roll-up, or null.
      * @param range - the picked range id ('all' / '30d' / '7d').
+     * @param bookPick - the panel's draw in [0, 1), which picks the yardstick book.
      * @returns the figures both views read.
      */
-    function homePanelData(state, listed, range) {
+    function homePanelData(state, listed, range, bookPick) {
       var value = state.value
       var ready = value !== null && value.totals !== undefined
       var totals = ready ? value.totals : null
@@ -447,17 +463,27 @@
           if (inRange(listed.days[ld].date)) activeDays += 1
         }
       }
-      // The yardstick line reads the all-time total, whatever the window is.
-      var allTokens = ready ? homeDayTokens(totals) : (listed === null ? 0 : listed.tokens)
-      // The hour histogram is the fold's own; the cost-meter answer has none.
+      // The hour histogram is the fold's own (behind a cost-meter answer it
+      // lands a moment later). All time reads the whole histogram; a window sums
+      // its own days' histograms, so the peak hour follows the range pills.
+      var hourCounts = null
+      if (ready && start === null && Array.isArray(value.hours)) hourCounts = value.hours
+      else if (ready && start !== null && Array.isArray(value.days)) {
+        for (var hd = 0; hd < value.days.length; hd++) {
+          var hourDay = value.days[hd]
+          if (!inRange(hourDay.date) || !Array.isArray(hourDay.hours)) continue
+          if (hourCounts === null) hourCounts = new Array(24).fill(0)
+          for (var dh = 0; dh < 24; dh++) hourCounts[dh] += Number(hourDay.hours[dh]) || 0
+        }
+      }
       var peakHour = null
-      if (ready && Array.isArray(value.hours)) {
+      if (hourCounts !== null) {
         var bestHour = 0
         var hourSum = 0
         for (var h = 0; h < 24; h++) {
-          var hourCount = Number(value.hours[h]) || 0
+          var hourCount = Number(hourCounts[h]) || 0
           hourSum += hourCount
-          if (hourCount > (Number(value.hours[bestHour]) || 0)) bestHour = h
+          if (hourCount > (Number(hourCounts[bestHour]) || 0)) bestHour = h
         }
         if (hourSum > 0) peakHour = formatHomeHour(bestHour)
       }
@@ -475,9 +501,20 @@
         }
       }
       if (model === null && ready && typeof value.model === 'string') model = value.model
-      var fun = allTokens >= HOME_HOBBIT_TOKENS
-        ? copyLabel('homeFunHobbit', "You've used ~{count}× more tokens than The Hobbit.", { count: formatHomeCount(Math.round(allTokens / HOME_HOBBIT_TOKENS)) })
-        : null
+      // The yardstick line reads the window's own total, like the tiles above it.
+      // The panel draws its book once; a window that has not passed that book
+      // yet steps down to the longest book it has passed, so switching ranges
+      // keeps the same book whenever the totals allow.
+      var fun = null
+      var bookIndex = Math.min(HOME_BOOKS.length - 1, Math.floor(bookPick * HOME_BOOKS.length))
+      while (bookIndex >= 0 && tokens < HOME_BOOKS[bookIndex].tokens) bookIndex -= 1
+      if (bookIndex >= 0) {
+        var book = HOME_BOOKS[bookIndex]
+        fun = copyLabel('homeFunBook', "You've used ~{count}× more tokens than {book}.", {
+          count: formatHomeCount(Math.round(tokens / book.tokens)),
+          book: copyLabel(book.key, book.title),
+        })
+      }
       var models = homeModelList(value, listed)
       return {
         ready: ready,
@@ -494,7 +531,6 @@
         activeDays: activeDays,
         peakHour: peakHour,
         model: model,
-        allTokens: allTokens,
         grid: homeHeatGrid(ready ? value.days : (listed === null ? null : listed.days)),
         fun: fun,
         models: models,

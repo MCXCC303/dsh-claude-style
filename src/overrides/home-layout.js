@@ -33,6 +33,12 @@
       var layout = DEFAULT_HOME_LAYOUT
       /** Whether the last pass saw the new-conversation hero, as of that reading. */
       var lastHero = false
+      /**
+       * The yardstick book's draw. It is held here, not in the panel: the dock
+       * seat keeps the panel mounted inside a conversation too, and the draw is
+       * renewed each time the page comes back to the new-conversation hero.
+       */
+      var bookPick = Math.random()
       var slotsFiber = null
 
       var usage = createHomeUsage(ctx)
@@ -94,7 +100,7 @@
         var range = rangeState[0]
         var setRange = rangeState[1]
         if (layout !== HOME_LAYOUT_STUDIO || !heroPhase()) return null
-        var data = homePanelData(state, usage.list(), range)
+        var data = homePanelData(state, usage.list(), range, bookPick)
 
         function tabButton(id, label) {
           return React.createElement('button', {
@@ -184,6 +190,7 @@
         var hero = heroPhase()
         if (hero !== lastHero) {
           lastHero = hero
+          if (hero) bookPick = Math.random()
           usage.notify()
         }
         if (next === HOME_LAYOUT_STUDIO) {
