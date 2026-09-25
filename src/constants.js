@@ -13,7 +13,7 @@
      * package name, which is what makes it render on this plugin's page.
      */
     var SETTINGS_ENTRY_FALLBACK = 'ui-skin-claude-style'
-    var PACKAGE_NAME = 'dsh-claude-style'
+    var PACKAGE_NAME = 'hdsl-claude-style'
     var BUNDLE_CONFIG_SLOT = 'plugins.bundle.config'
     var SETTINGS_SECTION_SLOT = 'settings.section'
 
@@ -331,10 +331,9 @@
     var USAGE_ROUTE = '/dsh-claude-style/usage'
     /**
      * Home-page layouts. `classic` is the centered hero the skin has always
-     * drawn; `studio` is the dashboard form Claude Code's own home shows: the
-     * greeting sits at the top left, the composer hugs the window's bottom edge,
-     * and the usage panel fills the space between them. Studio is the default,
-     * and a layout already chosen in the settings is kept.
+     * drawn; `studio` is the dashboard form: the greeting sits at the top left,
+     * the composer hugs the window's bottom edge, and the usage panel fills the
+     * space between them. Studio is the default: it is Claude Code's own home.
      */
     var HOME_LAYOUT_CLASSIC = 'classic'
     var HOME_LAYOUT_STUDIO = 'studio'

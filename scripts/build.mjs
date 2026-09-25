@@ -102,6 +102,7 @@ const FRAGMENTS = [
   'overrides/home/overview.js',
   'overrides/home/models.js',
   'overrides/home-layout.js',
+  'overrides/mascot.js',
   'overrides/scheduler.js',
   'settings.js',
   'entry.js',
@@ -130,6 +131,7 @@ const STYLE_FILES = [
   { file: 'components/home-panel.css' },
   { file: 'components/home-overview.css' },
   { file: 'components/home-models.css' },
+  { file: 'components/mascot.css' },
   { file: 'components/theme-flip.css' },
 ]
 
@@ -150,7 +152,7 @@ const HEADER = (() => {
  * ${styleSheets}
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-claude-style',
+  id: 'hdsl-claude-style',
   factory: (require) => {
     'use strict'
     var module = { exports: {} }

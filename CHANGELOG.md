@@ -1,36 +1,128 @@
 # Changelog
 
-All notable changes to `dsh-claude-style` are documented here, newest first.
+All notable changes to this plugin are documented here, newest first.
 
 ## [Unreleased]
 
 [中文](#cn-unreleased) | [English](#en-unreleased)
 
+<h3 id="cn-unreleased">移除</h3>
+
+- **新会话页输入卡片上沿的像素螃蟹连同它的钓鱼动作一并去掉**：0.7.1 版面上那只螃蟹、它的十一种姿势与点击 / 指针离开 / 空闲定时触发的钓鱼动作不再存在，经典版面与工作台版面都不再画它。
+
 <h3 id="cn-unreleased">新增功能</h3>
 
-- **两套首页版面，设置页随时切换**：新增「首页版面」设置项。**经典**沿用居中大标题加输入卡片；**工作台**把标题移到左上角并固定为一句「What's up next, 用户名？」（无衬线小字，与品牌标记同一行），输入框改用对话内的单行样式贴住窗口底部、上方一行细边框上下文胶囊，标题与一块 480px 窄栏用量面板贴着输入框左缘排布——概览页签是六个数字格（会话数、调用次数、Token、活跃天数、高峰时段、常用模型）与 26 周按天热力图（等分列方格、蓝色数据色阶）；模型页签是每天一根按模型颜色自下而上堆叠的柱子，下面跟一份模型排行（色块、模型名、输入与输出、占比，超过六行折成「再显示 N 个」），柱与色块共用同一套按名次取色的蓝色色阶；右上角的「全部 / 30 天 / 7 天」范围切换过滤数字格与模型排行，热力图与柱状图保持自身窗口；累计用量超过一本《霍比特人》时，热力图下方出现倍数趣味行。面板只在新会话页出现，进入对话后自动消失。
-- **用量数据在本机汇总**：新增只读路由 `GET /dsh-claude-style/usage`（与用户名路由同一同源护栏）。装了 `dsh-cost-meter` 时直接读它的账本缓存（只读），否则读本机会话日志自行汇总，并按日志文件增量缓存——冷启动首次约两秒，之后每次启动约 3 毫秒。汇总同时给出每个模型的四类 token 与每天按模型拆分的 token（`models` 与 `days[].models`），模型页签的柱状图与排行读它们；账本来源没有模型维度，此时排行回落到会话列表自带的按模型合计。汇总不可用（旧宿主半边或汇总失败）时，面板改用宿主会话列表自带的投影值出数。
-- **面板先画骨架再填数**：数字到达前先画好外框、占位数字、空热力格与模型行的占位条，到达后只替换文字、格子颜色与条长，整个版面不跳动；取不到数据的格子画破折号，不画零。
-- **接入 HDSL 启动器的账号信息**：由 HDSL 启动的实例，昵称与头像会优先取启动器里的账号。昵称按「自定义昵称 → 官方账号昵称 → HDSL 昵称 → 上次探测到的系统用户名 → 系统用户名 → `User`」回退，头像按「官方账号头像 → HDSL 头像 → Claude 徽标」回退。宿主半边新增两条只读私有路由，与用户名路由同级过宿主请求栅栏：`GET /dsh-claude-style/hdsl` 回账号元数据（不含头像文件的绝对路径），`GET /dsh-claude-style/hdsl-skin.png` 回头像图片。契约版本读不到或不认识时整组忽略；头像文件被删除时回落到徽标。
+- **账号位置的头像改为玩家自己的皮肤**：启动器记下了玩家导入的皮肤，宿主半边把那张规范化贴图以只读路由发给浏览器，浏览器按启动器账号列表相同的裁法取头部——脸的 8×8 贴图块按盒子的 1/18 内缩，帽子层铺满整个盒子。头部按**方形**绘制，不用账号头像那条路径的圆形遮罩：它画到盒子边缘，任何圆角都会切掉它的像素。没有头像、头像文件已删、图取不到时一律回退，先回退到宿主账号头像，再回退到手绘标记。
+- **权限档位改为跟随宿主目录**：权限控件（输入框分段控件与它的弹层）不再写死四档，段位与行都按宿主的 `permissionPresets` 目录构建——目录里有的档位才画，宿主没提供的整条不出现。第三方插件注册的档位因此成为一等条目：auto mode 插件的 `auto-mode` 会以 **Auto mode** 出现在弹层里，并在分段控件里占用 **Auto** 那一格（部署同时提供宿主内置 Auto review 时，内置档退居弹层、把格子让给部署自己的自动档）。档位名与说明仍由皮肤给（皮肤不认识的档位用目录自带的文案，机器值不上屏），行保持纯文字——预设声明的图标也不画。切换仍走宿主的 `/permission <preset>`。
+
+### 体验优化
+
+- **接入启动器的账号契约**：启动器启动实例时发布的账号（`HDSL_ACCOUNT_*`）现在被插件使用：宿主半边读 harness 启动时填好的启动环境快照，只接受进程环境与用户 home 两层（项目目录里的 `.env` 会随仓库被克隆，没有资格声明玩家是谁），契约版本号不是 `1` 时整组忽略。没有账号时一切照旧。浏览器只拿到名字、供应商、账号种类与「有没有头像」，皮肤文件的路径不出进程。
+- **昵称收敛成一条回退顺序**：玩家在设置里填的昵称优先，其次是官方账号昵称、启动器发布的账号名、上次探测到的系统用户名，最后是新探测到的系统用户名；欢迎语与账号行读同一处，不会各自漂移。启动器账号名由宿主半边读出，不经过设置表单，所以设置服务在启动瞬间不可用也不会让名称退回系统用户名。
+- **工作台成为默认首页版面，卡片的排版按 Claude Code 收口**：没在设置里选过版面时，新会话页用工作台版面（问候在左上、输入卡片贴住窗口底边、中间是用量面板），经典版面仍可在设置页切回；发送首条消息时用量面板不再先按对话区全宽铺满窗口约 120ms，而是随宿主离开新会话页的那一帧消失；输入卡片的栈与上下文胶囊的权重与宿主的门控规则持平，卡片重新贴住窗口底边。
+- **热力图的日期提示与概览数字格改用 Claude Code 的叫法**：指针停在热力图的某一天上，浮出深色提示，写着日期与当天的消息数（如「9月9日 — 15,955」），靠两端的几列提示贴住格子外沿、不伸出面板；读会话列表兜底来源时提示改写当天的 Token。概览的六个数字格改用「消息数 / Token 总量 / 最常用模型」等叫法，最常用模型按常规字重排。
+- **经典首页按时段从一组问候里随机抽一句**：早上、午间、下午、晚上、深夜各有一组问候，另有几句不分时段，每次回到新会话页抽一句，同一次停留里不变。
+
+### 其他变更
+
+- **整合包的形态**：这一版是 HDSL 整合包使用的构建，包名 `hdsl-claude-style`，以本地 `.tgz` 分发，包内不带 `repository` / `homepage` / `bugs` 字段，因此启动器与 `pnpm` 的任何一条路径都不会用同名上游包替换这份构建。安装见 README 的「安装」一节。设置命名空间（loader 行 id `ui-skin-claude-style`）与浏览器本地存储的键都没变，升级不会丢失已有偏好。
+- **新增回归用例**：宿主半边覆盖账号契约的取值、贴图路由的字节与拒绝路径（跨站 / 局域网 / DNS 重绑定 / 读请求栅栏 / 文件被删），浏览器半边用一张地标贴图（红脸块、两个绿帽子像素、其余灰色）断言裁脸几何并覆盖两种回退，权限用例按宿主的权限目录出数，经典问候用例断言进入新会话页时抽签、其后每轮 pass 不改动已抽的句子；全部 377 项通过。
+
+<h3 id="en-unreleased">Removals</h3>
+
+- **The pixel crab that stood on the new-conversation composer card is gone, its fishing routine with it**: the crab the 0.7.1 layout carried, its eleven poses, and the routine a click, a pointer leaving it, or the idle timer started no longer exist, on either the classic or the studio layout.
 
 <h3 id="en-unreleased">New Features</h3>
 
-- **Two home layouts, switchable in the settings page**: a new Home layout preference. **Classic** keeps the centered headline over the composer card; **Studio** pins the greeting to the top left as one fixed line ("What's up next, <user>?", in the sans UI face on the brand mark's line), docks the composer in the conversation's single-line form at the window's bottom edge with a row of hairline context chips above it, and sets the greeting and a 480px usage panel against the composer's left edge — an Overview tab with six stat cells (sessions, calls, tokens, active days, peak hour, top model) and a twenty-six-week per-day heat grid of square cells in equal columns, and a Models tab stacking each day's per-model tokens into one bar over a ranked model list (swatch, model name, input and output, share; past six rows it folds behind a "show more" row), both reading the same rank-ordered blue ramp. The All / 30d / 7d range pills filter the tiles and the model list while the grid and the chart keep their own windows, and once the all-time total passes one copy of The Hobbit a multiplier line appears under the grid. The panel appears on the new-conversation page only and steps away once a session is open.
-- **The usage numbers are folded locally**: a new read-only route, `GET /dsh-claude-style/usage`, behind the same same-origin fence as the username route. With `dsh-cost-meter` installed it reads that plugin's ledger cache (read-only); otherwise the host half folds the local session logs itself and caches the result incrementally per log file — about two seconds on the first cold pass, about 3 ms per start afterwards. The fold also answers each model's four token buckets and each day's per-model tokens (`models` and `days[].models`), which the Models tab's chart and ranking read; the ledger has no model dimension, so that source falls back to the session list's per-model totals. When the fold cannot answer (an older host half or a failed pass), the panel falls back to the projection block each host session row carries.
+- **The account row's mark becomes the player's own skin**: the launcher stores every imported skin as a normalized texture atlas, and the host half serves it over a read-only route. The browser crops the head the way the launcher's own account list does — the face's 8×8 texel block inset by 1/18 of the box, with the hat layer over the whole box. The head is drawn **square** rather than under the round mask the avatar-photo path uses, because it reaches the box's edges and any rounding would shave its pixels off. With no picture, a deleted file, or a picture that cannot be served, it falls back: first to the host account's avatar, then to the hand-drawn mark.
+- **The permission ladder now follows the host catalog**: the permission control (the composer's segmented group and its popover) no longer hardcodes four tiers. Both the segments and the rows are built from the host's `permissionPresets` catalog, so a deployment offers exactly the tiers it configures and a tier no one serves is absent rather than drawn dead. A tier a third-party plugin registers is therefore a first-class entry: the auto mode plugin's `auto-mode` appears as **Auto mode** in the popover and takes the **Auto** slot of the segmented group (when the deployment also serves the host's built-in Auto review, that one stays in the popover and the slot goes to the deployment's own tier). Names and descriptions still come from the skin — a tier it does not know reads with the catalog's own copy, never with its machine id — and the rows stay text-only, so a preset's declared glyph is not drawn either. Switching still goes through the host's `/permission <preset>`.
+
+### Improvements
+
+- **The launcher's account contract is now used**: the account a launcher publishes when it starts an instance (`HDSL_ACCOUNT_*`) now reaches the skin. The host half reads the launch-environment snapshot the harness fills, trusting only the process environment and the user's own home layer (a project directory's `.env` travels with a cloned repository and has no standing to say who the player is), and ignores the whole group for any contract version other than `1`. Without an account nothing changes. The browser receives the name, vendor, account kind and whether a picture exists — the skin file's path never leaves the process.
+- **One fallback order for the nickname**: a nickname typed in the settings wins, then the signed-in account's name, the name the launcher published, the last probed system user, and the fresh probe last. The greeting and the account row read that one place, so they cannot drift apart. The launcher's name is read by the host half rather than through the settings form, so a settings service that is not ready at startup no longer drops the name back to the system user.
+- **Studio is the default home layout, with the card's arrangement tightened**: without a layout chosen in the settings, the new-conversation page opens in the studio layout — the greeting at the top left, the composer on the window's bottom edge, the usage panel in between — and classic stays one switch away in the settings page. Sending the first message no longer spends about 120 ms with the usage panel laid out at the conversation's full width, because the panel leaves in the host's own frame; the composer stack and the context chips carry the weight their gated rules do, so the card rests on the bottom edge again.
+- **Day tips on the heat grid, and Claude Code's names on the tiles**: resting the pointer on a day of the heat grid shows a dark tip with the date and that day's messages ("Sep 9 — 15,955"); over the columns at either end the tip lines up with the cell's outer edge and stays inside the panel. The session list's fallback has no per-day message count, and its tips name the day's tokens instead. The overview's six tiles take Claude Code's names — Messages, Total tokens, Favorite model among them — with the favourite model at the regular weight.
+- **More greetings on the classic home page**: morning, midday, afternoon, evening and night each have a pool of greetings, plus a few lines for any hour; a fresh line is drawn each time the new-conversation page comes back and holds still while you stay.
+
+### Chores
+
+- **The shape of this integration build**: this version is the build the HDSL integration pack carries — package name `hdsl-claude-style`, shipped as a local `.tgz`, with no `repository` / `homepage` / `bugs` fields, so no launcher or `pnpm` path can replace this build with a same-named package from a registry. See the README's installation section. The settings namespace (loader row id `ui-skin-claude-style`) and the browser-local storage keys are unchanged, so an upgrade keeps the preferences already set.
+- **New regression coverage**: the host half covers the account contract's values, the texture route's bytes and its refusals (cross-site, LAN, DNS rebinding, the read fence, a file that was deleted); the browser half asserts the crop geometry against a fixture's landmark texels (a red face block, two green hat pixels, grey elsewhere) and covers both fallbacks; the permission cases read the host's own catalog directory; and the classic greeting cases assert the draw on arrival and that later passes leave the drawn line alone. All 377 checks pass.
+
+## [0.7.1] - 2026-09-25
+
+[中文](#cn-0.7.1) | [English](#en-0.7.1)
+
+<h3 id="cn-0.7.1">新增功能</h3>
+
+- **接入启动器的账号契约**：启动器启动实例时发布的账号（`HDSL_ACCOUNT_*`）现在被插件使用：宿主半边读 harness 启动时填好的启动环境快照，只接受进程环境与用户 home 两层（项目目录里的 `.env` 会随仓库被克隆，没有资格声明玩家是谁），契约版本号不是 `1` 时整组忽略。没有账号时一切照旧。浏览器只拿到名字、供应商、账号种类与「有没有头像」，皮肤文件的路径不出进程。
+- **账号位置的头像改为玩家自己的皮肤**：启动器记下了玩家导入的皮肤，宿主半边把那张规范化贴图以只读路由发给浏览器，浏览器按启动器账号列表相同的裁法取头部——脸的 8×8 贴图块按盒子的 1/18 内缩，帽子层铺满整个盒子。头部按**方形**绘制，不用账号头像那条路径的圆形遮罩：它画到盒子边缘，任何圆角都会切掉它的像素。没有头像、头像文件已删、图取不到时一律回退，先回退到宿主账号头像，再回退到手绘标记。
+- **昵称收敛成一条回退顺序**：玩家在设置里填的昵称优先，其次是官方账号昵称、启动器发布的账号名、上次探测到的系统用户名，最后是新探测到的系统用户名；欢迎语与账号行读同一处，不会各自漂移。启动器账号名由宿主半边读出，不经过设置表单，所以设置服务在启动瞬间不可用也不会让名称退回系统用户名。
+- **权限档位改为跟随宿主目录**：权限控件（输入框分段控件与它的弹层）不再写死四档，段位与行都按宿主的 `permissionPresets` 目录构建——目录里有的档位才画，宿主没提供的整条不出现，第三方插件注册的档位因此成为一等公民：auto mode 插件的 `auto-mode` 会以 **Auto mode** 出现在弹层里，并在分段控件里占用 **Auto** 那一格（部署同时提供宿主内置 Auto review 时，内置档退居弹层、把格子让给部署自己的自动档）。档位名与说明仍由皮肤给（皮肤不认识的档位用宿主自己的名字与说明，机器值不上屏），行保持纯文字——预设声明的 `icon` 也不画，档位列表读起来是一份清单。切换仍走宿主的 `/permission <preset>`。
+
+### 其他变更
+
+- **包名改为 `hdsl-claude-style`，改为本地 tgz 分发**：插件不再有 npm / GitHub 上游，插件包也不带 `repository` / `homepage` / `bugs` 字段，因此启动器与 `pnpm` 的任何一条路径都不会用同名上游包替换这份构建。安装改用启动器的「从文件安装插件」（`.tgz`）或 `dsh plugin --profile web add file:/绝对路径/hdsl-claude-style-0.7.1.tgz`。设置命名空间（loader 行 id `ui-skin-claude-style`）与浏览器本地存储的键都没变，升级不会丢失已有偏好。
+- **新增回归用例**：宿主半边覆盖账号契约的取值、头像路由的字节与拒绝路径（跨站 / 局域网 / DNS 重绑定 / 读请求栅栏 / 文件被删），浏览器半边新增三个启动器用例（用地标图形——红脸块、两个绿帽子像素、其余灰色——断言裁脸几何，并覆盖「契约在但没有图」与「图取不到」两种回退）与四个权限用例（第三方档位进目录后的清单与切换命令、会话处于该档位时的名字与激活标记、分段控件的 Auto 格绑定、主页往返一圈后档位列表仍在）。
+
+<h3 id="cn-0.7.1">体验优化</h3>
+
+- **默认首页版面改为工作台**：没在设置里选过版面时，新会话页用工作台版面——问候在左上、输入卡片贴住窗口底边、中间是用量面板，也就是 Claude Code 自己的首页。经典版面仍可在设置页随时切回，已经选过版面的不受影响。
+
+<h3 id="en-0.7.1">New Features</h3>
+
+- **The launcher's account contract is now used**: the account a launcher publishes when it starts an instance (`HDSL_ACCOUNT_*`) now reaches the skin. The host half reads the launch-environment snapshot the harness fills, trusting only the process environment and the user's own home layer (a project directory's `.env` travels with a cloned repository and has no standing to say who the player is), and ignores the whole group for any contract version other than `1`. Without an account nothing changes. The browser receives the name, vendor, account kind and whether a picture exists — the skin file's path never leaves the process.
+- **The account row's mark becomes the player's own skin**: the launcher stores every imported skin as a normalized texture atlas, and the host half serves it over a read-only route. The browser crops the head the way the launcher's own account list does — the face's 8×8 texel block inset by 1/18 of the box, with the hat layer over the whole box. The head is drawn **square** rather than under the round mask the avatar-photo path uses, because it reaches the box's edges and any rounding would shave its pixels off. With no picture, a deleted file, or a picture that cannot be served, it falls back: first to the host account's avatar, then to the hand-drawn mark.
+- **One fallback order for the nickname**: a nickname typed in the settings wins, then the signed-in account's name, the name the launcher published, the last probed system user, and the fresh probe last. The greeting and the account row read that one place, so they cannot drift apart. The launcher's name is read by the host half rather than through the settings form, so a settings service that is not ready at startup no longer drops the name back to the system user.
+- **The permission ladder now follows the host catalog**: the permission control (the composer's segmented group and its popover) no longer hardcodes four tiers. Both the segments and the rows are built from the host's `permissionPresets` catalog, so a deployment offers exactly the tiers it configures and a tier no one serves is absent rather than drawn dead. A tier a third-party plugin registers is therefore a first-class entry: the auto mode plugin's `auto-mode` appears as **Auto mode** in the popover and takes the **Auto** slot of the segmented group (when the deployment also serves the host's built-in Auto review, that one stays in the popover and the slot goes to the deployment's own tier). Names and descriptions still come from the skin — a tier it does not know reads with the host's own name and description, never with its machine id — and the rows stay text-only: a preset's declared `icon` is not drawn either, so the ladder reads as one list. Switching still goes through the host's `/permission <preset>`.
+
+### Chores
+
+- **The package is renamed `hdsl-claude-style` and ships as a local tarball**: the plugin has no npm or GitHub upstream any more, and its manifest carries no `repository` / `homepage` / `bugs` fields, so no launcher or `pnpm` path can replace this build with a same-named package from a registry. Install it through the launcher's "install plugin from file" (`.tgz`) or `dsh plugin --profile web add file:/absolute/path/hdsl-claude-style-0.7.1.tgz`. The settings namespace (loader row id `ui-skin-claude-style`) and the browser-local storage keys are unchanged, so an upgrade keeps the preferences already set.
+- **New regression coverage**: the host half covers the contract's values, the avatar route's bytes and its refusals (cross-site, LAN, DNS rebinding, the read fence, a file that was deleted), and the browser half gains three launcher cases (the crop geometry asserted against the fixture's landmark texels — a red face block, two green hat pixels, grey elsewhere — plus both fallbacks) and four permission cases (the third-party tier's place in the ladder and the command it sends, the name and active mark of a session running it, the segmented group's Auto slot binding, and the ladder surviving a round trip through the home view).
+
+<h3 id="en-0.7.1">Improvements</h3>
+
+- **Studio is the default home layout**: without a layout chosen in the settings, the new-conversation page opens in the Studio layout — the greeting at the top left, the composer on the window's bottom edge and the usage panel in between, Claude Code's own home. Classic stays one switch away in the settings page, and a layout already chosen is kept.
+
+**Full Changelog**: [v0.7.0...v0.7.1](https://github.com/Nwflower/dsh-claude-style/compare/v0.7.0...v0.7.1)
+
+## [0.7.0] - 2026-09-25
+
+[中文](#cn-0.7.0) | [English](#en-0.7.0)
+
+<h3 id="cn-0.7.0">新增功能</h3>
+
+- **两套首页版面，设置页随时切换**：新增「首页版面」设置项。**经典**沿用居中大标题加输入卡片；**工作台**把标题移到左上角并固定为一句「What's up next, 用户名？」（无衬线小字，与品牌标记同一行），输入框改用对话内的单行样式贴住窗口底部、上方一行细边框上下文胶囊，标题与一块 480px 窄栏用量面板贴着输入框左缘排布——概览页签是六个数字格（会话数、消息数、Token 总量、活跃天数、高峰时段、最常用模型）与 26 周按天热力图（等分列方格、蓝色数据色阶）；模型页签是每天一根按模型颜色自下而上堆叠的柱子，下面跟一份模型排行（色块、模型名、输入与输出、占比，超过六行折成「再显示 N 个」，展开后末尾是「收起」），柱与色块共用同一套按名次取色的蓝色色阶；右上角的「全部 / 30 天 / 7 天」范围切换过滤数字格（含高峰时段）、趣味行与模型排行，热力图与柱状图保持自身窗口；所选范围内的用量超过一本书时，热力图下方出现倍数趣味行：书从《动物农场》到《追忆似水年华》共十一本，每次回到新会话页随机换一本，范围内用量还不到这本书时退到已经超过的最长那本。面板只在新会话页出现，进入对话后自动消失。
+- **用量数据在本机汇总**：新增只读路由 `GET /dsh-claude-style/usage`（与用户名路由同一同源护栏）。装了 `dsh-cost-meter` 时直接读它的账本缓存（只读），否则读本机会话日志自行汇总，并按日志文件增量缓存——冷启动首次约两秒，之后每次启动约 3 毫秒。两种来源都给出每个模型的四类 token 与每天按模型拆分的 token（`models` 与 `days[].models`），模型页签的柱状图与排行读它们；账本按「提供方:模型」记账，同一模型经不同提供方的用量合成一行。账本不记小时，读账本时其余数字先出，高峰时段随后由本机会话日志按天算出补上。汇总不可用（旧宿主半边或汇总失败）时，面板改用宿主会话列表自带的投影值出数。
+- **面板先画骨架再填数**：数字到达前先画好外框、占位数字、空热力格与模型行的占位条，到达后只替换文字、格子颜色与条长，整个版面不跳动；取不到数据的格子画破折号，不画零。
+- **输入卡片上的像素螃蟹**：工作台版面的新会话页上（经典版面没有），输入卡片上沿靠右站着 Claude Code 的像素螃蟹。点它一下、指针从它身上移开时、以及页面开着时每隔 25–45 秒，它照 Claude Code 的样子钓一次鱼：半转身眨眼，举竿甩到卡片边上，侧身钓一会儿，收竿转回正面，约三秒；系统要求减少动态效果时（例如 Windows 关掉了「在 Windows 中显示动画」），只有点它才播放。只有螃蟹本身接收指针，鱼竿挥动的空白处不挡点击。
+- **热力图的日期提示**：指针停在热力图的某一天上，立刻浮出 Claude Code 样式的深色提示，写着日期和当天的消息数（如「9月9日 — 15,955」）；靠两端的几列提示贴着格子外沿，不会伸出面板。会话列表兜底来源没有按天的消息数，此时提示写当天的 Token。概览的数字格同时改用 Claude Code 的叫法：消息数、Token 总量、最常用模型（模型名不加粗）。
+- **经典首页的问候更多了**：经典版面的大标题不再每个时段只有一句，早上、午间、下午、晚上、深夜各有一组问候，另有几句不分时段；每次回到新会话页随机换一句，同一次停留里不会跳动。
+- **接入 HDSL 启动器的账号信息**：由 HDSL 启动的实例，昵称与头像会优先取启动器里的账号。昵称按「自定义昵称 → 官方账号昵称 → HDSL 昵称 → 上次探测到的系统用户名 → 系统用户名 → `User`」回退，头像按「官方账号头像 → HDSL 头像 → Claude 徽标」回退。宿主半边新增两条只读私有路由，与用户名路由同级过宿主请求栅栏：`GET /dsh-claude-style/hdsl` 回账号元数据（不含头像文件的绝对路径），`GET /dsh-claude-style/hdsl-skin.png` 回头像图片。契约版本读不到或不认识时整组忽略；头像文件被删除时回落到徽标。
+
+<h3 id="en-0.7.0">New Features</h3>
+
+- **Two home layouts, switchable in the settings page**: a new Home layout preference. **Classic** keeps the centered headline over the composer card; **Studio** pins the greeting to the top left as one fixed line ("What's up next, <user>?", in the sans UI face on the brand mark's line), docks the composer in the conversation's single-line form at the window's bottom edge with a row of hairline context chips above it, and sets the greeting and a 480px usage panel against the composer's left edge — an Overview tab with six stat cells (sessions, messages, total tokens, active days, peak hour, favorite model) and a twenty-six-week per-day heat grid of square cells in equal columns, and a Models tab stacking each day's per-model tokens into one bar over a ranked model list (swatch, model name, input and output, share; past six rows it folds behind a "show more" row, and the open list ends in a "show less" row), both reading the same rank-ordered blue ramp. The All / 30d / 7d range pills filter the tiles (the peak hour included), the multiplier line and the model list while the grid and the chart keep their own windows, and once the picked range's total passes one book a multiplier line appears under the grid — eleven books from Animal Farm to In Search of Lost Time, a fresh one drawn each time the new-conversation page comes back, stepping down to the longest book the range has passed when it has not reached the drawn one. The panel appears on the new-conversation page only and steps away once a session is open.
+- **The usage numbers are folded locally**: a new read-only route, `GET /dsh-claude-style/usage`, behind the same same-origin fence as the username route. With `dsh-cost-meter` installed it reads that plugin's ledger cache (read-only); otherwise the host half folds the local session logs itself and caches the result incrementally per log file — about two seconds on the first cold pass, about 3 ms per start afterwards. Both sources answer each model's four token buckets and each day's per-model tokens (`models` and `days[].models`), which the Models tab's chart and ranking read; the ledger books usage per provider and model, and one model served by several providers is one row. The ledger keeps no hours, so with it the other figures land first and the peak hour follows a moment later, folded per day from the local session logs. When the fold cannot answer (an older host half or a failed pass), the panel falls back to the projection block each host session row carries.
 - **The panel draws its skeleton before its numbers**: the frame, number placeholders, an empty heat grid and stand-in share bars come first; arriving values replace only the text, the cell colours and the bar lengths, so nothing shifts. A figure no source can answer is a dash, never a zero.
+- **A pixel crab on the composer card**: on the new-conversation page of the Studio layout (the Classic layout has none), Claude Code's pixel crab stands on the composer card's top edge near its right end. When it is clicked, when the pointer leaves it, and every 25–45 seconds while the page is in view, it plays Claude Code's fishing routine — a half turn and a wink, the rod cast down onto the card's edge, a spell of fishing side-on, and the rod put away as it turns back, about three seconds; with reduced motion requested (Windows' "Show animations in Windows" turned off, for one) only a click plays it. Only the crab itself takes the pointer, so the room the rod swings through never blocks a click.
+- **Day tips on the heat grid**: resting the pointer on a day of the heat grid shows Claude Code's dark tip at once, with the date and that day's messages ("Sep 9 — 15,955"); over the columns at either end the tip lines up with the cell's outer edge and stays inside the panel. The session list's fallback has no per-day message count, and its tips name the day's tokens instead. The Overview tiles take Claude Code's names as well: Messages, Total tokens and Favorite model (the model name at regular weight).
+- **More greetings on the classic home page**: the classic headline no longer has one line per time of day — morning, midday, afternoon, evening and night each have a pool, plus a few lines for any hour; a fresh line is drawn each time the new-conversation page comes back and holds still while you stay.
 - **HDSL launcher accounts are picked up**: an instance started by HDSL prefers the launcher's account for both the nickname and the picture. The nickname falls back through the custom nickname → the signed-in account's name → the HDSL account name → the last probed system user → the system user → `User`; the picture through the account's avatar → the HDSL avatar → the Claude mark. The host half gains two read-only private routes behind the same request fence as the username route: `GET /dsh-claude-style/hdsl` answers the account metadata (never the avatar file's absolute path) and `GET /dsh-claude-style/hdsl-skin.png` answers the image. A contract version that is missing or unknown voids the whole group, and a deleted avatar file falls back to the mark.
 
-<h3 id="cn-unreleased">体验优化</h3>
+<h3 id="cn-0.7.0">体验优化</h3>
 
 - **同时只开一张弹层卡片**：悬停或点击打开模型选择器、推理强度、权限、账户抽屉、会话统计卡片、工作台新会话页的工作区菜单时，之前打开的那张卡片立即收起，两张卡不再叠在同一角；宿主自带的工作区菜单与账户菜单一并参与。
 - **悬停停留由 50ms 延长到 100ms**：指针以平常速度扫过触发器不再展开卡片——工作台版面把上下文行贴在输入卡片正上方，此前指针移向输入框时几乎每次都会展开工作区菜单；停在触发器上仍然立即展开。模型选择器的收起宽限与会话统计卡片的展开停留保持各自的例外值。
 
-<h3 id="en-unreleased">Improvements</h3>
+<h3 id="en-0.7.0">Improvements</h3>
 
 - **One popover card at a time**: opening the model picker, the reasoning-effort card, the permission menu, the account drawer, the session-stats card or the studio new-conversation page's workspace menu now folds whatever card was up before it, so two panels no longer stack over one corner; the host's own workspace and account menus join on the same terms.
 - **The hover dwell goes from 50 ms to 100 ms**: a pointer crossing a trigger at an ordinary pace no longer unfolds a card — the studio layout sets the context row directly above the composer card, where a pointer on its way to the input used to unfold the workspace menu almost every time — while a pointer parked on the trigger still opens at once. The model picker's close grace and the stats card's open dwell keep their own values.
 
-<h3 id="cn-unreleased">问题修复</h3>
+<h3 id="cn-0.7.0">问题修复</h3>
 
 - 修复 **浅色模式下聊天记录顶部「加载更早」按钮几乎看不见**：浅色下的实色悬停底改为浅灰，按钮文字对比度从 2.6:1 回到 4.7:1，深色不变；同族令牌下的工作区重命名输入框在浅色里也不再是深色方块。
 - 修复 **设置页「账号与余额」的「充值」按钮文字与底色几乎同色**：统一的链接色不再覆盖这类实心按钮链接，按钮恢复自身配色（浅色 3.1:1，深色 6.1:1），旁边的「查询用量」回到描边按钮样式。
@@ -42,7 +134,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - 修复 **页面加载后第一次修改设置提示「设置存储不可用，改动不会被保存」**：设置表单现在会等宿主的命名空间登记完成后再绑定，登记晚到时也会在到达后立即绑定并读回取值，第一次修改即可保存。
 - 修复 **新会话页把鼠标从预设模式快速移到工作文件夹时两个弹层同时打开并闪烁**：一行里的两个选择器（工作文件夹与预设模式）现在只会有一个打开，移到另一个触发器时先收起前一个，两个弹窗不再同时出现、也不再闪动；悬停离开收起的是悬停打开的那一个。
 
-<h3 id="en-unreleased">Bug Fixes</h3>
+<h3 id="en-0.7.0">Bug Fixes</h3>
 
 - Fix **the "load earlier" button at the top of the transcript being nearly invisible in light mode**: the light-mode solid hover fill is now a light gray, returning the button's contrast from 2.6:1 to 4.7:1 (dark unchanged); the workspace rename field on the same token family is no longer a dark block in light mode either.
 - Fix **the "Top up" button in Settings → Account & balance showing its label in the same colour as its fill**: the shared link ink no longer overrides filled-button anchors, so the button keeps its own ink (3.1:1 light, 6.1:1 dark) and the neighbouring "View usage" returns to the outlined treatment.
@@ -53,6 +145,8 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - Fix **the archived rows' time being pushed off the row's right edge by the action buttons**: the unarchive and delete buttons reserved their place while transparent, so the time stopped where their reserved space began and hover crowded all three onto one line. The rows now follow the host's own session rows' mechanism: at rest the buttons occupy nothing and the time right-aligns with the row; on hover (or while the row holds keyboard focus) the time steps aside and the two buttons take its place. The invisible buttons also stop answering clicks aimed at that area.
 - Fix **the first settings change after a page load reporting "The settings store is unavailable, so changes will not be saved."**: the settings form now waits for the host's namespace registration before binding, binds as soon as a late registration arrives and reads the value back, so the first change saves.
 - Fix **both popovers on the new-conversation page opening at once, and flickering, when the pointer moved quickly from the preset mode to the workspace folder**: only one of the row's two pickers (the workspace folder and the preset mode) is open at a time — moving to the other trigger folds the first, so the two cards no longer appear together or flicker, and a hover-leave folds the picker the hover opened.
+
+**Full Changelog**: [v0.6.4...v0.7.0](https://github.com/Nwflower/dsh-claude-style/compare/v0.6.4...v0.7.0)
 
 ## [0.6.4] - 2026-09-24
 

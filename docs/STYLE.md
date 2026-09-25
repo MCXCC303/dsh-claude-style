@@ -229,34 +229,57 @@ theme on its own), an Overview/Models tab pair on the left of its head, and the
 All/30d/7d range pills on the right. The active tab and range pill are a gray
 chip one step below that wash — half the radius the 20px control would round to,
 so it reads as a rounded rectangle rather than a full pill. Overview carries six
-stat cells in a 3×2 grid (sessions, calls, tokens, active days, peak hour, top
-model) whose tiles sit one clear step deeper than the panel (15% of the label
-tone) and set a 12px label over a 13px bold figure — the figure stays barely
-above its own label, which is also what lets a long model id such as
-deepseek-v4.1-flash sit on one line. Once the all-time total passes one copy of
-The Hobbit (123k tokens), the yardstick line appears under the grid. The heat
+stat cells in a 3×2 grid under Claude Code's names (Sessions, Messages, Total
+tokens, Active days, Peak hour, Favorite model) whose tiles sit one clear step
+deeper than the panel (15% of the label tone) and set a 12px label over a 13px
+bold figure — the figure stays barely above its own label, which is also what
+lets a long model id such as deepseek-v4.1-flash sit on one line; the favourite
+model is a name, not a figure, and keeps the regular weight. Messages are the
+settled calls. Once the picked range's total passes one
+book, the yardstick line appears under the grid: eleven books from Animal Farm
+(39k tokens) to In Search of Lost Time (1.6M), each sized at 1.3 tokens a word.
+The book is drawn afresh each time the page comes back to the new-conversation
+hero, and a range that has not reached it steps down to the longest book it has
+passed, so the range pills keep the same book whenever the totals allow. The heat
 grid takes one
 equal column per week (twenty-six weeks), square cells from a 3px gutter, in
 Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
 cell); because the columns are fractions of the panel's own width, the newest
-week can never fall past the edge. Models is Claude Code's own shape: one column
+week can never fall past the edge. Hovering a cell shows Claude Code's day tip at
+once: a solid pill in the label ink with the canvas tone for text (so it inverts
+with the theme), 13px medium, reading the day in the shell's language and its
+messages ("Sep 9 — 15,955"); over the three columns at either end the pill lines
+up with the cell's outer edge so it stays inside the panel. The session list's
+fallback has no per-day message count, and its tip names the day's tokens.
+Models is Claude Code's own shape: one column
 per day of the chart's thirty-day window, stacked from the axis up with each
-model's slice in its rank's colour, four gridlines with their token labels in a
-34px left gutter and every seventh day's date under its column, and beneath it
+model's slice in its rank's colour (ranks past the ramp share its last, grey
+step), four gridlines with their token labels in a 34px left gutter and every
+third column's date under it in the shell's language ("Aug 26"), and beneath it
 the ranked list — swatch, model name, the input/output split, and the share of
-the models shown — folding past six rows behind one "show more" row. The list
-reads the fold's per-model buckets; the chart reads its per-day per-model map, so
-a day whose samples name no route draws no stack. A range window filters the
-tiles and the model list; the heat grid and the chart keep their own windows.
+the models shown — folding past six rows behind one "show more" row, which turns
+into "show less" once the list is open. The chart
+and the list write counts Claude Code's way: one decimal at most, no trailing
+".0", a lowercase k ("109M", "963.6k"). The list reads the roll-up's per-model
+buckets; the chart reads its per-day per-model map, so a day with nothing
+attributed to a model draws no stack. Each column is sized to its day's total
+against the axis top and each slice to its share of the day, so the column's
+rounding sits on the top of the stack. A range window filters the
+tiles (the peak hour included), the yardstick line and the model list; the heat
+grid and the chart keep their own windows.
 
 Two sources, in this order: the host half's usage route, then the session list's
 own projection block (`tokenUsage`, `modelSelection`, `sessionListMetadata`).
 The second answers in a few milliseconds and carries per-model totals without the
-four buckets, which is what the list falls back to when the first has no model
-dimension (a cost-meter answer); the first is the accurate per-event fold, and it
-alone carries the settlement hour histogram (a cost-meter answer has no hour
-dimension, so the peak-hour cell is a dash there) and each day's session ids,
-which a range window unions into one distinct session count. The panel names
+four buckets, which is what the list falls back to when the first cannot answer.
+The first reads the cost-meter ledger when one covers the newest activity — its
+`<provider>:<model>` split becomes the per-model cells, one model across providers
+merged into one — and otherwise the accurate per-event fold; both carry each day's
+session ids, which a range window unions into one distinct session count. Only
+the fold knows the settlement hours: it keeps one hour histogram per day, which a
+range window sums into its own peak hour, and behind a cost-meter answer it still
+runs for the histograms alone — the ledger's figures land first, and the peak
+hour of the sessions whose logs remain lands a moment later. The panel names
 which one it drew from, and a figure neither can answer is a dash.
 
 The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
