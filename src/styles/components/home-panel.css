@@ -113,8 +113,20 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root
 }
 
 /* ---------- the panel ---------- */
+/* The panel draws only inside the studio hero stack. Sending the first message
+   takes the stack's hero class away in the host's own render, while
+   the component steps away only on the skin's next pass; keyed here, the panel
+   leaves in the same frame, instead of spending that gap at the conversation's
+   full width with its square heat cells blown up to fill the window. */
 body[data-dsh-claude-style] .dsh-claude-home-panel {
+  display: none;
+}
+
+body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_composerHero"] > [data-slot="conversation.input.dock"] > .dsh-claude-home-panel {
   display: flex;
+}
+
+body[data-dsh-claude-style] .dsh-claude-home-panel {
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
