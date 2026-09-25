@@ -60,12 +60,25 @@
         return document.querySelector('[class*="_root"][data-phase="hero"]') !== null
       }
 
+      /**
+       * Mark the document while the studio layout owns the page shown: the
+       * studio rules key on this one attribute instead of each re-reading the
+       * host's phase marker.
+       */
+      function writeHeroAttr(hero) {
+        var studioHero = layout === HOME_LAYOUT_STUDIO && hero
+        if (studioHero === document.body.hasAttribute(HOME_HERO_ATTR)) return
+        if (studioHero) document.body.setAttribute(HOME_HERO_ATTR, '')
+        else document.body.removeAttribute(HOME_HERO_ATTR)
+      }
+
       /** Write the layout onto the document and start loading when it needs data. */
       function setLayout(next) {
         layout = next
         lastHero = heroPhase()
         if (next === HOME_LAYOUT_STUDIO) document.body.setAttribute(HOME_LAYOUT_ATTR, HOME_LAYOUT_STUDIO)
         else document.body.removeAttribute(HOME_LAYOUT_ATTR)
+        writeHeroAttr(lastHero)
         if (next === HOME_LAYOUT_STUDIO) usage.load(false)
         usage.notify()
       }
@@ -186,8 +199,10 @@
         }
         // The hero/active phase flips without any preference change (opening a
         // session, or the new-session row), and the panel's visibility follows
-        // it — so the flip has to reach the component.
+        // it — so the flip has to reach the component, and the stylesheet's
+        // studio rules follow it through the document mark.
         var hero = heroPhase()
+        writeHeroAttr(hero)
         if (hero !== lastHero) {
           lastHero = hero
           if (hero) bookPick = Math.random()
@@ -207,6 +222,7 @@
       return function () {
         usage.stop()
         document.body.removeAttribute(HOME_LAYOUT_ATTR)
+        document.body.removeAttribute(HOME_HERO_ATTR)
         if (slotsFiber !== null) {
           try {
             if (typeof slotsFiber.dispose === 'function') slotsFiber.dispose()

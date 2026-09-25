@@ -1,16 +1,18 @@
 /* ---------- home layout: the studio (dashboard) form and its usage panel ---------- */
 /* The hero's own markup is the host's either way; this file only rearranges it and
-   draws the panel the dock slot carries. Both are keyed on the attribute
-   src/overrides/home-layout.js writes, so the classic layout is untouched.
+   draws the panel the dock slot carries. Both are keyed on the attributes
+   src/overrides/home-layout.js writes — the layout, and `data-dsh-claude-home-hero`
+   while the studio layout owns the new-conversation page — so the classic
+   layout is untouched.
    The two tab bodies live in home-overview.css and home-models.css. */
 
 /* The scroll body centres the hero stack; the studio form starts at the top and
    lets the seat take the rest of the column, so the card lands on the bottom edge. */
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_scrollBody"] {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_scrollBody"] {
   justify-content: flex-start;
 }
 
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_composerSeat"] {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_composerSeat"] {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -20,9 +22,11 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root
    and fills the seat, so the context row and the card rest on the bottom edge.
    The composer keeps the 720px column, while the greeting and the dashboard
    card read as a 480px block against its left edge. */
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_composerHero"] {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_composerStack"][class*="_composerHero"] {
   /* The conversation form's own rule pins this stack to its content height; the
-     studio column has to fill the seat for the card to reach the bottom edge. */
+     studio column has to fill the seat for the card to reach the bottom edge.
+     Naming the stack by both its classes matches that gated rule's weight, and
+     this sheet comes after it, so the studio column wins. */
   flex: 1 1 auto !important;
   box-sizing: border-box;
   width: 100%;
@@ -67,8 +71,9 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_comp
 }
 
 /* The context row's triggers wear Claude's chip: a hairline box on the canvas
-   rather than a bare label. */
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_heroWorkspaceRow"] button {
+   rather than a bare label. The target list is the composer card's own for these
+   triggers, so the chip carries the same weight and, coming later, wins. */
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] :is(button, [role="button"]) {
   box-sizing: border-box;
   height: 28px;
   padding: 0 10px;
@@ -77,7 +82,7 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root
   background: transparent;
 }
 
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_heroWorkspaceRow"] button:hover:not(:disabled) {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] :is(button, [role="button"]):hover:not(:disabled) {
   background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 5%, transparent);
 }
 
@@ -90,9 +95,9 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_comp
    titleGroup inside it — the class name contains "title" — so both elements
    have to leave it behind, and the two extra body attributes plus the root
    qualifier carry past the hero's own 44.2px size as well. */
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_headline"],
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_headline"] [class*="titleGroup"],
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_headline"] [class*="titleGroup"] > span {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_headline"],
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_headline"] [class*="titleGroup"],
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_headline"] [class*="titleGroup"] > span {
   justify-content: flex-start;
   font-family: var(--dsw-font-family);
   font-size: 20px;
@@ -101,20 +106,32 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root
   color: var(--dsw-alias-label-primary, #141413);
 }
 
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="_headline"] {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_headline"] {
   gap: 8px;
 }
 
 /* The mark shrinks with the line: Claude's home asterisk stands a hair taller
    than the greeting's own cap height, not twice it. */
-body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_root"][data-phase="hero"] [class*="fishHitbox"]::before {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="fishHitbox"]::before {
   width: 21px;
   height: 21px;
 }
 
 /* ---------- the panel ---------- */
+/* The panel draws only inside the studio hero stack. Sending the first message
+   takes the stack's hero class away in the host's own render, while
+   the component steps away only on the skin's next pass; keyed here, the panel
+   leaves in the same frame, instead of spending that gap at the conversation's
+   full width with its square heat cells blown up to fill the window. */
 body[data-dsh-claude-style] .dsh-claude-home-panel {
+  display: none;
+}
+
+body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_composerHero"] > [data-slot="conversation.input.dock"] > .dsh-claude-home-panel {
   display: flex;
+}
+
+body[data-dsh-claude-style] .dsh-claude-home-panel {
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
