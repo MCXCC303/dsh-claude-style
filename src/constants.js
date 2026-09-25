@@ -262,6 +262,10 @@
     var DEFAULT_AUTO_POPOVER = AUTO_POPOVER_ALL
     /** Route that resolves the host OS user once; never polled. */
     var USERNAME_ROUTE = '/dsh-claude-style/username'
+    /** Route that forwards the HDSL launcher's account contract; never polled. */
+    var HDSL_ROUTE = '/dsh-claude-style/hdsl'
+    /** The player's own avatar, forwarded by the host half; 404 falls back to the mark. */
+    var HDSL_SKIN_ROUTE = '/dsh-claude-style/hdsl-skin.png'
     /** Longest accepted custom username; mirrored by lib/index.js. */
     var USERNAME_MAX = 64
     /** Most quick-provider ids kept, and the longest id accepted; mirrored by lib/index.js. */

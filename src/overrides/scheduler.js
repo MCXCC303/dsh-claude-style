@@ -191,6 +191,13 @@
         schedule()
       })
 
+      // The HDSL contract lands after the first pass too, and it can carry both
+      // the nickname and the picture, so its arrival repaints the same way.
+      var hdslUnsubscribe = null
+      hdslUnsubscribe = onHdslLoaded(function () {
+        schedule()
+      })
+
       // Chat streaming mutates the tree constantly; coalesce to one pass a frame.
       var scheduled = false
       /** The frame the pending pass waits on, so the teardown can cancel it. */
@@ -311,6 +318,10 @@
         if (usernameUnsubscribe !== null) {
           try { usernameUnsubscribe() } catch (error) { /* already disposed */ }
           usernameUnsubscribe = null
+        }
+        if (hdslUnsubscribe !== null) {
+          try { hdslUnsubscribe() } catch (error) { /* already disposed */ }
+          hdslUnsubscribe = null
         }
         observer.disconnect()
         if (composerCardObserver) {

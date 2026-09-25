@@ -115,8 +115,7 @@
       }
 
       var hostMenu = createHostAccountMenu({ close: closePopover })
-      var rows = createAccountRows(ctx, {
-        profile: profile,
+      var rows = createAccountRows({
         hostMenu: hostMenu,
         openBan: function () {
           // Leave the surface up: the overlay is a full-window surface, so what
@@ -157,7 +156,7 @@
        * name).
        */
       function ensureSynthetic(footArea) {
-        var username = profile.name() || getUsername(ctx)
+        var username = getUsername(ctx)
         removeStrayNodes(footArea, '.dsh-claude-account-btn', [accountBtn])
         removeStrayNodes(document, '.dsh-claude-account-popover', [accountPopover])
 

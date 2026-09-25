@@ -180,13 +180,13 @@
         row(
           'username',
           settingsCopy('usernameTitle', 'Username'),
-          settingsCopy('usernameDesc', 'Shown in the new-conversation greeting. Leave empty to use the name resolved from the host user.'),
+          settingsCopy('usernameDesc', 'Shown in the new-conversation greeting and the account row. Leave empty to use the signed-in account name, then the HDSL launcher\'s account name, then the local system user.'),
           React.createElement('input', {
             type: 'text',
             className: 'dsh-claude-settings-input',
             value: username,
             maxLength: USERNAME_MAX,
-            placeholder: settingsCopy('usernamePlaceholder', 'Auto-detect from host user'),
+            placeholder: settingsCopy('usernamePlaceholder', 'Auto-detect account or host user'),
             spellCheck: false,
             autoComplete: 'off',
             onChange: function (e) {

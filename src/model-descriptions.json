@@ -63,10 +63,10 @@
     "quickRemoved": { "zh": "已移除", "en": "Removed" },
     "usernameTitle": { "zh": "用户名", "en": "Username" },
     "usernameDesc": {
-      "zh": "显示在新会话欢迎语中；留空则使用宿主解析到的系统用户名。",
-      "en": "Shown in the new-conversation greeting. Leave empty to use the system username resolved by the host."
+      "zh": "显示在新会话欢迎语与账号行中；留空则依次使用官方账号昵称、HDSL 启动器昵称、本机系统用户名。",
+      "en": "Shown in the new-conversation greeting and the account row. Leave empty to use the signed-in account name, then the HDSL launcher's account name, then the local system user."
     },
-    "usernamePlaceholder": { "zh": "自动解析系统用户", "en": "Auto-detect host user" },
+    "usernamePlaceholder": { "zh": "自动解析账号或系统用户", "en": "Auto-detect account or host user" },
     "brandOff": { "zh": "关闭", "en": "Off" },
     "brandClaude": { "zh": "Claude", "en": "Claude" },
     "brandAnthropic": { "zh": "Anthropic", "en": "Anthropic" },

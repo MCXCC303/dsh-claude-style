@@ -4,21 +4,22 @@
      *
      * The footer (account-footer.js) builds the containers and decides which
      * mount point is active (account/surface.js); this factory builds and syncs
-     * the rows that go into them. `options.profile` is the account profile
-     * (account/profile.js), `options.hostMenu` the host's account menu
-     * (account/host-menu.js), and `options.openBan()` what a press on the header
-     * does.
+     * the rows that go into them. `options.hostMenu` is the host's account menu
+     * (account/host-menu.js) and `options.openBan()` what a press on the header
+     * does; the nickname and the picture come from the identity chain
+     * (src/context/host.js).
      */
-    function createAccountRows(ctx, options) {
-      var profile = options.profile
+    function createAccountRows(options) {
       var hostMenu = options.hostMenu
 
       /**
        * The profile picture's address, or null when there is none usable. It
-       * comes from the account service, so only http(s) is accepted, and it is
-       * handed to an `<img>` as a property — never written into markup.
+       * comes from the account service or from the plugin's own HDSL route, so
+       * only http(s) and that route are accepted, and it is handed to an `<img>`
+       * as a property — never written into markup.
        */
       function accountPhotoUrl(raw) {
+        if (raw === HDSL_SKIN_ROUTE) return raw
         if (typeof raw !== 'string' || raw === '') return null
         try {
           var url = new URL(raw, window.location.href)
@@ -29,16 +30,18 @@
       }
 
       /**
-       * Paint (or clear) the picture inside the avatar circle. It is a real
-       * `<img>` layered over the starburst rather than a CSS background: the
-       * host's own avatar `<img>` carries `referrerPolicy="no-referrer"`, which
-       * is what the picture host expects, and a background cannot drop the
-       * referrer. A picture that fails to load hides itself, so the starburst
-       * underneath shows instead of an empty circle.
+       * Paint (or clear) the picture inside the avatar circle. The address comes
+       * from the identity chain (src/context/host.js): the account's own avatar,
+       * then the HDSL launcher's, then nothing — and the brand mark the
+       * stylesheet draws shows through. It is a real `<img>` layered over that
+       * mark rather than a CSS background: the host's own avatar `<img>` carries
+       * `referrerPolicy="no-referrer"`, which is what the picture host expects,
+       * and a background cannot drop the referrer. A picture that fails to load
+       * hides itself, so the mark underneath shows instead of an empty circle.
        */
       function syncAccountAvatar(avatarEl) {
         if (avatarEl === null) return
-        var src = accountPhotoUrl(profile.avatar())
+        var src = accountPhotoUrl(resolveAvatarUrl())
         var photo = avatarEl.querySelector('.dsh-claude-account-photo')
         if (src === null) {
           if (photo !== null) avatarEl.removeChild(photo)
@@ -92,18 +95,20 @@
       }
 
       /**
-       * The nickname the header shows. On the host path the host renders the
-       * account row from its own profile, so that row's rendered label is the
-       * authority and is read back: whatever field or copy the host picked is
-       * what both places then show. The self-built row has no host label, so it
-       * falls back to the account profile, then to the stored username.
+       * The nickname the header shows: the identity chain first (a custom
+       * nickname, the account's own name, HDSL, the OS-user probe), then the
+       * host's own rendered label when the chain resolved nothing — on the host
+       * path that label is the host's own account name, so a host whose profile
+       * read failed still shows what it renders.
        */
       function accountDisplayName(hostRow) {
+        var resolved = resolveDisplayName()
+        if (resolved) return resolved
         if (hostRow !== null) {
           var label = (hostRow.textContent || '').trim()
           if (label) return label
         }
-        return profile.name() || getUsername(ctx)
+        return 'User'
       }
 
       /**

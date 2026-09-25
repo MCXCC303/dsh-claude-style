@@ -45,6 +45,8 @@ const ROOT = path.resolve(__dirname, '..')
 const CLIENT = path.join(ROOT, 'lib', 'client.js')
 const HOST = path.join(ROOT, 'lib', 'index.js')
 const MARKUP = '<img src=x onerror="window.__pwned=(window.__pwned||0)+1">'
+/** One transparent pixel: the launcher's avatar the HDSL case serves. */
+const PNG_1PX = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
@@ -293,7 +295,7 @@ const STAND_IN = `(function () {
     action.setAttribute('aria-label', MARKUP)
     action.setAttribute('data-cordis-badge', MARKUP)
   }
-  var username = CASE === 'markup' ? MARKUP : 'Tester'
+  var username = CASE === 'markup' ? MARKUP : CASE === 'desktop' || CASE === 'hdsl' ? '' : 'Tester'
   var form = {
     getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true } } },
     subscribe: function () { return function () {} },
@@ -327,13 +329,41 @@ const STAND_IN = `(function () {
       },
     }
   }
+  // The identity routes and the OS-user probe, answered inside the page: the
+  // probe for every case, the launcher's contract only for the case that models
+  // an HDSL launch. Three different names — the custom nickname Tester, the
+  // account's Ada, the launcher's HDSLPlayer — are what make the fallback order
+  // observable.
+  var realFetch = window.fetch
+  var PNG_1PX = Uint8Array.from(
+    atob('${PNG_1PX}'),
+    function (c) { return c.charCodeAt(0) })
+  function jsonResponse(payload) {
+    return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } })
+  }
+  window.fetch = function (input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url) || ''
+    if (url === '/dsh-claude-style/username') return Promise.resolve(jsonResponse({ ok: true, username: 'Tester' }))
+    if (url === '/dsh-claude-style/hdsl') {
+      return Promise.resolve(jsonResponse(CASE === 'hdsl'
+        ? { ok: true, contract: true, name: 'HDSLPlayer', vendor: 'deepseek', kind: 'official', skin: 'local', skinModel: 'default', hasSkinImage: true }
+        : { ok: true, contract: false }))
+    }
+    if (url === '/dsh-claude-style/hdsl-skin.png') {
+      if (CASE !== 'hdsl') return Promise.resolve(new Response(null, { status: 404 }))
+      return Promise.resolve(new Response(PNG_1PX, { headers: { 'content-type': 'image/png' } }))
+    }
+    return realFetch.apply(window, arguments)
+  }
   var account = {
     getProfile: CASE === 'install-fault'
       ? function () { return undefined } // host API drift: not a promise
-      : function () {
-          if (CASE === 'desktop') window.__profileReads++
-          return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } })
-        },
+      : CASE === 'hdsl'
+        ? function () { return Promise.resolve({ ok: true, value: null }) } // signed out: the launcher's name wins
+        : function () {
+            if (CASE === 'desktop') window.__profileReads++
+            return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } })
+          },
     watch: CASE === 'desktop'
       ? function () { return { [Symbol.asyncIterator]: accountFrames } }
       : undefined,
@@ -686,6 +716,8 @@ const PROBE = `(function () {
     r.avatarAttrs = attrs(avatar)
     var photo = avatar ? avatar.querySelector('img') : null
     r.photo = photo ? { attrs: attrs(photo), referrerPolicy: photo.referrerPolicy } : null
+    r.photoSrc = photo ? photo.getAttribute('src') : null
+    r.photoHidden = photo ? photo.hidden : null
     var mirrored = drawer ? drawer.querySelector('[data-action-index]') : null
     r.mirroredText = mirrored ? mirrored.querySelector('.dsh-claude-popover-item-text').textContent : null
     var badge = mirrored ? mirrored.querySelector('.dsh-claude-popover-item-badge') : null
@@ -896,7 +928,7 @@ const CASES = {
       r.drawer !== null && same(r.drawer, ['action', 'embed', 'settings']) && r.syntheticHeader === true,
       JSON.stringify({ drawer: r.drawer, header: r.syntheticHeader }))
     check('synthetic path injects nothing into a host menu', r.syntheticInject === 0, `${r.syntheticInject} containers`)
-    check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    check('a custom nickname outranks the signed-in profile', r.accountUser === 'Tester', JSON.stringify(r.accountUser))
     check('avatar is an <img> sent without a referrer', r.photo !== null && r.photo.referrerPolicy === 'no-referrer', JSON.stringify(r.photo))
     check('the self-built drawer matches the account row box',
       r.syntheticBox !== null && r.syntheticBox.popoverLeft === r.syntheticBox.buttonLeft &&
@@ -917,6 +949,16 @@ const CASES = {
     check('the closed drawer takes its parked rows out of the paint tree',
       r.syntheticVisibility === 'hidden' && r.syntheticRowVisibility === 'hidden',
       JSON.stringify({ panel: r.syntheticVisibility, row: r.syntheticRowVisibility }))
+    commonChecks(r)
+  },
+  hdsl(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check("the launcher's account name outranks the OS-user probe", r.accountUser === 'HDSLPlayer', JSON.stringify(r.accountUser))
+    check("the launcher's avatar is served through the plugin's own route",
+      r.photoSrc === '/dsh-claude-style/hdsl-skin.png', JSON.stringify(r.photoSrc))
+    check("the launcher's avatar loads, so the brand mark is not what shows",
+      r.photoHidden === false, JSON.stringify(r.photoHidden))
     commonChecks(r)
   },
   'stats-compact'(r) {
@@ -952,7 +994,7 @@ const CASES = {
     check('only the permission control was switched off', r.errors.length === 1 && r.errors[0].includes('"permissions"'), r.errors.join(' | '))
     check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))
     check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
-    check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Tester', JSON.stringify(r.accountUser))
     commonChecks(r)
   },
   'no-auto-review'(r) {
@@ -1053,6 +1095,11 @@ async function browserHalf() {
     if (name === 'client.js') {
       res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       res.end(fs.readFileSync(CLIENT))
+    } else if (name === 'dsh-claude-style/hdsl-skin.png') {
+      // The launcher's avatar, which an <img> loads outside `fetch`, so the
+      // page-side stand-in cannot answer it. Only the HDSL case asks for it.
+      res.writeHead(200, { 'content-type': 'image/png' })
+      res.end(Buffer.from(PNG_1PX, 'base64'))
     } else if (Object.prototype.hasOwnProperty.call(CASES, name)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       res.end(page(name))
