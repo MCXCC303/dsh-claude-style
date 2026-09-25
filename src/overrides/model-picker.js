@@ -124,9 +124,10 @@
 
       function openModelPopover() {
         cancelCloseModel()
-        // One card at a time: the two triggers sit side by side, so leaving the
-        // effort card up would stack two panels over the same corner.
-        if (ui.effort && typeof ui.effort.close === 'function') ui.effort.close()
+        // One card at a time: the second level is this same choice and stays,
+        // every other popover folds (the effort trigger sits beside this one, so
+        // leaving its card up would stack two panels over one corner).
+        closeOtherPopovers('model')
         var dir = modelCatalog.directory()
         // load() is async — the host itself guards with .catch(() => {}); a bare
         // try/catch cannot see its rejection.
@@ -541,6 +542,11 @@
       }
 
 
+      // The picker takes part in the shared popover rule (popover-utils.js): one
+      // entry for BOTH levels, so opening the More-models card never folds the
+      // card that carries it.
+      registerPopover('model', closeModelPopovers)
+
       ui.model = {
         sync: syncModelControl,
         /**
@@ -609,6 +615,7 @@
           dropModelControl()
           modelCatalog.resetWarm()
           modelSlot = null
+          unregisterPopover('model')
         }
       }
 

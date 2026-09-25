@@ -11,11 +11,15 @@ body[data-dsh-claude-style] :is([data-pane="conversation"], [class*="centerCol"]
 }
 
 /* ---------- clay accent: one emphasis color, disciplined ---------- */
-body[data-dsh-claude-style] a {
+/* Text links take the clay ink. An anchor that carries a host button class
+   (`AccountSection`'s "充值" is `_linkButton _primary`) is a filled or outlined
+   control, not a text link: it states its own ink, and repainting it here leaves
+   the label the same clay as the fill underneath it. */
+body[data-dsh-claude-style] a:not([class*="_linkButton"]) {
   color: #e08a6d;
 }
 
-body[data-dsh-claude-style] a:hover {
+body[data-dsh-claude-style] a:not([class*="_linkButton"]):hover {
   color: #f0a488;
 }
 

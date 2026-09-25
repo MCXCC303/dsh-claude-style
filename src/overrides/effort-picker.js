@@ -97,9 +97,9 @@
       function openEffortPopover() {
         effortHoverIntent.cancel()
         ensureEffortChrome()
-        // One card at a time: the two triggers sit side by side, so leaving the
-        // model card up would stack two panels over the same corner.
-        if (ui.model && typeof ui.model.close === 'function') ui.model.close()
+        // One card at a time: the model trigger sits beside this one, so leaving
+        // its card up would stack two panels over the same corner.
+        closeOtherPopovers('effort')
         if (effortSlider !== null) effortSlider.update()
         positionEffortPopover()
         if (effortPop !== null) effortPop.setAttribute('data-open', 'true')
@@ -306,7 +306,10 @@
         effortPop = null
         effortSlider = null
         releaseModelMargin()
+        unregisterPopover('effort')
       }
+
+      registerPopover('effort', closeEffortPopover)
 
       ui.effort = {
         sync: syncEffortControl,

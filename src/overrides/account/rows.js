@@ -4,21 +4,22 @@
      *
      * The footer (account-footer.js) builds the containers and decides which
      * mount point is active (account/surface.js); this factory builds and syncs
-     * the rows that go into them. `options.profile` is the account profile
-     * (account/profile.js), `options.hostMenu` the host's account menu
-     * (account/host-menu.js), and `options.openBan()` what a press on the header
-     * does.
+     * the rows that go into them. `options.hostMenu` is the host's account menu
+     * (account/host-menu.js) and `options.openBan()` what a press on the header
+     * does; the nickname and the picture come from the identity chain
+     * (src/context/host.js).
      */
-    function createAccountRows(ctx, options) {
-      var profile = options.profile
+    function createAccountRows(options) {
       var hostMenu = options.hostMenu
 
       /**
        * The profile picture's address, or null when there is none usable. It
-       * comes from the account service, so only http(s) is accepted, and it is
-       * handed to an `<img>` as a property — never written into markup.
+       * comes from the account service or from the plugin's own HDSL route, so
+       * only http(s) and that route are accepted, and it is handed to an `<img>`
+       * as a property — never written into markup.
        */
       function accountPhotoUrl(raw) {
+        if (raw === HDSL_SKIN_ROUTE) return raw
         if (typeof raw !== 'string' || raw === '') return null
         try {
           var url = new URL(raw, window.location.href)
@@ -28,16 +29,11 @@
         }
       }
 
-      /** The account whose head the canvas holds, and the picture in flight. */
-      var headSource = null
+      /** The head's canvas, and what a pass needs to decide whether to keep it. */
       var headCanvas = null
-      var headImage = null
-      /**
-       * The account whose skin could not be used. Kept per account rather than
-       * as a flag so nothing asks for the same missing picture on every pass;
-       * the mark keeps the circle in the meantime.
-       */
-      var headFailedFor = null
+      /** A load has been started; the route is read once per page, so is a failure. */
+      var headRequested = false
+      var headFailed = false
 
       /**
        * Draw the head out of a launcher skin, the way the launcher's own
@@ -64,15 +60,19 @@
         return true
       }
 
-      /** Load the launcher's skin once for one account. */
-      function loadLauncherHead(account, avatarEl) {
+      /**
+       * Load the launcher's atlas once. The canvas is built off-screen: the
+       * avatar element a pass hands in may be a different one by the time the
+       * picture lands, and a failure only means the mark keeps the circle.
+       */
+      function loadLauncherHead() {
+        headRequested = true
         var image = new Image()
-        headImage = image
         image.decoding = 'async'
         image.addEventListener('load', function () {
-          if (headImage !== image || headSource !== account) return
           if (image.naturalWidth !== image.naturalHeight || image.naturalWidth < 64) {
-            headFailedFor = account
+            headFailed = true
+            wake()
             return
           }
           if (headCanvas === null) {
@@ -82,19 +82,19 @@
             headCanvas.height = 64
             headCanvas.setAttribute('aria-hidden', 'true')
           }
-          if (!drawLauncherHead(headCanvas, image)) {
-            headFailedFor = account
-            return
-          }
-          syncLauncherHead(avatarEl)
+          if (!drawLauncherHead(headCanvas, image)) headFailed = true
+          wake()
         })
         image.addEventListener('error', function () {
-          if (headImage !== image) return
-          // No picture: the circle keeps the account profile's photo when there
-          // is one, and the mark otherwise. Nothing retries until a new answer.
-          headFailedFor = account
+          headFailed = true
+          wake()
         })
-        image.src = SKIN_ROUTE
+        image.src = HDSL_SKIN_ROUTE
+      }
+
+      /** Ask for the pass that mounts the head (the picture changes no DOM). */
+      function wake() {
+        if (typeof options.onChange === 'function') options.onChange()
       }
 
       /** Drop the account profile's photo, if one is mounted. */
@@ -105,28 +105,22 @@
         if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
       }
 
+      /** Take the head's canvas back out of a circle the photo path owns again. */
+      function detachLauncherHead(avatarEl) {
+        if (headCanvas !== null && headCanvas.parentElement === avatarEl) avatarEl.removeChild(headCanvas)
+        if (avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.removeAttribute('data-dsh-claude-skin')
+      }
+
       /**
-       * Paint the player's own head, when the launcher published a skin for
-       * this instance. The picture is a canvas cropped from the normalized
-       * atlas the host serves, so it is the same head the launcher's own
-       * account list shows.
+       * Paint the player's own head. What the launcher serves is the normalized
+       * skin atlas — a sheet of body parts, not a face — so it is cropped into
+       * a canvas rather than handed to the `<img>` the photo path uses.
        *
        * @returns whether the circle is the launcher head's to paint.
        */
       function syncLauncherHead(avatarEl) {
-        var account = getHostAccount()
-        var skin = account !== null && account.hasSkin === true ? account : null
-        if (skin === null) {
-          headSource = null
-          if (headCanvas !== null && headCanvas.parentElement === avatarEl) avatarEl.removeChild(headCanvas)
-          if (avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.removeAttribute('data-dsh-claude-skin')
-          return false
-        }
-        if (headSource !== skin && headFailedFor !== skin) {
-          headSource = skin
-          loadLauncherHead(skin, avatarEl)
-        }
-        if (headCanvas === null || headFailedFor === skin || headSource !== skin) return false
+        if (!headRequested && !headFailed) loadLauncherHead()
+        if (headCanvas === null) return false
         if (headCanvas.parentElement !== avatarEl) {
           if (headCanvas.parentElement !== null) headCanvas.parentElement.removeChild(headCanvas)
           avatarEl.appendChild(headCanvas)
@@ -136,22 +130,28 @@
       }
 
       /**
-       * Paint (or clear) the picture inside the avatar circle. The launcher's
-       * own skin wins — it is the player's picture for this instance — and the
-       * account profile's photo follows it. That photo is a real `<img>`
-       * layered over the starburst rather than a CSS background: the host's own
-       * avatar `<img>` carries `referrerPolicy="no-referrer"`, which is what
-       * the picture host expects, and a background cannot drop the referrer. A
-       * picture that fails to load hides itself, so the starburst underneath
-       * shows instead of an empty circle.
+       * Paint (or clear) the picture inside the avatar circle. The address comes
+       * from the identity chain (src/context/host.js): the account's own avatar,
+       * then the HDSL launcher's, then nothing — and the brand mark the
+       * stylesheet draws shows through. It is a real `<img>` layered over that
+       * mark rather than a CSS background: the host's own avatar `<img>` carries
+       * `referrerPolicy="no-referrer"`, which is what the picture host expects,
+       * and a background cannot drop the referrer. A picture that fails to load
+       * hides itself, so the mark underneath shows instead of an empty circle.
        */
       function syncAccountAvatar(avatarEl) {
         if (avatarEl === null) return
-        if (syncLauncherHead(avatarEl)) {
-          clearAccountPhoto(avatarEl)
-          return
+        var src = accountPhotoUrl(resolveAvatarUrl())
+        if (src === HDSL_SKIN_ROUTE) {
+          // The launcher's picture owns the circle as a cropped head; the
+          // profile photo stands down while it does.
+          if (syncLauncherHead(avatarEl)) {
+            clearAccountPhoto(avatarEl)
+            return
+          }
+        } else {
+          detachLauncherHead(avatarEl)
         }
-        var src = accountPhotoUrl(profile.avatar())
         var photo = avatarEl.querySelector('.dsh-claude-account-photo')
         if (src === null) {
           clearAccountPhoto(avatarEl)
@@ -204,18 +204,20 @@
       }
 
       /**
-       * The nickname the header shows. On the host path the host renders the
-       * account row from its own profile, so that row's rendered label is the
-       * authority and is read back: whatever field or copy the host picked is
-       * what both places then show. The self-built row has no host label, so it
-       * falls back to the account profile, then to the stored username.
+       * The nickname the header shows: the identity chain first (a custom
+       * nickname, the account's own name, HDSL, the OS-user probe), then the
+       * host's own rendered label when the chain resolved nothing — on the host
+       * path that label is the host's own account name, so a host whose profile
+       * read failed still shows what it renders.
        */
       function accountDisplayName(hostRow) {
+        var resolved = resolveDisplayName()
+        if (resolved) return resolved
         if (hostRow !== null) {
           var label = (hostRow.textContent || '').trim()
           if (label) return label
         }
-        return profile.name() || getUsername(ctx)
+        return 'User'
       }
 
       /**

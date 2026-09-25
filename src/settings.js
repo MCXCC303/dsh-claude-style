@@ -169,6 +169,10 @@
         { value: AUTO_POPOVER_ACCOUNT, label: settingsCopy('autoPopoverAccount', 'Account only') },
         { value: AUTO_POPOVER_ALL, label: settingsCopy('autoPopoverAll', 'All') },
       ]
+      var homeLayoutOptions = [
+        { value: HOME_LAYOUT_CLASSIC, label: settingsCopy('homeClassic', 'Classic') },
+        { value: HOME_LAYOUT_STUDIO, label: settingsCopy('homeStudio', 'Studio') },
+      ]
 
       /** What the quick-provider trigger reads: how many, or nothing chosen. */
       var quickSummary = function (chosen) {
@@ -180,13 +184,13 @@
         row(
           'username',
           settingsCopy('usernameTitle', 'Username'),
-          settingsCopy('usernameDesc', 'Shown in the new-conversation greeting. Leave empty to use the name resolved from the host user.'),
+          settingsCopy('usernameDesc', 'Shown in the new-conversation greeting and the account row. Leave empty to use the signed-in account name, then the HDSL launcher\'s account name, then the local system user.'),
           React.createElement('input', {
             type: 'text',
             className: 'dsh-claude-settings-input',
             value: username,
             maxLength: USERNAME_MAX,
-            placeholder: settingsCopy('usernamePlaceholder', 'Auto-detect from host user'),
+            placeholder: settingsCopy('usernamePlaceholder', 'Auto-detect account or host user'),
             spellCheck: false,
             autoComplete: 'off',
             onChange: function (e) {
@@ -229,6 +233,12 @@
           settingsCopy('composerTitle', 'Composer restyle'),
           settingsCopy('composerDesc', 'Which input area the skin restyles: the new-conversation page, the conversation, or both.'),
           segment(scopeOptions, prefs.composerScope, function (value) { write({ composerScope: value }) }),
+        ),
+        row(
+          'homeLayout',
+          settingsCopy('homeTitle', 'Home layout'),
+          settingsCopy('homeDesc', 'The new-conversation page: the centered hero, or the dashboard form with the greeting at the top left, the composer at the bottom edge and the usage panel in between.'),
+          segment(homeLayoutOptions, prefs.homeLayout, function (value) { write({ homeLayout: value }) }),
         ),
         row(
           'modelPicker',

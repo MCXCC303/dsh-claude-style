@@ -57,36 +57,58 @@
     }
 
     /**
-     * Host-resolved identity.
+     * Who the skin shows: one nickname and one picture, each resolved down a
+     * fixed order.
      *
-     * The host half resolves the name this instance runs as once — the
-     * launcher's account name when one was published, the OS user otherwise —
-     * and this side fetches it once and caches it. The same answer carries the
-     * launcher account, whose picture the account row draws in place of the
-     * mark. A custom username from the settings page always wins. No workspace
-     * parsing, no polling.
+     * Nickname: the custom nickname (settings), the signed-in account's name,
+     * the HDSL launcher's account name, the cached OS-user probe, the fresh
+     * probe, then `User`. Picture: the signed-in account's avatar, the HDSL
+     * launcher's avatar, then the brand mark the stylesheet draws underneath.
+     *
+     * Only the probe is resolved here. The account profile
+     * (overrides/account/profile.js) and the HDSL contract push their values in
+     * through the setters below, so the greeting, the account row and the hold
+     * screen all read this one place.
+     */
+    var accountName = ''
+    var accountAvatar = ''
+
+    /** The account profile's contribution; called when its read answers. */
+    function setAccountIdentity(name, avatar) {
+      accountName = typeof name === 'string' ? name.trim() : ''
+      accountAvatar = typeof avatar === 'string' ? avatar : ''
+    }
+
+    /**
+     * Host-resolved username.
+     *
+     * The host half owns the OS user (`os.userInfo().username`); this side
+     * fetches it once and caches it, and mirrors the answer into local storage
+     * so a reload shows the name from the first frame instead of `User`. No
+     * workspace parsing, no polling.
      */
     var usernameFromHost = ''
-    /** The launcher account behind that name, or null; see accountFromPayload. */
-    var accountFromHost = null
     var usernameRequested = false
     var usernameListeners = []
 
-    /**
-     * Clamp the launcher account the host reported. Every field is display
-     * copy or a switch: the skin picture itself is fetched separately, and the
-     * absolute path behind it never reaches this side.
-     */
-    function accountFromPayload(raw) {
-      if (raw === null || raw === undefined || typeof raw !== 'object') return null
-      return {
-        name: typeof raw.name === 'string' ? raw.name : '',
-        vendor: typeof raw.vendor === 'string' ? raw.vendor : '',
-        kind: typeof raw.kind === 'string' ? raw.kind : '',
-        skin: typeof raw.skin === 'string' ? raw.skin : '',
-        skinModel: typeof raw.skinModel === 'string' ? raw.skinModel : '',
-        hasSkin: raw.hasSkin === true,
+    /** Last OS-user probe this browser saw; the cache that outlives the page. */
+    var PROBED_USERNAME_KEY = 'dsh-claude-style.probed-username'
+    var probedUsername = readStoredProbeUsername()
+
+    function readStoredProbeUsername() {
+      try {
+        if (typeof localStorage === 'undefined') return ''
+        return localStorage.getItem(PROBED_USERNAME_KEY) || ''
+      } catch (error) {
+        return ''
       }
+    }
+
+    function storeProbeUsername(value) {
+      try {
+        if (typeof localStorage === 'undefined' || !value) return
+        localStorage.setItem(PROBED_USERNAME_KEY, value)
+      } catch (error) { /* storage may be unavailable */ }
     }
 
     function onUsernameLoaded(listener) {
@@ -110,26 +132,86 @@
           .then(function (data) {
             if (!data || data.ok !== true || typeof data.username !== 'string') return
             usernameFromHost = data.username.trim().slice(0, USERNAME_MAX)
-            accountFromHost = accountFromPayload(data.account)
+            if (usernameFromHost) {
+              probedUsername = usernameFromHost
+              storeProbeUsername(usernameFromHost)
+            }
             var listeners = usernameListeners.slice()
             for (var i = 0; i < listeners.length; i++) {
               try { listeners[i](usernameFromHost) } catch (error) { /* listener error */ }
             }
           })
-          .catch(function () { /* custom username or 'User' stays */ })
+          .catch(function () { /* the cached probe or 'User' stays */ })
       } catch (error) { /* no fetch: fallback stays */ }
     }
 
-    function getUsername() {
-      var custom = readPrefs().username || readFallbackUsername()
-      if (custom) return custom
-      if (usernameFromHost) return usernameFromHost
-      return 'User'
+    /**
+     * The HDSL launcher's account contract, when this instance was launched by
+     * it. Read once: the contract is fixed for the process lifetime.
+     */
+    var hdslContract = false
+    var hdslName = ''
+    var hdslAvatar = false
+    var hdslRequested = false
+    var hdslListeners = []
+
+    function onHdslLoaded(listener) {
+      hdslListeners.push(listener)
+      return function () {
+        var index = hdslListeners.indexOf(listener)
+        if (index !== -1) hdslListeners.splice(index, 1)
+      }
     }
 
-    /** The launcher account this instance runs as, or null; null until the host answers. */
-    function getHostAccount() {
-      return accountFromHost
+    function loadHdsl() {
+      if (hdslRequested) return
+      hdslRequested = true
+      if (typeof fetch !== 'function') return
+      try {
+        fetch(HDSL_ROUTE, { credentials: 'same-origin' })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status)
+            return response.json()
+          })
+          .then(function (data) {
+            if (!data || data.ok !== true || data.contract !== true) return
+            hdslContract = true
+            hdslName = typeof data.name === 'string' ? data.name.trim().slice(0, USERNAME_MAX) : ''
+            hdslAvatar = data.hasSkinImage === true
+            var listeners = hdslListeners.slice()
+            for (var i = 0; i < listeners.length; i++) {
+              try { listeners[i]() } catch (error) { /* listener error */ }
+            }
+          })
+          .catch(function () { /* not launched by HDSL: the chain skips it */ })
+      } catch (error) { /* no fetch: the chain skips it */ }
+    }
+
+    /**
+     * The nickname every skin surface shows, or '' when nothing resolved.
+     * @returns the winning name, without the `User` default.
+     */
+    function resolveDisplayName() {
+      var custom = readPrefs().username || readFallbackUsername()
+      if (custom) return custom
+      if (accountName) return accountName
+      if (hdslName) return hdslName
+      if (probedUsername) return probedUsername
+      return usernameFromHost
+    }
+
+    function getUsername() {
+      return resolveDisplayName() || 'User'
+    }
+
+    /**
+     * The picture every skin surface shows, or '' to let the brand mark show.
+     * @returns the winning avatar address.
+     */
+    function resolveAvatarUrl() {
+      if (accountAvatar) return accountAvatar
+      if (hdslContract && hdslAvatar) return HDSL_SKIN_ROUTE
+      return ''
     }
 
     /**
@@ -139,9 +221,16 @@
     var hostCtx = null
     function setHostContext(ctx) {
       hostCtx = ctx
-      // A new host context means a new user; the next apply resolves once again
-      // rather than reusing the previous host's cached identity.
+      // A new host context means a new OS user and a new launcher: the next
+      // apply resolves once again rather than reusing the previous host's
+      // answers. The probe cache survives on purpose — it is the same machine
+      // until something says otherwise.
       usernameRequested = false
       usernameFromHost = ''
-      accountFromHost = null
+      hdslRequested = false
+      hdslContract = false
+      hdslName = ''
+      hdslAvatar = false
+      accountName = ''
+      accountAvatar = ''
     }

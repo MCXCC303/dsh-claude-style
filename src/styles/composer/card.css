@@ -160,24 +160,29 @@ body[data-dsh-claude-style] [data-composer-card] [class*="_chevron"] {
    rounded card with drop shadow (z-index: 2). The bottom tray is a seamless
    equal-width tray (z-index: 1) attached directly to the bottom of the card,
    with transparent background (inheriting the canvas tone #fcfcfb),
-   left/right/bottom border, and 18px rounded bottom corners. */
-body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] {
+   left/right/bottom border, and 18px rounded bottom corners.
+
+   The tray belongs to the CLASSIC home layout: the studio layout
+   (components/home-panel.css) places the workspace row as a plain context row
+   above the card and the usage panel between them, so every rule below is
+   scoped away from it. */
+body[data-dsh-claude-style]:not([data-dsh-claude-home-layout="studio"]) [class*="composerStack"][data-composer-variant="hero"] {
   --dsh-claude-bar-h: 96px;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] *:has([data-composer-card]) {
+body[data-dsh-claude-style]:not([data-dsh-claude-home-layout="studio"]) [class*="composerStack"][data-composer-variant="hero"] *:has([data-composer-card]) {
   order: 1;
   padding-bottom: 0 !important;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] [data-composer-card] {
+body[data-dsh-claude-style]:not([data-dsh-claude-home-layout="studio"]) [class*="composerStack"][data-composer-variant="hero"] [data-composer-card] {
   gap: 8px !important;
   padding-bottom: 2px !important;
   min-height: 0 !important;
   height: auto !important;
 }
 
-body[data-dsh-claude-style] [class*="composerStack"][data-composer-variant="hero"] > [class*="heroWorkspaceRow"] {
+body[data-dsh-claude-style]:not([data-dsh-claude-home-layout="studio"]) [class*="composerStack"][data-composer-variant="hero"] > [class*="heroWorkspaceRow"] {
   order: 2;
   position: relative;
   z-index: 1;

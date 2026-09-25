@@ -21,6 +21,18 @@ Rules:
 - Never pure white, never pure black, never cool grays.
 - Accent usage stays under ~10% of visible elements.
 
+**Host token bindings.** The skin supplies its palette through the host's own
+alias tokens, so a host control that reads more than one token for one surface
+has to be given all of them. A filled primary button is that case: the host takes
+the fill from `--dsw-alias-brand-primary`, but the hover from a monochrome step
+of its own scale (light `#43454a`, dark `#ebeef2`) and the label from a
+foreground token the skin leaves alone. `--dsw-alias-button-primary-fill` and
+`--dsw-alias-button-primary-hover` therefore state both steps in each palette.
+Two fills are palette-specific rather than carried over from the dark base:
+`--dsw-alias-interactive-bg-hover-solid` (a solid chip, lighter than the canvas
+in light) and `--dsw-alias-button-elevated-fill` (a surface above the canvas in
+light, a raised gray in dark).
+
 ## Typography
 
 - **Serif display** — headings / editorial statements (`--dsw-font-serif`).
@@ -105,6 +117,18 @@ the account drawer, the session-stats card, and the host's own menu primitive
 under the hero row's workspace and preset pickers — is meant to start from one
 recipe. New popovers take it rather than inventing a card.
 
+Two rules hold across all of them, both owned by `overrides/popover-utils.js`. A
+pointer opens a card only after a **100 ms dwell** — long enough that crossing a
+28px trigger on the way somewhere else unfolds nothing — and the card closes
+100 ms after the pointer leaves. Two cards keep their own numbers with the reason
+written where they are used: the model picker's levels close after 150 ms (the
+pointer has to cross level 1 to reach level 2) and the session-stats card waits
+300 ms to open (its sentence sits mid-row, where a passing pointer would trip
+it). And **only one card is on screen at a time**: each popover registers its
+close path with `registerPopover(name, close)` and calls
+`closeOtherPopovers(name)` on the way open, so opening the model picker folds the
+permission menu, the account drawer, the stats card and the host's hero menu.
+
 **Card**
 
 | Property | Value |
@@ -164,7 +188,121 @@ attribute, so it takes the same fade/scale as a one-shot `0.15s` animation; and
 the host places it *below* its trigger, which is where the composer sits — so
 `src/overrides/hero-menu.js` re-places it beside the trigger (bottom-aligned,
 growing upward into the empty hero space, flipping left when the viewport is
-tight) with an `important` inline write that outranks the host's own.
+tight). The host re-runs its own placement from its anchor geometry on every
+frame while the card is open, so the position is handed over in two custom
+properties on the card (`--dsh-claude-hero-menu-x` / `--dsh-claude-hero-menu-y`,
+written by the same pass that stamps it) which `components/hero-menu.css` reads
+with `!important`; that declaration outranks the host's plain inline value.
+
+## Home layouts · 首页版面
+
+The new-conversation page has two arrangements. `homeLayout` (settings: Home
+layout) writes `data-dsh-claude-home-layout` onto `<body>` and
+`src/styles/components/home-panel.css` branches on it. Both are the host's own
+hero markup — the greeting, the workspace row, the dock and the composer card
+inside `…_composerStack …_composerHero` — so only the arrangement differs.
+
+| | Classic | Studio |
+|---|---|---|
+| greeting | centred, 44.2px serif, brand mark on its line | top left, one fixed line naming the user ("What's up next, …?") in the 20px sans UI face, a 21px brand mark on its line |
+| composer card | vertically centred in the scroll body | the conversation's single-line inline form, resting on the window's bottom edge (16px foot) |
+| between them | — | the usage panel |
+| workspace / preset row | the card's footer tray | hairline chips directly above the card |
+| column width | the hero's centred box | a 720px composer column; the greeting and the panel form a 480px block against its left edge |
+
+The studio composer is stamped `data-composer-variant="inline"` (composer.js's
+pass reads the same preference), so the home card is drawn by the conversation's
+single-line stylesheet. The classic tray rules in `composer/card.css` are scoped
+away from studio with `:not([data-dsh-claude-home-layout="studio"])`. That is
+deliberate: they set `order: 1` / `order: 2` on the same boxes, and a competing
+rule would have to be out-specified rather than merely reordered — scoping them
+removes the contest.
+
+**The usage panel.** It is a `conversation.input.dock` entry (the host's list
+seat between the greeting and the card; a list seat keys its entries by `id`),
+and it renders only in the hero phase — the host mounts that same seat inside a
+conversation, where the todo, queue and goal bars hang on it.
+
+The panel is Claude Code's dashboard shape: a flat warm-gray wash (a
+`color-mix` of the label tone at 4% over the card tone, which flips with the
+theme on its own), an Overview/Models tab pair on the left of its head, and the
+All/30d/7d range pills on the right. The active tab and range pill are a gray
+chip one step below that wash — half the radius the 20px control would round to,
+so it reads as a rounded rectangle rather than a full pill. Overview carries six
+stat cells in a 3×2 grid under Claude Code's names (Sessions, Messages, Total
+tokens, Active days, Peak hour, Favorite model) whose tiles sit one clear step
+deeper than the panel (15% of the label tone) and set a 12px label over a 13px
+bold figure — the figure stays barely above its own label, which is also what
+lets a long model id such as deepseek-v4.1-flash sit on one line; the favourite
+model is a name, not a figure, and keeps the regular weight. Messages are the
+settled calls. Once the picked range's total passes one
+book, the yardstick line appears under the grid: eleven books from Animal Farm
+(39k tokens) to In Search of Lost Time (1.6M), each sized at 1.3 tokens a word.
+The book is drawn afresh each time the page comes back to the new-conversation
+hero, and a range that has not reached it steps down to the longest book it has
+passed, so the range pills keep the same book whenever the totals allow. The heat
+grid takes one
+equal column per week (twenty-six weeks), square cells from a 3px gutter, in
+Claude Code's blue data ramp (`#3b6ecf` at 20/40/65/100 over the neutral empty
+cell); because the columns are fractions of the panel's own width, the newest
+week can never fall past the edge. Hovering a cell shows Claude Code's day tip at
+once: a solid pill in the label ink with the canvas tone for text (so it inverts
+with the theme), 13px medium, reading the day in the shell's language and its
+messages ("Sep 9 — 15,955"); over the three columns at either end the pill lines
+up with the cell's outer edge so it stays inside the panel. The session list's
+fallback has no per-day message count, and its tip names the day's tokens.
+Models is Claude Code's own shape: one column
+per day of the chart's thirty-day window, stacked from the axis up with each
+model's slice in its rank's colour (ranks past the ramp share its last, grey
+step), four gridlines with their token labels in a 34px left gutter and every
+third column's date under it in the shell's language ("Aug 26"), and beneath it
+the ranked list — swatch, model name, the input/output split, and the share of
+the models shown — folding past six rows behind one "show more" row, which turns
+into "show less" once the list is open. The chart
+and the list write counts Claude Code's way: one decimal at most, no trailing
+".0", a lowercase k ("109M", "963.6k"). The list reads the roll-up's per-model
+buckets; the chart reads its per-day per-model map, so a day with nothing
+attributed to a model draws no stack. Each column is sized to its day's total
+against the axis top and each slice to its share of the day, so the column's
+rounding sits on the top of the stack. A range window filters the
+tiles (the peak hour included), the yardstick line and the model list; the heat
+grid and the chart keep their own windows.
+
+Two sources, in this order: the host half's usage route, then the session list's
+own projection block (`tokenUsage`, `modelSelection`, `sessionListMetadata`).
+The second answers in a few milliseconds and carries per-model totals without the
+four buckets, which is what the list falls back to when the first cannot answer.
+The first reads the cost-meter ledger when one covers the newest activity — its
+`<provider>:<model>` split becomes the per-model cells, one model across providers
+merged into one — and otherwise the accurate per-event fold; both carry each day's
+session ids, which a range window unions into one distinct session count. Only
+the fold knows the settlement hours: it keeps one hour histogram per day, which a
+range window sums into its own peak hour, and behind a cost-meter answer it still
+runs for the histograms alone — the ledger's figures land first, and the peak
+hour of the sessions whose logs remain lands a moment later. The panel names
+which one it drew from, and a figure neither can answer is a dash.
+
+The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
+of a fixed cell count, and on the models tab the chart's frame with three
+stand-in rows — and the heat grid's empty cell **is** the zero step, so "no data"
+and "a day with no usage" stay different things: a missing value draws a
+placeholder, a zero day draws the grid's own base tone.
+
+## The composer crab · 输入卡片上的螃蟹
+
+On the studio layout's new-conversation page, Claude Code's pixel crab stands on
+the composer card's top edge: 4px cells, a nine-cell shell with two-cell arms
+(52×32px), feet on the card's edge and the right arm 8px inside the single-line
+card's right edge, so the feet stand where its 18px corner starts to round. The
+classic layout keeps its centred hero without the crab. The shell is the clay accent `#d97757` in both
+themes, the side-on back is `#b9603f`, the eyes `#141413`, and the rod takes the
+tertiary label ink. When the crab is clicked, when the pointer leaves it, and on its own every 25–45
+seconds while the page is in view, it plays Claude Code's fishing routine
+(about three seconds): a half turn and a wink, the rod raised overhead and cast
+down onto the card's edge, a hop, a spell of fishing side-on, and the rod put
+away as it turns back to face front. With reduced motion requested, only a click
+plays it: the pointer passing by and the idle timer leave it still. Only the crab
+takes the pointer; the room the rod swings through does not.
 
 ## Implementation notes
 
@@ -175,7 +313,9 @@ tight) with an `important` inline write that outranks the host's own.
 
 The shipped bundle `lib/client.js` is **generated** — never edit it directly.
 Source lives in `src/` and `node scripts/build.mjs` (or `npm run build`)
-assembles the bundle:
+assembles the bundle. The map below annotates what each source is for; the
+assembly order itself is authoritative in `scripts/build.mjs`
+(`FRAGMENTS` / `STYLE_FILES`), which the build enforces:
 
 | Source | Content |
 |---|---|
@@ -191,6 +331,7 @@ assembles the bundle:
 | `src/styles/composer/inline.css` | in-conversation single-line composer (gated by composer preference) |
 | `src/styles/composer/inline-bar.css` | the inline composer's trailing bar: model trigger and merged time/usage stats line (gated by composer preference) |
 | `src/styles/sidebar.css` | sidebar brand, new-session row, workspace tree |
+| `src/styles/components/workspace.css` | the workspace section's 进行中 / 已归档 segment control and the skin's own archived list |
 | `src/styles/components/permissions.css` | permission segments and popover |
 | `src/styles/components/account-footer.css` | account row and floating popover |
 | `src/styles/components/ban-screen.css` | the account-hold easter egg (full-window overlay) |
@@ -201,23 +342,45 @@ assembles the bundle:
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
 | `src/styles/components/settings.css` | settings page section |
+| `src/styles/components/home-panel.css` | the studio home layout and the usage panel's shell (keyed on the attribute `home-layout.js` writes) |
+| `src/styles/components/home-overview.css` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
+| `src/styles/components/home-models.css` | the usage panel's Models tab: the stacked chart and the ranked list |
+| `src/styles/components/mascot.css` | the pixel crab: its seat on the card's top edge and its inks |
+| `src/styles/components/theme-flip.css` | theme-flip transition suppression |
 | `src/context/host.js` | host accessors and helpers |
 | `src/context/prefs.js` | preference store |
 | `src/context/model-copy.js` | model copy document store |
 | `src/context/i18n.js` | localized copy lookups |
 | `src/overrides/popover-utils.js` | shared anchor positioning and hover intent |
+| `src/overrides/composer.js` | composer layout feature: each pass writes the variant, gate, attachment and context-ring attributes the composer stylesheets read |
 | `src/overrides/copy.js` | composer/copy rewrites installer |
 | `src/overrides/session-stats.js` | session-stats card factory (`createSessionStats`), the permissions feature's split-out half |
 | `src/overrides/permissions.js` | permission segments/popover installer (the stats card lives in `session-stats.js`) |
+| `src/overrides/model-brand.js` | brand lockup lookup: maps a catalog model to its vendored lockup through the `brands` bindings |
+| `src/overrides/model-copy-lookup.js` | model copy lookup: exact entry → family rule → tier rule → the catalog's own text |
 | `src/overrides/model/catalog.js` | model catalog factory (`createModelCatalog`): the per-session ModelDirectory store |
 | `src/overrides/model/rows.js` | model row factory (`createModelRows`): option cells, provider rules, level-1 sections |
 | `src/overrides/model-picker.js` | model picker installer, wiring the `model/` factories (thin orchestration) |
+| `src/overrides/effort/matrix.js` | effort matrix factory (`createEffortMatrix`): the tier data the slider snaps to |
+| `src/overrides/effort/control.js` | effort control factory (`createEffortControl`): the reasoning-effort slider and its card |
+| `src/overrides/effort-picker.js` | effort picker installer, wiring the `effort/` factories (thin orchestration) |
 | `src/overrides/hero-menu.js` | stamps the host menu card the hero row's pickers open |
+| `src/overrides/quick-providers.js` | the settings page's quick-providers multi-select popover |
 | `src/overrides/account/profile.js` | account profile factory (`createAccountProfile`): signed-in name/avatar reads and retries |
 | `src/overrides/account/host-menu.js` | host account menu factory (`createHostAccountMenu`): reads and drives the host's own menu |
+| `src/overrides/account/rows.js` | account rows factory (`createAccountRows`): the account popover's row builders |
 | `src/overrides/account/footer-mirror.js` | footer mirror factory (`createFooterMirror`): redirects other plugins' footer entries into the drawer |
+| `src/overrides/account/surface.js` | account surface factory (`createAccountSurface`): one row model, picks the mount point each pass (the host's account menu or the self-built popover) |
 | `src/overrides/account-footer.js` | account drawer installer, wiring the `account/` factories (thin orchestration) |
 | `src/overrides/ban-screen.js` | account-hold easter egg installer |
+| `src/overrides/theme-flip.js` | suppresses transitions during a theme flip, so colours and shapes land together |
+| `src/overrides/workspace-view.js` | workspace section feature: the 进行中 / 已归档 segments and the archived list (row delete goes through the plugin's own route) |
+| `src/overrides/view-tabs.js` | conversation view tabs: moves the tab bar onto the title row when it fits |
+| `src/overrides/home-layout.js` | home layout feature shell: writes the layout attribute, registers the usage panel into the host's dock seat, and draws the panel's head |
+| `src/overrides/home/data.js` | the usage panel's data: the roll-up route, the session list's fallback, and the figures both tabs read |
+| `src/overrides/home/overview.js` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
+| `src/overrides/home/models.js` | the usage panel's Models tab: the stacked chart and the ranked list |
+| `src/overrides/mascot.js` | the pixel crab on the new-conversation card: its poses as one inline SVG, and the fishing routine |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |
@@ -247,6 +410,10 @@ rule should be checked for accidental hits:
 - Never override the host's active-phase layout contract on
   `[class*="viewArea"]` (`flex: 1 0 auto; min-height: auto`) — it is what
   keeps the sticky composer seat pinned to the scrollport bottom.
+- An anchor that carries a host button class (`_linkButton`, e.g. the settings
+  page's "充值") is a filled or outlined control, not a text link: it states its
+  own ink. The blanket anchor colour excludes that class — painting it leaves a
+  filled button's label the same colour as its fill.
 
 `node scripts/probe.cjs --token <launch-token>` drives a headless Chrome over
 CDP and asserts the invariants (composer pinned at bottom, single-line start,

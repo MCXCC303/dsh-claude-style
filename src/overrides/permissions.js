@@ -302,6 +302,8 @@
         for (var i = 0; i < wanted.length; i++) permPopover.appendChild(buildPermRow(wanted[i]))
       }
 
+      registerPopover('permission', closePermMenu)
+
       function buildPermTriggerAndPopover(onPick) {
         permPick = onPick
         var container = document.createElement('div')
@@ -330,6 +332,7 @@
 
         function openPerm() {
           if (permHoverIntent) permHoverIntent.cancel()
+          closeOtherPopovers('permission')
           var rect = btn.getBoundingClientRect()
           popover.style.left = Math.max(8, rect.left) + 'px'
           popover.style.bottom = Math.max(8, window.innerHeight - rect.top + 6) + 'px'
@@ -381,6 +384,10 @@
         }
 
         container.appendChild(btn)
+        // One popover per generation: a rebuild whose container a host
+        // re-render dropped strands the previous popover in the document, so
+        // installing this one sweeps every popover already there.
+        removeStrayNodes(document, '.dsh-claude-perm-popover', [])
         document.body.appendChild(popover)
 
         return {
@@ -421,74 +428,52 @@
         }
       }
 
+      /**
+       * The first failed switch request, thrown on the next sync so the feature
+       * retires the way a failed catalog read does (D12): a control that cannot
+       * switch must hand the shipped access button back, and the refusal must
+       * not pass silently.
+       */
+      var submitError = null
+
+      /**
+       * Request the preset switch through the host's `/permission` command —
+       * the same write the shipped picker's confirmation dialog ends in, minus
+       * the dialog. The command validates the preset against the host's own
+       * catalog, writes the sandbox mode and the approval policy, and appends
+       * the preset event, so the next sync re-renders the control from the
+       * projection alone.
+       */
       function submitPreset(preset) {
         var session = currentSession(ctx)
         if (session === null) return
         var settled = session.command('/permission ' + preset)
-        if (settled !== void 0 && typeof settled.then === 'function') settled.then(ui.schedule, ui.schedule)
+        if (settled === void 0 || typeof settled.then !== 'function') return
+        settled.then(function (result) {
+          if (result === null || typeof result !== 'object' || result.ok !== true) {
+            submitError = new Error('permission: the /permission ' + preset + ' command was refused')
+          } else if (result.value === null || typeof result.value !== 'object' || result.value.matched !== true) {
+            submitError = new Error('permission: the host offers no /permission command')
+          } else {
+            submitError = null
+          }
+          ui.schedule()
+        }, function () {
+          submitError = new Error('permission: the /permission ' + preset + ' command failed')
+          ui.schedule()
+        })
       }
 
       /**
-       * Drive the shipped access menu to its risk-gated row (Full access or Auto review),
-       * so the switch runs through the shipped risk-confirmation dialog rather than a
-       * skin-owned prompt. The trigger is hidden by this skin but still in
-       * the tree, so a synthetic click still opens the menu; the row is then
-       * picked by its label. A plain confirm stands in only when that menu
-       * cannot be reached, which keeps the switch behind an explicit
-       * acknowledgement either way.
+       * Request the switch for every row, gated presets included: the host's
+       * `/permission` command performs the switch itself, so no shipped menu
+       * and no risk-confirmation dialog sit between the pick and the write.
+       * A same-value pick writes nothing.
        */
-      var gateInFlight = false
-
-      function openShippedGate(preset) {
-        if (gateInFlight) return
-        var isAuto = preset === AUTO_REVIEW_PRESET
-        var targetLabels = isAuto ? AUTO_REVIEW_LABELS : FULL_ACCESS_LABELS
-        var prompt = isAuto ? AUTO_REVIEW_PROMPT : GATED_PROMPT
-        var trigger = findAccessTrigger()
-        if (trigger === null) {
-          if (window.confirm(prompt)) submitPreset(preset)
-          return
-        }
-        gateInFlight = true
-        trigger.click()
-        var attempts = 0
-        function seek() {
-          // The skin's own popover is itself a role=menu whose row texts start
-          // with the same labels, so it must stay out of this search — matching
-          // it would click back into pick() and toggle the shipped menu every
-          // frame. The shipped Auto review row concatenates its EXP badge into
-          // the text ("Auto reviewEXP"), so the label matches as a prefix.
-          var items = document.querySelectorAll('[role="menu"]:not(.dsh-claude-perm-popover) button[role="menuitem"]')
-          for (var i = 0; i < items.length; i++) {
-            var text = (items[i].textContent || '').trim()
-            for (var j = 0; j < targetLabels.length; j++) {
-              if (text.indexOf(targetLabels[j]) === 0) {
-                items[i].click()
-                gateInFlight = false
-                return
-              }
-            }
-          }
-          attempts += 1
-          if (attempts < 20) {
-            requestAnimationFrame(seek)
-            return
-          }
-          gateInFlight = false
-          trigger.click()
-          if (window.confirm(prompt)) submitPreset(preset)
-        }
-        requestAnimationFrame(seek)
-      }
-
       function pick(preset) {
         var session = currentSession(ctx)
         if (session === null || preset === null) return
         if (preset === currentPreset(session)) return
-        if (preset === GATED_PRESET || preset === AUTO_REVIEW_PRESET) {
-          openShippedGate(preset)
-          return
-        }
         submitPreset(preset)
       }
 
@@ -583,6 +568,10 @@
             }
             permBtn = permContainer.querySelector('.dsh-claude-perm-btn')
             permLabel = permContainer.querySelector('.dsh-claude-perm-label')
+            // The container can be adopted from a generation whose disposals a
+            // client reload dropped; its popover is still in the document, and
+            // without it updatePermState would early-return forever.
+            if (permPopover === null) permPopover = document.querySelector('.dsh-claude-perm-popover')
           } else {
             var res = buildPermTriggerAndPopover(pick)
             permContainer = res.container
@@ -598,6 +587,7 @@
       ui.permissions = {
         sync: function () {
           if (autoPresetError !== null) throw autoPresetError
+          if (submitError !== null) throw submitError
           stats.sync()
           syncSegments()
         },
@@ -619,6 +609,7 @@
 
       return function () {
         stats.teardown()
+        unregisterPopover('permission')
         if (permHoverIntent) permHoverIntent.cancel()
         dropAutoPresetRead()
         if (catalogFiber !== null && typeof catalogFiber.dispose === 'function') {
@@ -638,10 +629,8 @@
           window.removeEventListener('scroll', permResizeListener, true)
           permResizeListener = null
         }
-        removeStrayNodes(document, '.' + SEGMENTS_CLASS + '[data-composer-segments], .dsh-claude-perm-container', [])
+        removeStrayNodes(document, '.' + SEGMENTS_CLASS + '[data-composer-segments], .dsh-claude-perm-container, .dsh-claude-perm-popover', [])
         segments = null
-        gateInFlight = false
-        if (permPopover !== null && permPopover.parentElement !== null) permPopover.parentElement.removeChild(permPopover)
         permPopover = null
         permBtn = null
         permLabel = null

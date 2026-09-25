@@ -31,6 +31,9 @@
         if (name === accountName && avatar === accountAvatar) return
         accountName = name
         accountAvatar = avatar
+        // The greeting, the account rows and the hold screen read one identity
+        // store (src/context/host.js); this feature supplies its account half.
+        setAccountIdentity(name, avatar)
         // Nothing in the DOM changed, so no mutation will schedule the pass that
         // paints the new name and picture: ask for one. (A body attribute used to
         // stand in for this, but the observer's attributeFilter never sees it.)

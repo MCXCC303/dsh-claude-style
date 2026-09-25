@@ -95,6 +95,7 @@
       }
 
       function open(trigger, write) {
+        closeOtherPopovers('quickProviders')
         anchor = trigger
         anchor.setAttribute('aria-expanded', 'true')
         onWrite = write
@@ -125,6 +126,8 @@
         })
       }
 
+      registerPopover('quickProviders', close)
+
       ui.quickProviders = {
         toggle: toggle,
         /**
@@ -140,6 +143,7 @@
       }
       return function () {
         close()
+        unregisterPopover('quickProviders')
         if (unsubscribe !== null) {
           try { unsubscribe() } catch (error) { /* already disposed */ }
           unsubscribe = null

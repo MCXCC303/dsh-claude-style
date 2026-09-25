@@ -1,7 +1,7 @@
 {
   "name": "hdsl-claude-style",
   "description": "Claude Code Desktop theme for DeepSeek Harness (dsh) web GUI — HDSL local build, shipped as a plugin tarball",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "main": "lib/index.js",
   "icon": "lib/claude-mark.svg",

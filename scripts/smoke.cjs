@@ -19,6 +19,10 @@
  *   - idle       once settled, no scheduler pass runs — a pass that mutates the
  *                DOM schedules the next one, and then the page never idles;
  *   - enter      Enter on an open composer menu reaches the host, never "Send";
+ *   - popovers   the shared popover rule: a pointer crossing a trigger opens
+ *                nothing before the dwell elapses, and whichever card opens last
+ *                folds the one before it — the skin's own cards and the host's
+ *                hero menu alike;
  *   - desktop    the 0.1.7 desktop footer: the host's own account row is the
  *                entry, and our container is injected into its account menu —
  *                first child, self-healing across a host re-render, reachable
@@ -36,7 +40,6 @@
 'use strict'
 const fs = require('fs')
 const http = require('http')
-const os = require('os')
 const path = require('path')
 const { Readable } = require('stream')
 const { pathToFileURL } = require('url')
@@ -46,15 +49,24 @@ const ROOT = path.resolve(__dirname, '..')
 const CLIENT = path.join(ROOT, 'lib', 'client.js')
 const HOST = path.join(ROOT, 'lib', 'index.js')
 const MARKUP = '<img src=x onerror="window.__pwned=(window.__pwned||0)+1">'
+/** One transparent pixel: the launcher's avatar the HDSL case serves. */
+const PNG_1PX = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 /**
  * A 64×64 skin atlas with three landmarks, so a wrong crop cannot pass: the
  * head's front face (8,8–16,16) is red, the hat layer (40,8–48,16) is clear
  * except two green pixels that land at the box's opposite corners, and the
- * rest of the atlas is grey.
+ * rest of the atlas is grey. What the launcher serves is this sheet, not a
+ * finished avatar.
  */
 const SKIN_FIXTURE = path.join(__dirname, 'fixtures', 'skin-64.png')
 const SKIN_FACE = [255, 0, 0, 255]
 const SKIN_HAT = [0, 255, 0, 255]
+/**
+ * The cases whose launcher serves that atlas. `hdsl-broken` deliberately does
+ * not: its contract names a picture the player has already deleted, which the
+ * picture route answers with a 404.
+ */
+const SKIN_CASES = ['hdsl']
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
@@ -74,26 +86,15 @@ function check(label, ok, detail) {
  *
  * @param mod - the host-half module.
  * @param options - `fenced` offers the host's own request check, `home` answers
- *   `dshHomePath` with a scratch harness home, `live` names the sessions the
- *   fake `sessions` service reports as open, and `launch` provides the launch
- *   environment's layers (as the harness's own snapshot does).
+ *   `dshHomePath` with a scratch harness home, and `live` names the sessions the
+ *   fake `sessions` service reports as open, and `events` maps a session id to
+ *   the durable events the fake `sessionQuery` reader answers for it.
  */
 function fakeHost(mod, options = {}) {
-  const { fenced, home, live = [], launch } = options
+  const { fenced, home, live = [], events, launch } = options
   const routes = {}
   const settings = { configure: () => () => {} }
-  // Modelled on the host's connection.requestRejection(): the Host/Origin fence
-  // (loopback, no cross-site marker, Origin naming the Host), then the cookie.
-  const connection = {
-    requestRejection(req) {
-      const h = req.headers
-      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(h.host ?? '')) return 403
-      if (h['sec-fetch-site'] === 'cross-site') return 403
-      if (h.origin !== undefined && new URL(h.origin).host !== h.host) return 403
-      return /dsh-auth-/.test(h.cookie ?? '') ? undefined : 401
-    },
-  }
-  // The harness's launch environment, as its snapshot behaves: the canonical
+  // The harness's launch environment, as its own snapshot behaves: the canonical
   // order is process, project-env, user-env, and a layer left out of the asked
   // list stays unreachable.
   const launchEnvironment = launch === undefined ? undefined : {
@@ -106,14 +107,28 @@ function fakeHost(mod, options = {}) {
       return undefined
     },
   }
+  // Modelled on the host's connection.requestRejection(): the Host/Origin fence
+  // (loopback, no cross-site marker, Origin naming the Host), then the cookie.
+  const connection = {
+    requestRejection(req) {
+      const h = req.headers
+      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(h.host ?? '')) return 403
+      if (h['sec-fetch-site'] === 'cross-site') return 403
+      if (h.origin !== undefined && new URL(h.origin).host !== h.host) return 403
+      return /dsh-auth-/.test(h.cookie ?? '') ? undefined : 401
+    },
+  }
   const ctx = {
     fiber: { entry: { id: 'include:ui-skin-claude-style' } },
     logger: { warn() {} },
     get: (name) => {
       if (name === 'connection' && fenced) return connection
-      if (name === 'dshHomePath' && home !== undefined) return (sub) => path.join(home, sub)
+      if (name === 'dshHomePath' && home !== undefined) return (...segments) => path.join(home, ...segments)
       if (name === 'sessions') return { get: (id) => (live.includes(id) ? {} : undefined) }
       if (name === 'launchEnvironment') return launchEnvironment
+      if (name === 'sessionQuery' && events !== undefined) {
+        return { readSession: async (id) => ({ events: events[id] ?? [] }) }
+      }
       return undefined
     },
     effect: (fn) => fn(),
@@ -130,7 +145,7 @@ function fakeHost(mod, options = {}) {
 
 /**
  * One request through a registered route; resolves with `{ status, body }`, and
- * with the answer's bytes as `raw` (a picture route answers with them).
+ * with the answer's bytes as `raw` (the skin route answers with a picture).
  */
 function request(host, route, method, body, headers) {
   const req = Readable.from(body ? [Buffer.from(body)] : [])
@@ -140,7 +155,7 @@ function request(host, route, method, body, headers) {
       status: 0,
       writeHead(status) { this.status = status },
       end(chunk) {
-        const raw = chunk === undefined ? null : (Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+        const raw = chunk === undefined ? null : (Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)))
         resolve({ status: this.status, body: raw === null ? '' : raw.toString(), raw })
       },
     }
@@ -176,13 +191,13 @@ async function hostHalf() {
     const r = await request(host, USER, 'GET', '', browser)
     check('browser username read answered', r.status === 200 && JSON.parse(r.body).ok === true, `HTTP ${r.status}`)
 
-    // The launcher's account contract. It arrives through the harness's launch
-    // environment; the account name outranks the OS user, and the player's own
-    // skin is served as bytes because the browser can never read a path.
-    const SKIN = '/dsh-claude-style/skin'
+    // The launcher's account contract. Its two layers are the only ones allowed
+    // to say who the player is, and the picture's absolute path stays here.
+    const HDSL = '/dsh-claude-style/hdsl'
+    const SKIN = '/dsh-claude-style/hdsl-skin.png'
     const contract = {
       HDSL_ACCOUNT_CONTRACT: '1',
-      HDSL_ACCOUNT_NAME: 'Ada Lambert',
+      HDSL_ACCOUNT_NAME: 'HDSLPlayer',
       HDSL_ACCOUNT_VENDOR: 'deepseek',
       HDSL_ACCOUNT_KIND: 'official',
       HDSL_ACCOUNT_SKIN: 'local',
@@ -192,31 +207,28 @@ async function hostHalf() {
     const withContract = (patch) => fakeHost(mod, {
       fenced, home: scratchHome, launch: { process: Object.assign({}, contract, patch) },
     })
-    const who = JSON.parse((await request(withContract(), USER, 'GET', '', browser)).body)
-    check('a launcher account names the instance', who.ok === true && who.username === 'Ada Lambert', JSON.stringify(who.username))
-    check('the answer carries the account and whether it has a picture',
-      who.account !== null && who.account.kind === 'official' && who.account.vendor === 'deepseek'
-        && who.account.skin === 'local' && who.account.hasSkin === true,
-      JSON.stringify(who.account))
+    const who = JSON.parse((await request(withContract(), HDSL, 'GET', '', browser)).body)
+    check('the launcher contract reached the browser half',
+      who.ok === true && who.contract === true && who.name === 'HDSLPlayer' && who.vendor === 'deepseek' &&
+        who.kind === 'official' && who.hasSkinImage === true,
+      JSON.stringify(who))
     check('the skin path never reaches the browser', JSON.stringify(who).indexOf(SKIN_FIXTURE) === -1)
     const skin = await request(withContract(), SKIN, 'GET', '', browser)
-    check("the skin route serves the launcher's picture",
+    check("the skin route serves the launcher's atlas",
       skin.status === 200 && Buffer.compare(skin.raw, fs.readFileSync(SKIN_FIXTURE)) === 0, `HTTP ${skin.status}`)
-    const head = await request(withContract(), SKIN, 'HEAD', '', browser)
-    check('the skin route answers a HEAD with no body', head.status === 200 && head.raw === null, `HTTP ${head.status}`)
-    const posted = await request(withContract(), SKIN, 'POST', '', browser)
-    check('the skin route refuses a write', posted.status === 405, `HTTP ${posted.status}`)
     for (const [label, headers] of [['cross-site page', crossSite], ['LAN peer', lanPeer], ['DNS-rebound page', rebound]]) {
       const refused = await request(withContract(), SKIN, 'GET', '', headers)
       check(`${label}: skin read refused`, refused.status === 401 || refused.status === 403, `HTTP ${refused.status}`)
+      const meta = await request(withContract(), HDSL, 'GET', '', headers)
+      check(`${label}: account read refused`, meta.status === 401 || meta.status === 403, `HTTP ${meta.status}`)
     }
-    // An offline account keeps its name and its picture. The launcher writes a
-    // vendor for it as well (`offline`), so the kind is what says it has none.
-    const offline = JSON.parse((await request(withContract({ HDSL_ACCOUNT_KIND: 'offline', HDSL_ACCOUNT_VENDOR: 'offline' }), USER, 'GET', '', browser)).body)
+    // An offline account still has a name and, on the launcher's own patch, a
+    // vendor of `offline`: the kind is what says it has no provider.
+    const offline = JSON.parse((await request(withContract({ HDSL_ACCOUNT_KIND: 'offline', HDSL_ACCOUNT_VENDOR: 'offline' }), HDSL, 'GET', '', browser)).body)
     check('an offline account still names the instance and reports its kind',
-      offline.username === 'Ada Lambert' && offline.account.kind === 'offline', JSON.stringify(offline.account))
-    // The project directory's `.env` must not be able to say who the player is,
-    // nor to point the picture route at a file of its choosing.
+      offline.name === 'HDSLPlayer' && offline.kind === 'offline', JSON.stringify(offline))
+    // The project directory's `.env` travels with a cloned repository: it may
+    // not name the player, nor point the picture route at a file of its choosing.
     const spoofed = fakeHost(mod, {
       fenced,
       home: scratchHome,
@@ -225,26 +237,20 @@ async function hostHalf() {
         'project-env': { HDSL_ACCOUNT_NAME: 'Mallory', HDSL_ACCOUNT_SKIN: 'local', HDSL_ACCOUNT_SKIN_FILE: SKIN_FIXTURE },
       },
     })
-    const spoofedWho = JSON.parse((await request(spoofed, USER, 'GET', '', browser)).body)
-    check('the project directory cannot name the player', spoofedWho.username === os.userInfo().username, JSON.stringify(spoofedWho.username))
-    check('the project directory cannot supply a picture', spoofedWho.account.hasSkin === false, JSON.stringify(spoofedWho.account))
-    check('the project directory cannot make the skin route serve a file',
-      (await request(spoofed, SKIN, 'GET', '', browser)).status === 404)
-    // Without a contract the OS user stands in, exactly as before a launcher.
-    const bare = JSON.parse((await request(fakeHost(mod, { fenced, home: scratchHome }), USER, 'GET', '', browser)).body)
-    check('without a contract the OS user stands in', bare.username === os.userInfo().username && bare.account === null, JSON.stringify(bare.username))
-    // A picture that is gone, and a file that is not a picture.
+    const spoofedWho = JSON.parse((await request(spoofed, HDSL, 'GET', '', browser)).body)
+    check('the project directory cannot name the player', spoofedWho.name === null, JSON.stringify(spoofedWho))
+    check('the project directory cannot supply a picture',
+      spoofedWho.hasSkinImage === false && (await request(spoofed, SKIN, 'GET', '', browser)).status === 404)
+    check('without a contract the route says so',
+      (await request(fakeHost(mod, { fenced, home: scratchHome }), HDSL, 'GET', '', browser)).body.indexOf('"contract":false') !== -1)
+    // A picture the launcher points at but can no longer read. The contract
+    // advertises that the player chose one (the declaration is what the
+    // launcher wrote); the route is the truth, and it is what the browser half
+    // falls back from (the `hdsl-broken` case).
     const gone = withContract({ HDSL_ACCOUNT_SKIN_FILE: path.join(scratchHome, 'deleted.png') })
-    check('a skin that no longer exists is reported as missing',
-      JSON.parse((await request(gone, USER, 'GET', '', browser)).body).account.hasSkin === false)
-    check('a missing skin answers 404', (await request(gone, SKIN, 'GET', '', browser)).status === 404)
-    const notAPicture = path.join(scratchHome, 'not-a-skin.png')
-    fs.mkdirSync(scratchHome, { recursive: true })
-    fs.writeFileSync(notAPicture, 'not a png')
-    const wrong = withContract({ HDSL_ACCOUNT_SKIN_FILE: notAPicture })
-    check('a file that is not a PNG is not served as one', (await request(wrong, SKIN, 'GET', '', browser)).status === 404)
-    check('a file that is not a PNG is not advertised as a picture',
-      JSON.parse((await request(wrong, USER, 'GET', '', browser)).body).account.hasSkin === false)
+    check('a picture that is gone answers 404 although the contract names one',
+      (await request(gone, SKIN, 'GET', '', browser)).status === 404 &&
+        JSON.parse((await request(gone, HDSL, 'GET', '', browser)).body).hasSkinImage === true)
 
     fs.rmSync(scratchHome, { recursive: true, force: true })
     fs.mkdirSync(path.join(scratchCwd, scratchId), { recursive: true })
@@ -267,6 +273,77 @@ async function hostHalf() {
     check('a stored session is deleted', done.status === 200 && JSON.parse(done.body).ok === true, `HTTP ${done.status}`)
     check('the session directory is gone', fs.existsSync(path.join(scratchCwd, scratchId)) === false)
   }
+
+  // The usage roll-up from a cost-meter ledger: its per-day `byProviderModel`
+  // becomes the day's per-model map, one model served by two providers is one
+  // cell, and a key without a provider prefix is the model itself. The ledger
+  // has no hours, so the fold over the one stored log supplies them, per day.
+  // The ledger covers today, the day the log was written, so it answers.
+  console.log('\nhost half — usage roll-up from the cost-meter ledger')
+  const USAGE = '/dsh-claude-style/usage'
+  const now = new Date()
+  const at = (dayOffset, hour) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, 10)
+  const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const today = localDay(at(0, 15))
+  const yesterday = localDay(at(-1, 9))
+  fs.rmSync(scratchHome, { recursive: true, force: true })
+  fs.mkdirSync(path.join(scratchHome, 'storages', 'cost-meter'), { recursive: true })
+  const cell = (input, output) => ({ input, output, cacheRead: 0, cacheWrite: 0, calls: 1 })
+  fs.writeFileSync(path.join(scratchHome, 'storages', 'cost-meter', 'ledger.json'), JSON.stringify({
+    version: 1,
+    days: {
+      [today]: {
+        input: 700, output: 70, cacheRead: 0, cacheWrite: 0, calls: 3,
+        sessions: [{ id: 's1' }, { id: 's2' }],
+        byProviderModel: { 'alpha:model-a': cell(300, 30), 'beta:model-a': cell(200, 20), 'model-b': cell(200, 20) },
+      },
+      [yesterday]: {
+        input: 100, output: 10, cacheRead: 0, cacheWrite: 0, calls: 1,
+        sessions: [{ id: 's1' }],
+        byProviderModel: { 'alpha:model-b': cell(100, 10) },
+      },
+    },
+  }))
+  fs.mkdirSync(path.join(scratchCwd, 's1'), { recursive: true })
+  fs.writeFileSync(path.join(scratchCwd, 's1', 'session.v4.jsonl.zstd'), 'x')
+  const settlement = (date, turn) => ({
+    type: 'assistant/message',
+    time: date.getTime(),
+    data: { turn, step: 0, usage: { inputTokens: 10, outputTokens: 1 }, message: { source: { model: 'model-b' } } },
+  })
+  const usageHost = fakeHost(mod, {
+    fenced: true,
+    home: scratchHome,
+    events: { s1: [settlement(at(-1, 9), 1), settlement(at(0, 15), 2)] },
+  })
+  let usage = null
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const answer = await request(usageHost, USAGE, 'GET', '', browser)
+    usage = answer.status === 200 ? JSON.parse(answer.body) : { status: answer.status }
+    if (usage.value !== undefined && usage.value !== null && usage.computing !== true) break
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  const value = usage?.value ?? {}
+  const days = Array.isArray(value.days) ? value.days : []
+  check('the ledger answers the roll-up', value.source === 'cost-meter' && value.totals?.sessions === 2,
+    JSON.stringify({ source: value.source, totals: value.totals }))
+  check("each ledger day carries its per-model tokens, providers merged",
+    days.length === 2 && days[1].date === today &&
+      JSON.stringify(days[1].models) === JSON.stringify({ 'model-a': 550, 'model-b': 220 }) &&
+      JSON.stringify(days[0].models) === JSON.stringify({ 'model-b': 110 }),
+    JSON.stringify(days.map((day) => [day.date, day.models])))
+  check('the ranked models carry the input/output split across days',
+    Array.isArray(value.models) && value.models.length === 2 &&
+      value.models[0].id === 'model-a' && value.models[0].input === 500 && value.models[0].output === 50 &&
+      value.models[1].id === 'model-b' && value.models[1].tokens === 330,
+    JSON.stringify(value.models))
+  const hourOf = (hours) => (Array.isArray(hours) ? hours.indexOf(1) : null)
+  check('behind the ledger, the fold supplies the hour histograms, whole and per day',
+    Array.isArray(value.hours) && value.hours[9] === 1 && value.hours[15] === 1 &&
+      hourOf(days[0]?.hours) === 9 && hourOf(days[1]?.hours) === 15 &&
+      days.every((day) => day.hours.reduce((sum, count) => sum + count, 0) === 1),
+    JSON.stringify({ hours: value.hours, days: days.map((day) => [day.date, day.hours]) }))
+  fs.rmSync(scratchHome, { recursive: true, force: true })
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +456,45 @@ const STAND_IN = `(function () {
     closeHostMenu()
   }, true)
 
+  // The hero row's two pickers and the host menus their clicks toggle, for the
+  // popovers case. They are TWO independent host menus behind one row — the
+  // workspace chip and the preset seat in the real page — which is what made
+  // crossing from one trigger to the other leave both cards up.
+  if (CASE === 'popovers') {
+    var heroMenus = {}
+    function heroMenuOf(id) { return heroMenus[id] || null }
+    function closeHeroMenu(id) {
+      var menu = heroMenus[id]
+      if (menu && menu.parentElement) menu.parentElement.removeChild(menu)
+      heroMenus[id] = null
+      document.getElementById(id).setAttribute('aria-expanded', 'false')
+    }
+    function bindHeroTrigger(id, label) {
+      document.getElementById(id).addEventListener('click', function () {
+        if (heroMenus[id]) { closeHeroMenu(id); return }
+        var menu = document.createElement('div')
+        menu.setAttribute('role', 'menu')
+        menu.innerHTML = '<div class="itemWrap"><button type="button" role="menuitem">' + label + '</button></div>'
+        document.body.appendChild(menu)
+        heroMenus[id] = menu
+        document.getElementById(id).setAttribute('aria-expanded', 'true')
+      })
+    }
+    bindHeroTrigger('hero-workspace', 'Workspace A')
+    bindHeroTrigger('hero-preset', 'Standard mode')
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return
+      closeHeroMenu('hero-workspace')
+      closeHeroMenu('hero-preset')
+    })
+    window.__heroMenuOpen = function (id) { return heroMenuOf(id) !== null }
+    window.__heroMenusOpen = function () {
+      var count = 0
+      for (var id in heroMenus) if (heroMenus[id]) count++
+      return count
+    }
+  }
+
   window.__keys = []
   var menuOpen = true
   document.getElementById('editor').addEventListener('keydown', function (e) {
@@ -394,11 +510,17 @@ const STAND_IN = `(function () {
     action.setAttribute('aria-label', MARKUP)
     action.setAttribute('data-cordis-badge', MARKUP)
   }
-  // The launcher cases leave the custom name empty on purpose: the name they
-  // show is the one the host resolved from the launcher's contract.
-  var username = CASE === 'markup' ? MARKUP : (CASE.indexOf('launcher') === 0 ? '' : 'Tester')
+  // The launcher cases leave the custom nickname empty on purpose: the name
+  // they show is the one the launcher published.
+  var LAUNCHER = {
+    hdsl: { hasSkinImage: true },
+    'hdsl-noskin': { hasSkinImage: false },
+    'hdsl-broken': { hasSkinImage: true },
+  }
+  var launcherCase = LAUNCHER[CASE] !== undefined
+  var username = CASE === 'markup' ? MARKUP : CASE === 'desktop' || launcherCase ? '' : 'Tester'
   var form = {
-    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true } } },
+    getSnapshot: function () { return { status: 'ready', value: { username: username, collapseFooter: true, homeLayout: CASE === 'studio' ? 'studio' : 'classic' } } },
     subscribe: function () { return function () {} },
     set: function () { return Promise.resolve(true) },
   }
@@ -430,13 +552,77 @@ const STAND_IN = `(function () {
       },
     }
   }
+  // The identity routes and the OS-user probe, answered inside the page: the
+  // probe for every case, the launcher's contract only for the case that models
+  // an HDSL launch. Three different names — the custom nickname Tester, the
+  // account's Ada, the launcher's HDSLPlayer — are what make the fallback order
+  // observable.
+  var realFetch = window.fetch
+  var PNG_1PX = Uint8Array.from(
+    atob('${PNG_1PX}'),
+    function (c) { return c.charCodeAt(0) })
+  function jsonResponse(payload) {
+    return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } })
+  }
+  window.fetch = function (input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url) || ''
+    if (url === '/dsh-claude-style/username') return Promise.resolve(jsonResponse({ ok: true, username: 'Tester' }))
+    if (url === '/dsh-claude-style/hdsl') {
+      // Three launcher cases: the player's own atlas, a built-in figure (no
+      // picture at all), and an atlas the player deleted before the page
+      // loaded — the two fallbacks the account row has to survive.
+      return Promise.resolve(jsonResponse(LAUNCHER[CASE] !== undefined
+        ? {
+            ok: true, contract: true, name: 'HDSLPlayer', vendor: 'deepseek', kind: 'official',
+            skin: 'local', skinModel: 'default', hasSkinImage: LAUNCHER[CASE].hasSkinImage,
+          }
+        : { ok: true, contract: false }))
+    }
+    if (url === '/dsh-claude-style/usage' && CASE === 'studio') {
+      // A folded answer with the model dimension, so both tabs draw their data.
+      // The all-time figures reach past the one listed day (history older than
+      // any range window): all time peaks at 3 AM over 500k tokens, today alone
+      // peaks at 3 PM over 250k.
+      var today = new Date()
+      var pad = function (value) { return value < 10 ? '0' + value : String(value) }
+      var date = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate())
+      var dayHours = new Array(24).fill(0)
+      dayHours[15] = 3
+      var day = { date: date, input: 240000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 3, sessions: 1,
+        sessionIds: ['s1'], models: { 'model-a': 175000, 'model-b': 75000 }, hours: dayHours }
+      var hours = new Array(24).fill(0)
+      hours[3] = 10
+      hours[15] = 3
+      return Promise.resolve(jsonResponse({ ok: true, computing: false, value: {
+        source: 'local', computedAt: Date.now(), days: [day], firstDay: date, lastDay: date, hours: hours,
+        // Eight models, two past the six rows the list shows before it folds.
+        models: [
+          { id: 'model-a', input: 165000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 2, tokens: 175000 },
+          { id: 'model-b', input: 75000, output: 0, cacheRead: 0, cacheWrite: 0, calls: 1, tokens: 75000 },
+        ].concat([6, 5, 4, 3, 2, 1].map(function (size) {
+          return { id: 'model-small-' + size, input: size * 10, output: 0, cacheRead: 0, cacheWrite: 0, calls: 1, tokens: size * 10 }
+        })),
+        totals: { input: 490000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 9, sessions: 4, activeDays: 3 },
+      } }))
+    }
+    if (url === '/dsh-claude-style/hdsl-skin.png') {
+      // An <img> or a canvas source loads this outside the fetch stub, so the
+      // HTTP stand-in serves the bytes; this branch only keeps a stray request
+      // from reaching the real network.
+      if (SKIN_CASES.indexOf(CASE) === -1) return Promise.resolve(new Response(null, { status: 404 }))
+      return Promise.resolve(new Response(PNG_1PX, { headers: { 'content-type': 'image/png' } }))
+    }
+    return realFetch.apply(window, arguments)
+  }
   var account = {
     getProfile: CASE === 'install-fault'
       ? function () { return undefined } // host API drift: not a promise
-      : function () {
-          if (CASE === 'desktop') window.__profileReads++
-          return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } })
-        },
+      : launcherCase
+        ? function () { return Promise.resolve({ ok: true, value: null }) } // signed out: the launcher's name wins
+        : function () {
+            if (CASE === 'desktop') window.__profileReads++
+            return Promise.resolve({ ok: true, value: { profile: { status: 'ready', value: profile } } })
+          },
     watch: CASE === 'desktop'
       ? function () { return { [Symbol.asyncIterator]: accountFrames } }
       : undefined,
@@ -450,22 +636,19 @@ const STAND_IN = `(function () {
     $on: function () { return function () {} },
   }
   // The host's permission catalog: the configured presets, plus the live Auto
-  // review preset only while the auto-review integration is registered, plus
-  // the auto mode plugin's own preset in the cases that model it installed
-  // (with a declared glyph in one of them, without one in the other). The
+  // review preset only while the auto-review integration is registered. The
   // no-auto-review case models the plugin being disabled.
   var configuredPresetOptions = [
     { value: 'read-only', name: 'Read Only', description: 'read only' },
     { value: 'workspace-write', name: 'Workspace Write', description: 'workspace write' },
     { value: 'danger-full-access', name: 'Full access', description: 'full access' },
   ]
-  // What each case's host catalog carries on top of the configured presets, and
-  // the preset its session runs. Every case not listed here keeps the live Auto
-  // review preset, which is the shipped shape; the auto mode cases model the
-  // third-party tier being installed (with a declared glyph in one of them, and
-  // together with the built-in one in the hero case, where the slot has to
-  // choose). The conversation cases drive the popover, the hero case the
-  // segment group.
+  // What each case's catalog carries on top of the configured presets, and the
+  // preset its session runs. Every case not listed keeps the live Auto review
+  // preset, which is the shipped shape; the auto mode cases model the
+  // third-party tier being installed (alone, and together with the built-in one
+  // in the hero case, where the slot has to choose). The conversation cases
+  // drive the popover, the hero case the segment group.
   var PERMISSION_FIXTURES = {
     'no-auto-review': { extras: [], current: null },
     automode: { extras: [{ value: 'auto-mode', name: 'Auto mode', description: 'classified' }], current: 'workspace-write' },
@@ -513,18 +696,53 @@ const STAND_IN = `(function () {
                   return { getSnapshot: function () { return { currentValue: permissionFixture.current } } }
                 },
               },
-              command: function (line) { permissionCommands.push(line) },
+              command: function (line) { permissionCommands.push(line); return undefined },
             },
           }
         },
       } : undefined)
+  // The served-namespace directory. The late-forms case starts empty and gains
+  // the namespace after apply, the way a cold page sees the host's wire read
+  // answer after this plugin has already installed.
+  var formsView = { namespaces: CASE === 'late-forms' ? [] : [{ ns: 'ui-skin-claude-style' }] }
+  var formsListeners = []
   var forms = {
     get: function () { return form },
-    // The served-namespace mirror: the skin binds only a namespace listed here.
     describe: function () {
-      return { getSnapshot: function () { return { view: { namespaces: [{ ns: 'ui-skin-claude-style' }] } } } }
+      return {
+        getSnapshot: function () { return { view: formsView } },
+        subscribe: function (listener) {
+          formsListeners.push(listener)
+          return function () {
+            var at = formsListeners.indexOf(listener)
+            if (at !== -1) formsListeners.splice(at, 1)
+          }
+        },
+        ensure: function () { return Promise.resolve() },
+      }
     },
   }
+  window.__serveNamespace = function () {
+    formsView = { namespaces: [{ ns: 'ui-skin-claude-style' }] }
+    for (var fi = 0; fi < formsListeners.length; fi++) formsListeners[fi]()
+  }
+  // The studio case needs the slot registry: the home panel is an entry in the
+  // dock list seat (a list seat, so it carries an id), and the registration is
+  // the whole wiring — the seat's own rendering is the host's. The component is
+  // kept so the probe can render it the way the seat would.
+  var slotRegistry = CASE === 'studio' ? {
+    inject: function (key, callback) {
+      return key === 'conversation.input.dock' ? callback() : function () {}
+    },
+    register: function (spec, component) {
+      window.__slots = window.__slots || []
+      window.__slots.push({ key: spec.name, id: spec.id, order: spec.order, component: typeof component })
+      window.__slotComponents = window.__slotComponents || {}
+      window.__slotComponents[spec.id] = component
+      return function () {}
+    },
+  } : undefined
+  window.__permissionCommands = permissionCommands
   window.__ctx = {
     fiber: { entry: { id: 'ui-skin-claude-style' } },
     get: function (name) {
@@ -533,16 +751,17 @@ const STAND_IN = `(function () {
       if (name === 'remote.permissionPresets') return permissionPresets
       if (name === 'remote') return CASE === 'desktop' ? remote : undefined
       if (name === 'sessions') return sessions
+      if (name === 'slots') return slotRegistry
       return undefined
     },
     effect: function (fn) { window.__dispose = fn() },
   }
-  window.__permissionCommands = permissionCommands
   // The desktop account service mounts after this plugin does, so the skin waits
-  // for it through ctx.inject; the other cases keep no inject, which is what
-  // makes them read synchronously at install (the install-fault case depends on
-  // that read throwing).
-  if (CASE === 'desktop') {
+  // for it through ctx.inject; the studio case waits for the slot registry the
+  // same way. The other cases keep no inject, which is what makes them read
+  // synchronously at install (the install-fault case depends on that read
+  // throwing).
+  if (CASE === 'desktop' || CASE === 'studio') {
     window.__ctx.inject = function (deps, cb) {
       var disposers = []
       cb({
@@ -608,12 +827,25 @@ const STAND_IN = `(function () {
       })
     })(statsPills[sp], sp)
   }
+  // Elements are inert unless the probe renders a registered component: then
+  // function components run eagerly into a plain tree, and "states" stands in
+  // for a click that moved a state off its initial value.
   var react = {
-    createElement: function () { return null },
-    useState: function (v) { return [v, function () {}] },
+    rendering: false,
+    states: null,
+    createElement: function (type, props) {
+      if (!react.rendering) return null
+      var merged = Object.assign({}, props, { children: Array.prototype.slice.call(arguments, 2) })
+      return typeof type === 'function' ? type(merged) : { type: type, props: merged }
+    },
+    useState: function (v) {
+      var states = react.states
+      return [states !== null && Object.prototype.hasOwnProperty.call(states, v) ? states[v] : v, function () {}]
+    },
     useEffect: function () {},
     useRef: function (v) { return { current: v } },
   }
+  window.__react = react
   window.__ModuleLoader__ = {
     load: function (def) {
       window.__skin = def.factory(function (name) {
@@ -643,6 +875,72 @@ const PROBE = `(function () {
         }
       }
       return false
+    }
+    if (window.SMOKE_CASE === 'late-forms') {
+      // The directory has not answered yet: the skin holds the defaults.
+      r.lateBefore = document.body.getAttribute('data-dsh-claude-home-layout')
+      window.__serveNamespace()
+      // A pass is driven by a mutation, the way the live page drives one.
+      document.body.appendChild(document.createElement('i'))
+      await sleep(200)
+      r.lateAfter = document.body.getAttribute('data-dsh-claude-home-layout')
+    }
+    if (window.SMOKE_CASE === 'popovers') {
+      // The shared popover rule (popover-utils.js): the dwell keeps a pointer that
+      // merely crosses a trigger from unfolding anything, and only one card is up
+      // at a time — whichever opens last folds the one before it.
+      // The controls are built by the first scheduler pass, not by apply().
+      await sleep(500)
+      var permTrigger = document.querySelector('.dsh-claude-perm-btn')
+      var drawerTrigger = document.querySelector('.dsh-claude-account-btn')
+      var heroTrigger = document.getElementById('hero-workspace')
+      var presetTrigger = document.getElementById('hero-preset')
+      function permUp() { return document.querySelectorAll('.dsh-claude-perm-popover[data-open="true"]').length }
+      function drawerUp() { return document.querySelectorAll('.dsh-claude-account-popover[data-open="true"]').length }
+      function hostCards() { return document.querySelectorAll('body > [role="menu"]:not([class*="dsh-claude"])').length }
+      // The dwell is 100 ms: at 50 ms a crossing pointer has opened nothing, and
+      // by 250 ms a pointer that stayed has the card.
+      permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(50)
+      r.permOpenAtDwell = permUp()
+      await sleep(200)
+      r.permOpenPastDwell = permUp()
+      // The drawer opens over the permission card and folds it.
+      drawerTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(250)
+      r.drawerUp = drawerUp()
+      r.permFoldedByDrawer = permUp()
+      // The hero row's host menu opens on the same dwell, over the drawer.
+      heroTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.heroUp = window.__heroMenuOpen('hero-workspace')
+      r.drawerFoldedByHero = drawerUp()
+      // ...and the permission card folds the host menu on its way back.
+      permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(250)
+      r.permReopened = permUp()
+      r.heroFoldedByPerm = window.__heroMenuOpen('hero-workspace')
+      // The row's two pickers are two host menus: crossing from the preset seat
+      // straight to the workspace chip must fold the first, not leave both cards
+      // up (with two cards up the skin stamps and places neither, and the pair
+      // flickers as the hover-close path presses the wrong trigger).
+      presetTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.presetUp = window.__heroMenuOpen('hero-preset')
+      r.permFoldedByPreset = permUp()
+      heroTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.workspaceUpAfterCrossing = window.__heroMenuOpen('hero-workspace')
+      r.presetFoldedBySibling = window.__heroMenuOpen('hero-preset')
+      r.heroCardsUp = hostCards()
+      // Leaving the row folds the menu the hover opened, and only that one.
+      heroTrigger.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }))
+      await sleep(300)
+      r.heroMenusLeft = window.__heroMenusOpen()
+      permTrigger.dispatchEvent(new MouseEvent('mouseleave'))
+      drawerTrigger.dispatchEvent(new MouseEvent('mouseleave'))
+      await sleep(250)
+      r.cardsLeftAfterLeave = permUp() + drawerUp()
     }
     if (window.SMOKE_CASE === 'sync-fault') {
       // A sync is retired after failing three passes in a row: drive four.
@@ -785,6 +1083,39 @@ const PROBE = `(function () {
     }
     r.seatIdle = seatState(seats[0])
     r.seatRunning = seatState(seats[1])
+    if (window.SMOKE_CASE === 'default') {
+      // The classic hero's welcome is drawn on arrival and holds between
+      // passes: the draw pinned to either end of its pool gives two different
+      // lines, and a further pass leaves the drawn one alone.
+      var greetRoot = document.createElement('div')
+      greetRoot.className = '_x_root_1'
+      greetRoot.setAttribute('data-phase', 'hero')
+      var greetGroup = document.createElement('div')
+      greetGroup.className = '_x_titleGroup_1'
+      var greetSpan = document.createElement('span')
+      greetSpan.textContent = 'Host greeting'
+      greetGroup.appendChild(greetSpan)
+      greetRoot.appendChild(greetGroup)
+      var greetRandom = Math.random
+      var arrive = async function (draw) {
+        Math.random = function () { return draw }
+        document.body.appendChild(greetRoot)
+        await sleep(150)
+        Math.random = greetRandom
+        return greetSpan.textContent
+      }
+      r.greeting = { low: await arrive(0) }
+      // The crab belongs to the studio home page alone.
+      r.classicCrab = document.querySelector('.dsh-claude-mascot') !== null
+      document.body.appendChild(document.createElement('i'))
+      await sleep(150)
+      r.greeting.held = greetSpan.textContent
+      greetRoot.remove()
+      await sleep(150)
+      r.greeting.high = await arrive(0.999)
+      greetRoot.remove()
+      await sleep(150)
+    }
     if (window.SMOKE_CASE === 'default' && statsRoot) {
       // The host's panels mount on its own commit, later than the skin's old
       // read window: both sections must still reach the card.
@@ -832,12 +1163,13 @@ const PROBE = `(function () {
     r.avatarAttrs = attrs(avatar)
     var photo = avatar ? avatar.querySelector('img') : null
     r.photo = photo ? { attrs: attrs(photo), referrerPolicy: photo.referrerPolicy } : null
-    // The launcher's own skin, when the instance has one: a canvas cropped out
-    // of the texture the host serves, sampled at the landmarks the fixture
-    // carries so a wrong crop cannot pass.
+    r.photoSrc = photo ? photo.getAttribute('src') : null
+    r.photoHidden = photo ? photo.hidden : null
+    // The launcher's own picture is a texture sheet, so the row crops the head
+    // into a canvas instead of handing the sheet to the <img>. Sampled at the
+    // fixture's landmarks: red face inside the inset, green hat at the box's
+    // corners, nothing in the margin between them.
     r.skinFlag = r.avatarAttrs !== null && r.avatarAttrs.indexOf('data-dsh-claude-skin') !== -1
-    // The mask's shape: the head is drawn to the box's edges, so it must not be
-    // rounded off the way the photo path's circle is.
     r.avatarRadius = avatar ? getComputedStyle(avatar).borderRadius : null
     var skinHead = avatar ? avatar.querySelector('canvas.dsh-claude-account-skin') : null
     r.skinCanvas = skinHead ? { width: skinHead.width, height: skinHead.height } : null
@@ -859,16 +1191,143 @@ const PROBE = `(function () {
     // skin must leave the body marker off and keep its measured placement.
     r.titlebarTabs = document.body.hasAttribute('data-dsh-titlebar-tabs')
     r.footerTakeover = document.body.hasAttribute('data-dsh-claude-footer-takeover')
+    r.homeLayoutAttr = document.body.getAttribute('data-dsh-claude-home-layout')
+    r.homeLayoutExpected = window.SMOKE_CASE === 'studio' ? 'studio' : null
+    r.slotRegistrations = window.__slots || null
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
+    if (window.SMOKE_CASE === 'studio') {
+      // Render the registered panel on the hero page, once per tab, the way
+      // the dock seat would: a throw here is the slot's error boundary on the
+      // live page, which leaves the new-conversation page without its panel.
+      var heroRoot = document.createElement('div')
+      heroRoot.className = '_x_root_1'
+      heroRoot.setAttribute('data-phase', 'hero')
+      // Arriving on the hero draws the yardstick book; the draw is pinned to the
+      // last book on the shelf, which no window here has passed, so the line has
+      // to step down to the longest book each window did pass.
+      var random = Math.random
+      Math.random = function () { return 0.999 }
+      document.body.appendChild(heroRoot)
+      await sleep(200)
+      Math.random = random
+      r.panelRenders = {}
+      // The Overview tab twice — all time, and the 7d pill picked — and the
+      // Models tab folded and open; each state is keyed by the initial value it
+      // replaces.
+      var tabs = {
+        overview: null,
+        'overview-7d': { all: '7d' },
+        models: { overview: 'models' },
+        'models-open': { overview: 'models', false: true },
+      }
+      for (var tab in tabs) {
+        var react = window.__react
+        react.rendering = true
+        react.states = tabs[tab]
+        try {
+          var classes = []
+          var texts = []
+          ;(function collect(node) {
+            if (typeof node === 'string') { if (node) texts.push(node); return }
+            if (node === null || typeof node !== 'object') return
+            if (Array.isArray(node)) { node.forEach(collect); return }
+            if (node.props && typeof node.props.className === 'string') classes.push(node.props.className)
+            if (node.props) collect(node.props.children)
+          })(window.__slotComponents['claude-style-usage']({}))
+          r.panelRenders[tab] = { error: null, classes: classes, texts: texts }
+        } catch (e) {
+          r.panelRenders[tab] = { error: String((e && e.stack) || e), classes: [], texts: [] }
+        } finally {
+          react.rendering = false
+          react.states = null
+        }
+      }
+      // The crab rides the hero card. The pointer leaving it starts the
+      // routine: a quarter second in it is winking, and past the routine's
+      // three seconds it faces front again — and no frame of it wakes a pass.
+      var mascot = document.querySelector('[data-composer-card] > .dsh-claude-mascot')
+      r.mascot = {
+        mounted: mascot !== null,
+        poses: mascot === null ? 0 : mascot.querySelectorAll('g[data-pose]').length,
+        visiblePoses: mascot === null ? 0 : mascot.querySelectorAll('g[data-pose]:not([display])').length,
+      }
+      if (mascot !== null) {
+        // A real press has to reach the crab: nothing on the page may cover it.
+        mascot.scrollIntoView({ block: 'center' })
+        var hitBox = mascot.querySelector('.dsh-claude-mascot-hit').getBoundingClientRect()
+        var topmost = document.elementFromPoint(hitBox.left + hitBox.width / 2, hitBox.top + hitBox.height / 2)
+        r.mascot.reachable = topmost !== null && topmost.classList.contains('dsh-claude-mascot-hit')
+        var passesBefore = window.__passes
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new PointerEvent('pointerleave'))
+        await sleep(250)
+        r.mascot.early = mascot.getAttribute('data-pose')
+        r.mascot.earlyVisible = mascot.querySelectorAll('g[data-pose]:not([display])').length
+        await sleep(3000)
+        r.mascot.settled = mascot.getAttribute('data-pose')
+        r.mascot.passesDuring = window.__passes - passesBefore
+        // Under reduced motion the pointer passing by leaves it still, and a
+        // click still plays it.
+        var matchMedia = window.matchMedia
+        window.matchMedia = function (query) {
+          return query === '(prefers-reduced-motion: reduce)' ? { matches: true } : matchMedia.call(window, query)
+        }
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new PointerEvent('pointerleave'))
+        await sleep(250)
+        r.mascot.reducedLeave = mascot.getAttribute('data-pose')
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        await sleep(250)
+        r.mascot.clicked = mascot.getAttribute('data-pose')
+        await sleep(3000)
+        r.mascot.clickSettled = mascot.getAttribute('data-pose')
+        window.matchMedia = matchMedia
+      }
+      r.homeHero = { onHero: document.body.hasAttribute('data-dsh-claude-home-hero') }
+      // The studio rules reach the hero stack through that mark: the stack
+      // takes the studio column's 720px cap.
+      var studioStack = document.createElement('div')
+      studioStack.className = '_x_composerStack_1 _x_composerHero_1'
+      document.body.appendChild(studioStack)
+      r.homeHero.stackMaxWidth = getComputedStyle(studioStack).maxWidth
+      studioStack.remove()
+      heroRoot.remove()
+      await sleep(200)
+      r.homeHero.offHero = document.body.hasAttribute('data-dsh-claude-home-hero')
+      r.mascot.afterHero = document.querySelector('.dsh-claude-mascot') !== null
+      // The stylesheet alone decides where a panel may draw: under the hero
+      // stack's dock it shows, and the moment the host drops the stack's hero
+      // class (the first message sent) it is gone, before any pass runs.
+      function panelDisplay(stackClass) {
+        var stack = document.createElement('div')
+        stack.className = stackClass
+        var dock = document.createElement('div')
+        dock.setAttribute('data-slot', 'conversation.input.dock')
+        var panel = document.createElement('section')
+        panel.className = 'dsh-claude-home-panel'
+        dock.appendChild(panel)
+        stack.appendChild(dock)
+        document.body.appendChild(stack)
+        var display = getComputedStyle(panel).display
+        stack.remove()
+        return display
+      }
+      r.panelDisplay = {
+        hero: panelDisplay('_x_composerStack_1 _x_composerHero_1'),
+        conversation: panelDisplay('_x_composerStack_1'),
+      }
+    }
     // The host's own access-mode button: the permission control stands in for
     // it while installed, and hands it back when switched off.
     var hostAccess = document.querySelector('button[aria-label^="Access mode"]')
     r.hostAccessVisible = hostAccess !== null && getComputedStyle(hostAccess).display !== 'none'
     // The permission ladder follows the host's catalog: a preset it does not
     // serve has no row at all, and one a plugin adds (the auto mode plugin's)
-    // gets its own. Each row's shape is read so the names, the glyphs and the
-    // active mark can be asserted.
-    function permRowState(it) {
+    // gets its own. Each row's shape is read so names, the active mark and the
+    // "no glyphs in this list" rule can be asserted.
+    var permAutoPopoverRow = document.querySelector('.dsh-claude-perm-popover [data-preset="auto"]')
+    var permAutoSegment = document.querySelector('.dsh-claude-segment[data-preset="auto"]')
+    r.permAutoRowDisplay = permAutoPopoverRow !== null ? getComputedStyle(permAutoPopoverRow).display : null
+    r.permAutoSegmentDisplay = permAutoSegment !== null ? getComputedStyle(permAutoSegment).display : null
+    r.permRows = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-perm-popover [data-preset]'), function (it) {
       return {
         preset: it.getAttribute('data-preset'),
         display: getComputedStyle(it).display,
@@ -876,19 +1335,14 @@ const PROBE = `(function () {
         active: it.hasAttribute('data-active'),
         glyphs: it.querySelectorAll('svg').length,
       }
-    }
-    var permAutoPopoverRow = document.querySelector('.dsh-claude-perm-popover [data-preset="auto"]')
-    var permAutoSegment = document.querySelector('.dsh-claude-segment[data-preset="auto"]')
-    r.permAutoRowDisplay = permAutoPopoverRow !== null ? getComputedStyle(permAutoPopoverRow).display : null
-    r.permAutoSegmentDisplay = permAutoSegment !== null ? getComputedStyle(permAutoSegment).display : null
-    r.permRows = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-perm-popover [data-preset]'), permRowState)
+    })
     var permLabelEl = document.querySelector('.dsh-claude-perm-label')
     r.permLabel = permLabelEl === null ? null : permLabelEl.textContent
     r.permSegments = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-segment'), function (it) {
       return { preset: it.getAttribute('data-preset'), text: it.textContent, active: it.hasAttribute('data-active') }
     })
     // The pick path, end to end: switch to the auto mode tier and read what the
-    // control sent the session (the host's permission command line).
+    // control sent the session (the host permission command line).
     var autoModeRow = document.querySelector('.dsh-claude-perm-popover [data-preset="auto-mode"]')
     if (autoModeRow !== null) {
       autoModeRow.click()
@@ -928,6 +1382,17 @@ const PROBE = `(function () {
     r.hostRowPresent = document.getElementById('host-account') !== null
     var hostRowAtRest = document.getElementById('host-account')
     r.hostRowMarked = !!(hostRowAtRest && hostRowAtRest.hasAttribute('data-dsh-claude-account-host-row'))
+    // The two host controls the skin's own colour rules must leave readable: the
+    // chat's solid hover chip, and a filled anchor button whose ink comes from
+    // the host's foreground token rather than from the link colour.
+    var chip = document.querySelector('._h_older_1 button')
+    var chipCS = chip ? getComputedStyle(chip) : null
+    r.chipInk = chipCS ? chipCS.color : null
+    r.chipFill = chipCS ? chipCS.backgroundColor : null
+    var topUp = document.querySelector('._h_balance_1 a')
+    var topUpCS = topUp ? getComputedStyle(topUp) : null
+    r.topUpInk = topUpCS ? topUpCS.color : null
+    r.topUpFill = topUpCS ? topUpCS.backgroundColor : null
     var banRow = document.querySelector('[data-dsh-claude-ban-row]')
     if (banRow) banRow.click()
     var toast = document.querySelector('.dsh-claude-ban-toast-text')
@@ -1004,6 +1469,30 @@ function page(name) {
         '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="105 tok · Cache hit 90%">' +
           '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">105 tok · Cache hit 90%</span></button></span>' +
       '</div>'
+  // The hero row's two pickers, only where the popovers case drives them: each is
+  // its own host menu, opened and closed by pressing its own trigger.
+  var heroRow = name === 'popovers'
+    ? '<div class="_x_heroWorkspaceRow_1">' +
+        '<button type="button" id="hero-workspace" aria-haspopup="menu" aria-expanded="false">workspace</button>' +
+        '<button type="button" id="hero-preset" aria-haspopup="menu" aria-expanded="false">preset</button>' +
+      '</div>'
+    : ''
+  // Two of the host's own controls, painted the way the host paints them: the
+  // chat's "load earlier" chip (secondary ink on the solid hover fill) and a
+  // filled anchor button (AccountSection's "充值", `_linkButton _primary`). The
+  // skin supplies the tokens both read; the host supplies the foreground token
+  // for a filled control, which the skin leaves alone.
+  var hostControls = '<style>' +
+      'body { --dsw-alias-label-primary-foreground: #ffffff; }' +
+      'body[data-ds-dark-theme] { --dsw-alias-label-primary-foreground: #0f1115; }' +
+      '._h_older_1 button { border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px;' +
+        ' color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-interactive-bg-hover-solid); }' +
+      '._h_linkButton_1 { color: var(--dsw-alias-label-primary); background: transparent; }' +
+      '._h_primary_1 { color: var(--dsw-alias-label-primary-foreground);' +
+        ' background: var(--dsw-alias-button-primary-fill); }' +
+    '</style>' +
+    '<div class="_h_older_1"><button type="button">Load earlier</button></div>' +
+    '<div class="_h_balance_1"><a class="_h_linkButton_1 _h_primary_1" href="#">Top up</a></div>'
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
 <body>
@@ -1013,11 +1502,13 @@ ${footer}
   <div class="_x_sessionRow_1" role="treeitem"><span class="_x_slot_1"><svg data-state="ongoing" viewBox="0 0 16 16" width="10" height="10"></svg></span><span class="_x_title_1">running session</span></div>
 </div>
 <div data-composer-card${name === 'automode-hero' ? ' data-phase="hero"' : ''}>
+${heroRow}
   <div class="_x_toolbar_1"><button aria-label="Access mode: Edit">Edit</button></div>
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
   <button aria-label="Send" id="send">Send</button>
 </div>
 ${stats}
+${hostControls}
 <script>window.SMOKE_CASE = ${JSON.stringify(name)}</script>
 <script>${STAND_IN}</script>
 <script src="/client.js"></script>
@@ -1025,8 +1516,31 @@ ${stats}
 </body></html>`
 }
 
+/** WCAG contrast ratio between two `rgb(r, g, b)` readings. */
+function contrast(a, b) {
+  const luminance = (css) => {
+    const channels = css.match(/[\d.]+/g).slice(0, 3).map((raw) => {
+      const c = Number(raw) / 255
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    })
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+  }
+  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (high + 0.05) / (low + 0.05)
+}
+
 /** Checks every case shares: a clean teardown and an idle scheduler. */
 function commonChecks(r) {
+  check('the home layout attribute follows the preference',
+    r.homeLayoutAttr === r.homeLayoutExpected,
+    JSON.stringify({ attribute: r.homeLayoutAttr, expected: r.homeLayoutExpected }))
+  check("the host's solid hover chip keeps its label readable on its fill",
+    r.chipInk !== null && r.chipFill !== null && contrast(r.chipInk, r.chipFill) >= 4.5,
+    JSON.stringify({ ink: r.chipInk, fill: r.chipFill }))
+  check('a filled host anchor keeps its own ink instead of the link colour',
+    r.topUpInk !== null && r.topUpFill !== null && r.topUpInk !== r.topUpFill &&
+      contrast(r.topUpInk, r.topUpFill) >= 3,
+    JSON.stringify({ ink: r.topUpInk, fill: r.topUpFill }))
   check('the idle session seat draws the status circle through the slot outlet',
     r.seatIdle !== null && r.seatIdle.content !== 'none' && r.seatIdle.width === '5px',
     JSON.stringify(r.seatIdle))
@@ -1052,6 +1566,13 @@ const CASES = {
   default(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('stylesheet injected', r.stylesheet)
+    const greeting = r.greeting || {}
+    check('the classic hero draws its welcome on arrival and keeps it between passes',
+      typeof greeting.low === 'string' && greeting.low !== 'Host greeting' && greeting.low !== '' &&
+        greeting.held === greeting.low && typeof greeting.high === 'string' && greeting.high !== 'Host greeting' &&
+        greeting.high !== greeting.low,
+      JSON.stringify(greeting))
+    check('the classic hero page carries no crab', r.classicCrab === false, JSON.stringify(r.classicCrab))
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     check('detailed stats keep the merged sentence: host icons hidden, our separator in',
       r.statsMode === 'detailed' && r.statsIcons !== null && r.statsIcons.length === 2 &&
@@ -1061,9 +1582,8 @@ const CASES = {
       r.drawer !== null && same(r.drawer, ['action', 'embed', 'settings']) && r.syntheticHeader === true,
       JSON.stringify({ drawer: r.drawer, header: r.syntheticHeader }))
     check('synthetic path injects nothing into a host menu', r.syntheticInject === 0, `${r.syntheticInject} containers`)
-    check('account row names the signed-in profile', r.accountUser === 'Ada', JSON.stringify(r.accountUser))
+    check('a custom nickname outranks the signed-in profile', r.accountUser === 'Tester', JSON.stringify(r.accountUser))
     check('avatar is an <img> sent without a referrer', r.photo !== null && r.photo.referrerPolicy === 'no-referrer', JSON.stringify(r.photo))
-    check('without a launcher skin the avatar keeps its round mask', r.avatarRadius === '50%', JSON.stringify(r.avatarRadius))
     check('the self-built drawer matches the account row box',
       r.syntheticBox !== null && r.syntheticBox.popoverLeft === r.syntheticBox.buttonLeft &&
         r.syntheticBox.popoverWidth === r.syntheticBox.buttonWidth,
@@ -1087,109 +1607,6 @@ const CASES = {
     check('the closed drawer takes its parked rows out of the paint tree',
       r.syntheticVisibility === 'hidden' && r.syntheticRowVisibility === 'hidden',
       JSON.stringify({ panel: r.syntheticVisibility, row: r.syntheticRowVisibility }))
-    commonChecks(r)
-  },
-  'stats-compact'(r) {
-    check('apply() completes', r.applyError === null, r.applyError)
-    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
-    check('compact stats carry the skin sentence: icons hidden, our separator in',
-      r.statsMode === 'compact' && r.statsIcons !== null && r.statsIcons.length === 2 &&
-        r.statsIcons.every((d) => d === 'none') && r.statsSep.indexOf('·') !== -1,
-      JSON.stringify({ mode: r.statsMode, icons: r.statsIcons, sep: r.statsSep }))
-    check('a hover on compact stats opens no card', r.statsOpen === 0, r.statsOpen + ' open')
-    commonChecks(r)
-  },
-  markup(r) {
-    check('apply() completes', r.applyError === null, r.applyError)
-    check('no injected markup executed', r.pwned === 0, `${r.pwned} executions`)
-    check('account name rendered as text', r.accountUser === MARKUP, JSON.stringify(r.accountUser))
-    check('mirrored plugin label and badge rendered as text', r.mirroredText === MARKUP && r.mirroredBadge === MARKUP, JSON.stringify([r.mirroredText, r.mirroredBadge]))
-    check('account-hold toast renders the username as text', r.banToast === MARKUP + ': account_banned', JSON.stringify(r.banToast))
-    check('avatar URL adds no attribute to the page',
-      r.avatarAttrs !== null && r.avatarAttrs.every((a) => a === 'class' || a === 'data-dsh-claude-photo') &&
-      (r.photo === null || r.photo.attrs.every((a) => !/^on/i.test(a))), JSON.stringify([r.avatarAttrs, r.photo]))
-    commonChecks(r)
-  },
-  'install-fault'(r) {
-    check('apply() completes although the account API is broken', r.applyError === null, r.applyError)
-    check('only the account footer was switched off', r.errors.length === 1 && r.errors[0].includes('"footer"'), r.errors.join(' | '))
-    check("the host's own footer is handed back", !r.footerTakeover && r.accountUser === null, JSON.stringify({ takeover: r.footerTakeover, row: r.accountUser }))
-    check('the rest of the skin keeps running', r.stylesheet && r.composerRestyle && same(r.keys, ['host picked the menu item']))
-    commonChecks(r)
-  },
-  'sync-fault'(r) {
-    check('apply() completes', r.applyError === null, r.applyError)
-    check('only the permission control was switched off', r.errors.length === 1 && r.errors[0].includes('"permissions"'), r.errors.join(' | '))
-    check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))
-    check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
-    check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Ada', JSON.stringify(r.accountUser))
-    commonChecks(r)
-  },
-  'no-auto-review'(r) {
-    check('apply() completes', r.applyError === null, r.applyError)
-    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
-    check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
-      JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
-    check('a preset the catalog does not carry is not drawn at all',
-      r.permAutoRowDisplay === null &&
-        same(r.permRows.map(function (row) { return row.preset }), ['read-only', 'workspace-write', 'danger-full-access']),
-      JSON.stringify(r.permRows))
-    check('the rows the catalog does carry stay offered',
-      r.permRows.every(function (row) { return row.display !== 'none' }),
-      JSON.stringify(r.permRows))
-    commonChecks(r)
-  },
-  desktop(r) {
-    check('apply() completes', r.applyError === null, r.applyError)
-    check('the footer entries are hidden in place before the drawer is ever opened',
-      Array.isArray(r.footerEntriesBeforeOpen) && r.footerEntriesBeforeOpen.length === 2 &&
-        r.footerEntriesBeforeOpen.every(function (entry) { return entry.hidden === true && entry.display === 'none' }),
-      JSON.stringify(r.footerEntriesBeforeOpen))
-    check("the host's own account row stays visible; the skin builds no trigger",
-      r.hostRowVisible === true && r.hostRowDisplay !== 'none' && r.syntheticBtn === false,
-      JSON.stringify({ visible: r.hostRowVisible, display: r.hostRowDisplay, synthetic: r.syntheticBtn }))
-    check('the takeover marks the host account row for the stylesheet',
-      r.hostRowMarked === true, JSON.stringify(r.hostRowMarked))
-    check('the host trigger row is not hidden', r.triggerRowDisplay !== 'none', JSON.stringify(r.triggerRowDisplay))
-    check('the open host account menu carries the skin marker',
-      r.accountMenuMarked === true, JSON.stringify(r.accountMenuMarked))
-    check("our container is injected as the list's first child",
-      r.injectInViewport === true && r.injectFirst === true,
-      JSON.stringify({ inViewport: r.injectInViewport, first: r.injectFirst }))
-    check('the injected container carries the header and the plugin rows',
-      same(r.injectRows, ['header', 'action', 'embed']) && r.injectName === 'Ada',
-      JSON.stringify({ rows: r.injectRows, name: r.injectName }))
-    check('the injected header names the same user as the host account row',
-      r.injectName !== null && r.injectName === r.hostRowText,
-      JSON.stringify({ header: r.injectName, row: r.hostRowText }))
-    check('the account width variable is the account row box width',
-      r.accountWidthVar === Math.round(r.hostRowWidth) + 'px',
-      JSON.stringify({ variable: r.accountWidthVar, row: r.hostRowWidth }))
-    check('the host menu card is as wide as the account row',
-      r.menuCardWidth !== null && Math.round(r.menuCardWidth) === Math.round(r.hostRowWidth),
-      JSON.stringify({ card: r.menuCardWidth, row: r.hostRowWidth }))
-    check('hovering the host account row opens the host menu; leaving it closes',
-      r.hoverOpenedMenu === true && r.hoverClosedMenu === true,
-      JSON.stringify({ opened: r.hoverOpenedMenu, closed: r.hoverClosedMenu }))
-    check('the host account menu carries the skin entry animation',
-      r.menuEntryKeyframes === true && r.menuEntryAnimation === true,
-      JSON.stringify({ keyframes: r.menuEntryKeyframes, animation: r.menuEntryAnimation }))
-    check('a host re-render is healed: container first and rows unchanged',
-      r.injectHealedFirst === true && r.injectHealedSame === true,
-      JSON.stringify({ first: r.injectHealedFirst, same: r.injectHealedSame }))
-    check("the host's keyboard walk reaches our injected button",
-      r.focusInInjected === true, JSON.stringify(r.focusInInjected))
-    check('closing the host menu leaves no injected container behind',
-      r.injectAfterClose === 0 && r.hostMenuAfterClose === 0,
-      JSON.stringify({ containers: r.injectAfterClose, menus: r.hostMenuAfterClose }))
-    check('closing the host menu clears the skin marker',
-      r.accountMenuMarkAfterClose === 0, JSON.stringify(r.accountMenuMarkAfterClose))
-    check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
-    check('the first account frame reads the profile exactly once',
-      r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
-    check('a repeated same-state frame reads nothing more',
-      r.profileReadsAfterRepeat === 1, JSON.stringify(r.profileReadsAfterRepeat))
-    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     commonChecks(r)
   },
   // The auto mode cases: the ladder follows the host catalog, so a third-party
@@ -1255,20 +1672,17 @@ const CASES = {
       same(r.rowsAfterReturn, ladder), JSON.stringify(r.rowsAfterReturn))
     commonChecks(r)
   },
-  // The launcher cases: the host answers with an account contract, and the
-  // avatar circle has to become the player's own head.
-  launcher(r) {
+  hdsl(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
-    check('the launcher account names the instance where no custom name is set',
-      r.banToast === 'Ada Lambert: account_banned', JSON.stringify(r.banToast))
-    check("the launcher's skin draws the head into the avatar circle",
+    check("the launcher's account name outranks the OS-user probe", r.accountUser === 'HDSLPlayer', JSON.stringify(r.accountUser))
+    check("the launcher's atlas is cropped into the head the launcher itself draws",
       r.skinCanvas !== null && r.skinCanvas.width === 64 && r.skinFlag === true,
       JSON.stringify({ canvas: r.skinCanvas, flag: r.skinFlag }))
-    check('the head takes the box from the account profile picture',
-      r.photo === null, JSON.stringify(r.photo))
-    check('the head is not cut by a round mask', r.avatarRadius === '0px', JSON.stringify(r.avatarRadius))
-    check('the head is the atlas face, inset, with the hat layer over the whole box',
+    check('the head takes the box from the profile picture, uncut by a round mask',
+      r.photo === null && r.avatarRadius === '0px',
+      JSON.stringify({ photo: r.photo, radius: r.avatarRadius }))
+    check('the crop is the face, inset, with the hat layer over the whole box',
       same(r.skinPixels && r.skinPixels.face, SKIN_FACE) &&
         same(r.skinPixels && r.skinPixels.hatTop, SKIN_HAT) &&
         same(r.skinPixels && r.skinPixels.hatBottom, SKIN_HAT) &&
@@ -1276,35 +1690,219 @@ const CASES = {
       JSON.stringify(r.skinPixels))
     commonChecks(r)
   },
-  'launcher-noskin'(r) {
+  'hdsl-noskin'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
-    check('the launcher account still names the instance',
-      r.banToast === 'Ada Lambert: account_banned', JSON.stringify(r.banToast))
-    check('a launcher figure with no picture leaves the circle to the profile',
-      r.skinCanvas === null && r.skinFlag === false && r.photo !== null,
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('the launcher account still names the instance', r.accountUser === 'HDSLPlayer', JSON.stringify(r.accountUser))
+    check('a built-in figure with no picture leaves the circle to the mark alone',
+      r.skinCanvas === null && r.skinFlag === false && r.photo === null,
       JSON.stringify({ canvas: r.skinCanvas, flag: r.skinFlag, photo: r.photo }))
     commonChecks(r)
   },
-  'launcher-broken'(r) {
+  'hdsl-broken'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
-    check('a picture that never arrives falls back to the profile photo, not an empty circle',
-      r.skinCanvas === null && r.skinFlag === false && r.photo !== null,
-      JSON.stringify({ canvas: r.skinCanvas, flag: r.skinFlag, photo: r.photo }))
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('a picture the launcher points at but cannot serve leaves no canvas and no marker',
+      r.skinCanvas === null && r.skinFlag === false,
+      JSON.stringify({ canvas: r.skinCanvas, flag: r.skinFlag }))
+    check('the failed picture falls back to the circle as it was',
+      r.avatarRadius === '50%', JSON.stringify(r.avatarRadius))
     commonChecks(r)
   },
-}
-
-/**
- * The launcher contract each browser case is served, keyed by case name. A case
- * missing here reads as "no launcher published an account", which is what every
- * other case checks. `hasSkin` is what the host advertises, `picture` what the
- * skin route answers: they differ in `launcher-broken`, standing for a file
- * that is no longer there.
- */
-const LAUNCHER = {
-  launcher: { name: 'Ada Lambert', vendor: 'deepseek', kind: 'official', skin: 'local', skinModel: 'default', hasSkin: true, picture: true },
-  'launcher-noskin': { name: 'Ada Lambert', vendor: 'deepseek', kind: 'offline', skin: 'default', skinModel: 'default', hasSkin: false, picture: false },
-  'launcher-broken': { name: 'Ada Lambert', vendor: 'deepseek', kind: 'official', skin: 'local', skinModel: 'default', hasSkin: true, picture: false },
+  'stats-compact'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('compact stats carry the skin sentence: icons hidden, our separator in',
+      r.statsMode === 'compact' && r.statsIcons !== null && r.statsIcons.length === 2 &&
+        r.statsIcons.every((d) => d === 'none') && r.statsSep.indexOf('·') !== -1,
+      JSON.stringify({ mode: r.statsMode, icons: r.statsIcons, sep: r.statsSep }))
+    check('a hover on compact stats opens no card', r.statsOpen === 0, r.statsOpen + ' open')
+    commonChecks(r)
+  },
+  markup(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no injected markup executed', r.pwned === 0, `${r.pwned} executions`)
+    check('account name rendered as text', r.accountUser === MARKUP, JSON.stringify(r.accountUser))
+    check('mirrored plugin label and badge rendered as text', r.mirroredText === MARKUP && r.mirroredBadge === MARKUP, JSON.stringify([r.mirroredText, r.mirroredBadge]))
+    check('account-hold toast renders the username as text', r.banToast === MARKUP + ': account_banned', JSON.stringify(r.banToast))
+    check('avatar URL adds no attribute to the page',
+      r.avatarAttrs !== null && r.avatarAttrs.every((a) => a === 'class' || a === 'data-dsh-claude-photo') &&
+      (r.photo === null || r.photo.attrs.every((a) => !/^on/i.test(a))), JSON.stringify([r.avatarAttrs, r.photo]))
+    commonChecks(r)
+  },
+  'install-fault'(r) {
+    check('apply() completes although the account API is broken', r.applyError === null, r.applyError)
+    check('only the account footer was switched off', r.errors.length === 1 && r.errors[0].includes('"footer"'), r.errors.join(' | '))
+    check("the host's own footer is handed back", !r.footerTakeover && r.accountUser === null, JSON.stringify({ takeover: r.footerTakeover, row: r.accountUser }))
+    check('the rest of the skin keeps running', r.stylesheet && r.composerRestyle && same(r.keys, ['host picked the menu item']))
+    commonChecks(r)
+  },
+  'sync-fault'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('only the permission control was switched off', r.errors.length === 1 && r.errors[0].includes('"permissions"'), r.errors.join(' | '))
+    check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))
+    check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
+    check('the rest of the skin keeps running', r.stylesheet && r.accountUser === 'Tester', JSON.stringify(r.accountUser))
+    commonChecks(r)
+  },
+  studio(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('the studio preference reaches the document',
+      r.homeLayoutAttr === 'studio', JSON.stringify(r.homeLayoutAttr))
+    check('the usage panel registers into the dock list seat with an id',
+      Array.isArray(r.slotRegistrations) && r.slotRegistrations.length === 1 &&
+        r.slotRegistrations[0].key === 'conversation.input.dock' &&
+        r.slotRegistrations[0].id === 'claude-style-usage' &&
+        r.slotRegistrations[0].component === 'function',
+      JSON.stringify(r.slotRegistrations))
+    const renders = r.panelRenders || {}
+    const drew = (tab, className) => renders[tab] !== undefined && renders[tab].error === null &&
+      renders[tab].classes.includes(className)
+    check('the usage panel renders its Overview tab: stat cells and heat grid',
+      drew('overview', 'dsh-claude-home-stat') && drew('overview', 'dsh-claude-home-heat'),
+      JSON.stringify(renders.overview))
+    const said = (tab, pattern) => renders[tab] !== undefined && renders[tab].texts.some((text) => pattern.test(text))
+    check('all time: the peak hour and the book line read the whole history (500k steps down to Moby-Dick)',
+      said('overview', /^3 AM$/) && said('overview', /^You've used ~2× more tokens than Moby-Dick\.$/),
+      JSON.stringify(renders.overview && renders.overview.texts))
+    check('7d: the peak hour and the book line follow the range window (250k steps down to Pride and Prejudice)',
+      said('overview-7d', /^3 PM$/) && said('overview-7d', /^You've used ~2× more tokens than Pride and Prejudice\.$/),
+      JSON.stringify(renders['overview-7d'] && renders['overview-7d'].texts))
+    check('the usage panel renders its Models tab: stacked chart and ranked list',
+      drew('models', 'dsh-claude-home-chart-seg') && drew('models', 'dsh-claude-home-model'),
+      JSON.stringify(renders.models))
+    const rows = (tab) => (renders[tab] === undefined ? 0
+      : renders[tab].classes.filter((name) => name === 'dsh-claude-home-model').length)
+    check('the folded model list shows six rows and a "Show 2 more" row',
+      rows('models') === 6 && said('models', /^Show 2 more$/),
+      JSON.stringify({ rows: rows('models'), texts: renders.models && renders.models.texts.slice(-3) }))
+    const mascot = r.mascot || {}
+    check('the crab stands on the hero card, facing front, one pose shown',
+      mascot.mounted === true && mascot.poses === 11 && mascot.visiblePoses === 1, JSON.stringify(mascot))
+    check('the pointer leaving the crab plays the routine and it ends facing front, without waking a pass',
+      mascot.early === 'wink' && mascot.earlyVisible === 1 && mascot.settled === 'front' && mascot.passesDuring === 0,
+      JSON.stringify(mascot))
+    check('a click reaches the crab; under reduced motion only a click plays the routine',
+      mascot.reachable === true && mascot.reducedLeave === 'front' && mascot.clicked === 'wink' && mascot.clickSettled === 'front',
+      JSON.stringify(mascot))
+    check('the crab leaves with the hero page', mascot.afterHero === false, JSON.stringify(mascot))
+    check('the studio hero mark is on the document on the hero page and off it elsewhere, and the studio rules reach the stack',
+      r.homeHero !== undefined && r.homeHero.onHero === true && r.homeHero.offHero === false && r.homeHero.stackMaxWidth === '720px',
+      JSON.stringify(r.homeHero))
+    check('the usage panel draws under the hero stack only, so sending a message never shows it full width',
+      r.panelDisplay !== undefined && r.panelDisplay.hero === 'flex' && r.panelDisplay.conversation === 'none',
+      JSON.stringify(r.panelDisplay))
+    check('the open model list shows every row and a "Show less" row',
+      rows('models-open') === 8 && said('models-open', /^Show less$/) && !said('models-open', /^Show \d+ more$/),
+      JSON.stringify({ rows: rows('models-open'), texts: renders['models-open'] && renders['models-open'].texts.slice(-3) }))
+    check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
+    commonChecks(r)
+  },
+  'late-forms'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('the store stays on the defaults (the studio home) until the namespace is served',
+      r.lateBefore === 'studio', JSON.stringify(r.lateBefore))
+    check('a namespace served after apply still binds the form and its value (classic)',
+      r.lateAfter === null && r.homeLayoutAttr === null,
+      JSON.stringify({ after: r.lateAfter, final: r.homeLayoutAttr }))
+    commonChecks(r)
+  },
+  'no-auto-review'(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check("the permission control stands in for the host's access button", r.composerRestyle && !r.hostAccessVisible,
+      JSON.stringify({ restyle: r.composerRestyle, hostAccess: r.hostAccessVisible }))
+    check('a preset the catalog does not carry is not drawn at all',
+      r.permAutoRowDisplay === null &&
+        same(r.permRows.map(function (row) { return row.preset }), ['read-only', 'workspace-write', 'danger-full-access']),
+      JSON.stringify(r.permRows))
+    check('the rows the catalog does carry stay offered',
+      r.permRows.every(function (row) { return row.display !== 'none' }),
+      JSON.stringify(r.permRows))
+    commonChecks(r)
+  },
+  popovers(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    check('a pointer crossing a trigger opens nothing before the dwell elapses',
+      r.permOpenAtDwell === 0, `${r.permOpenAtDwell} open at 50 ms`)
+    check('a pointer that stays the dwell out opens the card',
+      r.permOpenPastDwell === 1, `${r.permOpenPastDwell} open past the dwell`)
+    check('opening the account drawer folds the permission card',
+      r.drawerUp === 1 && r.permFoldedByDrawer === 0,
+      JSON.stringify({ drawer: r.drawerUp, permission: r.permFoldedByDrawer }))
+    check("opening the hero row's host menu folds the drawer",
+      r.heroUp === true && r.drawerFoldedByHero === 0,
+      JSON.stringify({ hero: r.heroUp, drawer: r.drawerFoldedByHero }))
+    check('opening the permission card folds the hero menu',
+      r.permReopened === 1 && r.heroFoldedByPerm === false,
+      JSON.stringify({ permission: r.permReopened, hero: r.heroFoldedByPerm }))
+    check("the row's other picker opens over the permission card and folds it",
+      r.presetUp === true && r.permFoldedByPreset === 0,
+      JSON.stringify({ preset: r.presetUp, permission: r.permFoldedByPreset }))
+    check('crossing to the row\'s other trigger folds the picker left behind',
+      r.workspaceUpAfterCrossing === true && r.presetFoldedBySibling === false && r.heroCardsUp === 1,
+      JSON.stringify({ workspace: r.workspaceUpAfterCrossing, preset: r.presetFoldedBySibling, cards: r.heroCardsUp }))
+    check('leaving the row leaves no hero picker up',
+      r.heroMenusLeft === 0, `${r.heroMenusLeft} open`)
+    check('leaving every trigger leaves no card up',
+      r.cardsLeftAfterLeave === 0, `${r.cardsLeftAfterLeave} open`)
+    commonChecks(r)
+  },
+  desktop(r) {
+    check('apply() completes', r.applyError === null, r.applyError)
+    check('the footer entries are hidden in place before the drawer is ever opened',
+      Array.isArray(r.footerEntriesBeforeOpen) && r.footerEntriesBeforeOpen.length === 2 &&
+        r.footerEntriesBeforeOpen.every(function (entry) { return entry.hidden === true && entry.display === 'none' }),
+      JSON.stringify(r.footerEntriesBeforeOpen))
+    check("the host's own account row stays visible; the skin builds no trigger",
+      r.hostRowVisible === true && r.hostRowDisplay !== 'none' && r.syntheticBtn === false,
+      JSON.stringify({ visible: r.hostRowVisible, display: r.hostRowDisplay, synthetic: r.syntheticBtn }))
+    check('the takeover marks the host account row for the stylesheet',
+      r.hostRowMarked === true, JSON.stringify(r.hostRowMarked))
+    check('the host trigger row is not hidden', r.triggerRowDisplay !== 'none', JSON.stringify(r.triggerRowDisplay))
+    check('the open host account menu carries the skin marker',
+      r.accountMenuMarked === true, JSON.stringify(r.accountMenuMarked))
+    check("our container is injected as the list's first child",
+      r.injectInViewport === true && r.injectFirst === true,
+      JSON.stringify({ inViewport: r.injectInViewport, first: r.injectFirst }))
+    check('the injected container carries the header and the plugin rows',
+      same(r.injectRows, ['header', 'action', 'embed']) && r.injectName === 'Ada',
+      JSON.stringify({ rows: r.injectRows, name: r.injectName }))
+    check('the injected header names the same user as the host account row',
+      r.injectName !== null && r.injectName === r.hostRowText,
+      JSON.stringify({ header: r.injectName, row: r.hostRowText }))
+    check('the account width variable is the account row box width',
+      r.accountWidthVar === Math.round(r.hostRowWidth) + 'px',
+      JSON.stringify({ variable: r.accountWidthVar, row: r.hostRowWidth }))
+    check('the host menu card is as wide as the account row',
+      r.menuCardWidth !== null && Math.round(r.menuCardWidth) === Math.round(r.hostRowWidth),
+      JSON.stringify({ card: r.menuCardWidth, row: r.hostRowWidth }))
+    check('hovering the host account row opens the host menu; leaving it closes',
+      r.hoverOpenedMenu === true && r.hoverClosedMenu === true,
+      JSON.stringify({ opened: r.hoverOpenedMenu, closed: r.hoverClosedMenu }))
+    check('the host account menu carries the skin entry animation',
+      r.menuEntryKeyframes === true && r.menuEntryAnimation === true,
+      JSON.stringify({ keyframes: r.menuEntryKeyframes, animation: r.menuEntryAnimation }))
+    check('a host re-render is healed: container first and rows unchanged',
+      r.injectHealedFirst === true && r.injectHealedSame === true,
+      JSON.stringify({ first: r.injectHealedFirst, same: r.injectHealedSame }))
+    check("the host's keyboard walk reaches our injected button",
+      r.focusInInjected === true, JSON.stringify(r.focusInInjected))
+    check('closing the host menu leaves no injected container behind',
+      r.injectAfterClose === 0 && r.hostMenuAfterClose === 0,
+      JSON.stringify({ containers: r.injectAfterClose, menus: r.hostMenuAfterClose }))
+    check('closing the host menu clears the skin marker',
+      r.accountMenuMarkAfterClose === 0, JSON.stringify(r.accountMenuMarkAfterClose))
+    check('Ctrl+, opens the host dialog', r.dialogAfterShortcut === 1, JSON.stringify(r.dialogAfterShortcut))
+    check('the first account frame reads the profile exactly once',
+      r.profileReadsAfterFirst === 1, JSON.stringify(r.profileReadsAfterFirst))
+    check('a repeated same-state frame reads nothing more',
+      r.profileReadsAfterRepeat === 1, JSON.stringify(r.profileReadsAfterRepeat))
+    check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
+    commonChecks(r)
+  },
 }
 
 /** Load one case in a fresh tab and return the page's report. */
@@ -1312,9 +1910,20 @@ async function runCase(port, base, name) {
   const tab = await connectTab(port)
   try {
     await tab.send('Page.enable')
+    // The machine's own motion setting must not decide a check: every case
+    // runs with no reduced-motion request, and a probe that needs one asks
+    // for it itself.
+    await tab.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await tab.send('Page.navigate', { url: `${base}/${name}` })
     for (let i = 0; i < 100; i++) {
       const out = await tab.send('Runtime.evaluate', { expression: 'window.__smoke', awaitPromise: true, returnByValue: true })
+      // A probe that throws rejects its promise, which CDP answers as an
+      // exception carrying an empty object as the value: without this the case
+      // would report "no report" instead of the failure that caused it.
+      if (out.result && out.result.exceptionDetails) {
+        const exception = out.result.exceptionDetails.exception
+        throw new Error(`case "${name}" threw: ${(exception && exception.description) || out.result.exceptionDetails.text}`)
+      }
       const result = out.result && out.result.result
       if (result && result.type === 'object') return result.value
       await sleep(100)
@@ -1331,61 +1940,35 @@ async function browserHalf() {
     console.log('\nbrowser half — skipped: no Chrome/Edge found (set CHROME_PATH)')
     return false
   }
-  // The identity routes the client half reads. They belong to the host half in
-  // production; here the server stands in for it, per case, so the account row
-  // can be driven from a contract the way a launcher-driven instance is.
-  const IDENTITY = '/dsh-claude-style/username'
-  const SKIN = '/dsh-claude-style/skin'
+  /** The case whose page is being served; the picture route answers for it. */
   let current = null
   const server = http.createServer((req, res) => {
-    const pathname = new URL(req.url, 'http://x').pathname
-    const name = pathname.slice(1)
+    const name = new URL(req.url, 'http://x').pathname.slice(1)
     if (name === 'client.js') {
       res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       res.end(fs.readFileSync(CLIENT))
-      return
-    }
-    if (Object.prototype.hasOwnProperty.call(CASES, name)) {
+    } else if (name === 'dsh-claude-style/hdsl-skin.png') {
+      // The launcher's atlas, which the skin loads outside `fetch`, so the
+      // page-side stand-in cannot answer it. `hdsl-broken` models a file the
+      // player removed after the launcher wrote the contract.
+      if (SKIN_CASES.indexOf(current) === -1) {
+        res.writeHead(404, { 'cache-control': 'no-store' })
+        res.end()
+        return
+      }
+      res.writeHead(200, { 'content-type': 'image/png' })
+      res.end(fs.readFileSync(SKIN_FIXTURE))
+    } else if (Object.prototype.hasOwnProperty.call(CASES, name)) {
       current = name
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       res.end(page(name))
-      return
-    }
-    const contract = LAUNCHER[current]
-    if (contract === undefined) {
+    } else {
       res.writeHead(404)
       res.end()
-      return
     }
-    if (pathname === IDENTITY) {
-      const body = Buffer.from(JSON.stringify({
-        ok: true,
-        username: contract.name,
-        account: {
-          name: contract.name,
-          vendor: contract.vendor,
-          kind: contract.kind,
-          skin: contract.skin,
-          skinModel: contract.skinModel,
-          hasSkin: contract.hasSkin,
-        },
-      }))
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'content-length': String(body.byteLength) })
-      res.end(body)
-      return
-    }
-    // The picture itself. `picture: false` stands for a file the player removed
-    // after the launcher wrote the contract.
-    if (pathname === SKIN && contract.picture === true) {
-      const image = fs.readFileSync(SKIN_FIXTURE)
-      res.writeHead(200, { 'content-type': 'image/png', 'content-length': String(image.byteLength) })
-      res.end(image)
-      return
-    }
-    res.writeHead(404, { 'cache-control': 'no-store' })
-    res.end()
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+
   const base = `http://127.0.0.1:${server.address().port}`
   const chrome = await launchChrome(browser, { name: 'smoke', width: 1280, height: 800 })
   try {

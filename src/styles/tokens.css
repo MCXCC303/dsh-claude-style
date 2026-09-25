@@ -40,6 +40,12 @@ body[data-dsh-claude-style][data-ds-dark-theme] {
   --dsw-alias-border-l3: #3a3833;
   --dsw-alias-brand-primary: #d97757;
   --dsw-alias-brand-text: #faf9f5;
+  /* The host takes a primary button's fill from --dsw-alias-brand-primary but
+     its hover from a monochrome step of its own scale (light #43454a, dark
+     #ebeef2). The skin's accent is clay, so a filled button states both steps
+     here and the hover stays in the fill's own family. */
+  --dsw-alias-button-primary-fill: #d97757;
+  --dsw-alias-button-primary-hover: #e08a6d;
   --dsw-alias-button-elevated-fill: #242320;
   --dsw-alias-button-floating-fill: #242320;
   --dsw-alias-button-floating-hover: #2e2c29;
@@ -95,6 +101,8 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-alias-border-l2: #dedcd2;
   --dsw-alias-border-l3: #d0cdc1;
   --dsw-alias-brand-primary: #d97757;
+  --dsw-alias-button-primary-fill: #d97757;
+  --dsw-alias-button-primary-hover: #c6613f;
   --dsw-alias-button-info-fill: #d97757;
   --dsw-alias-button-info-hover: #c6613f;
   --dsw-alias-button-floating-fill: #ffffff;
@@ -121,11 +129,13 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) {
   --dsw-shadow-lv2: 0 4px 18px rgba(20, 20, 19, 0.10), 0 1px 3px rgba(20, 20, 19, 0.05);
   --dsw-alias-brand-primary-new-colorprimary-new-color: #d97757;
   /* Carried over from the dark base block so the light palette stays complete
-     now that the dark palette is dark-scoped. */
+     now that the dark palette is dark-scoped. The two fills are palette-specific
+     instead: the host paints a solid hover chip and an elevated surface lighter
+     than the canvas here, and the light ink they carry needs a light fill. */
   --dsw-alias-brand-text: #faf9f5;
-  --dsw-alias-button-elevated-fill: #242320;
+  --dsw-alias-button-elevated-fill: #ffffff;
   --dsw-alias-interactive-bg-active: rgba(217, 119, 87, 0.30);
-  --dsw-alias-interactive-bg-hover-solid: #2e2c29;
+  --dsw-alias-interactive-bg-hover-solid: #f0efe9;
   /* User message bubbles: the host's light bubble token is deepseek-50 (blue);
      use the skin's button-hover gray instead. */
   --dsw-specific-bubble: var(--dsh-claude-hover-bg);
@@ -159,11 +169,13 @@ body[data-dsh-claude-style]:not([data-ds-dark-theme]) :is([data-pane="conversati
   background: #fcfcfb !important;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) a {
+/* The light half of the anchor ink in chrome.css; both leave a host button
+   class (`_linkButton`) to the ink that class states for itself. */
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) a:not([class*="_linkButton"]) {
   color: #c6613f;
 }
 
-body[data-dsh-claude-style]:not([data-ds-dark-theme]) a:hover {
+body[data-dsh-claude-style]:not([data-ds-dark-theme]) a:not([class*="_linkButton"]):hover {
   color: #a94f2f;
 }
 

@@ -54,20 +54,75 @@
     var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
     /**
-     * Time-of-day hero greeting, à la Claude Code's rotating welcomes. Slots
-     * cover all 24 hours; the eight o'clock slot salutes the current weekday
-     * instead ("Happy Monday."). `username` fills the Good morning slot.
+     * The classic hero's welcomes, à la Claude Code's rotating greetings. Each
+     * time-of-day slot has its own pool — the night slot runs past midnight,
+     * so its hours count on from 24 — and a few lines fit any hour. `{name}`
+     * is the user's name, `{weekday}` today's.
      */
-    function pickHeroGreeting(username) {
+    var HERO_GREETING_SLOTS = [
+      { from: 5, to: 12, lines: [
+        'Good morning, {name}!',
+        'Happy {weekday}, {name}.',
+        'What are you working on?',
+        'Morning, {name}. What’s first?',
+        'Fresh start, {name}?',
+      ] },
+      { from: 12, to: 14, lines: [
+        'What’s on the agenda today?',
+        'Good afternoon, {name}.',
+        'Midday check-in, {name}?',
+      ] },
+      { from: 14, to: 18, lines: [
+        'Coffee and Claude time?',
+        'Good afternoon, {name}.',
+        'How’s the day going, {name}?',
+        'Afternoon, {name}. What’s next?',
+      ] },
+      { from: 18, to: 22, lines: [
+        'Evening, how are things?',
+        'Good evening, {name}.',
+        'How was your day, {name}?',
+        'Winding down, or just getting started?',
+      ] },
+      { from: 22, to: 29, lines: [
+        'You are here!',
+        'Hello, night owl.',
+        'Burning the midnight oil, {name}?',
+        'Still up, {name}?',
+      ] },
+    ]
+    var HERO_GREETING_ANYTIME = [
+      'Back at it, {name}?',
+      'Welcome back, {name}.',
+      'Hey there, {name}.',
+      'What shall we build?',
+    ]
+
+    /**
+     * One classic hero welcome: the current slot's pool and the any-hour lines,
+     * picked by `draw` in [0, 1). The caller holds the draw, so the line stays
+     * put between passes and changes only when the draw or the slot does.
+     */
+    function pickHeroGreeting(username, draw) {
       var now = new Date()
       var hour = now.getHours()
-      if (hour >= 6 && hour < 8) return 'Good morning, ' + (username || 'User') + '!'
-      if (hour >= 8 && hour < 9) return 'Happy ' + WEEKDAY_NAMES[now.getDay()] + '.'
-      if (hour >= 9 && hour < 12) return 'What are you working on?'
-      if (hour >= 12 && hour < 14) return 'What’s on the agenda today?'
-      if (hour >= 14 && hour < 18) return 'Coffee and Claude time?'
-      if (hour >= 18) return 'Evening, how are things?'
-      return 'You are here!'
+      var clock = hour < 5 ? hour + 24 : hour
+      var lines = HERO_GREETING_ANYTIME
+      for (var s = 0; s < HERO_GREETING_SLOTS.length; s++) {
+        var slot = HERO_GREETING_SLOTS[s]
+        if (clock >= slot.from && clock < slot.to) lines = slot.lines.concat(HERO_GREETING_ANYTIME)
+      }
+      var line = lines[Math.min(lines.length - 1, Math.floor(draw * lines.length))]
+      return line.replace('{name}', username || 'User').replace('{weekday}', WEEKDAY_NAMES[now.getDay()])
+    }
+
+    /**
+     * The studio dashboard's greeting, à la Claude Code's desktop home: one
+     * fixed line naming the signed-in user, no clock. The classic hero keeps
+     * the rotating welcomes.
+     */
+    function pickStudioGreeting(username) {
+      return "What's up next, " + (username || 'User') + '?'
     }
 
     /**
@@ -165,15 +220,8 @@
      */
     var PERMISSION_CURRENT_LABELS = { custom: 'Custom' }
 
-    /** The presets the shipped UI gates behind its risk-confirmation dialog. */
-    var GATED_PRESET = 'danger-full-access'
+    /** The preset the auto-review integration registers, offered only while it is live. */
     var AUTO_REVIEW_PRESET = 'auto'
-    /** Shipped risk-gated row labels, used to find those rows in the shipped menu. */
-    var FULL_ACCESS_LABELS = ['完全权限', 'Full access']
-    var AUTO_REVIEW_LABELS = ['Auto review', 'Auto review EXP']
-    /** Fallback prompts, used only when the shipped menu cannot be reached. */
-    var GATED_PROMPT = '启用完全权限（Yolo）？\n\n智能体将减少确认步骤，可直接执行敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。'
-    var AUTO_REVIEW_PROMPT = '启用 Auto review（实验）？\n\nAuto review 不使用沙箱。每次原生工具调用和 PTC 内层调用前，都会由与当前 agent 相同的模型进行审查。此功能仍属实验性，可能误放行或误拒绝，并会消耗额外 token。'
 
     /** Skin-owned class names, so nothing couples to hashed CSS-module classes. */
     var SEGMENTS_CLASS = 'dsh-claude-segments'
@@ -255,6 +303,19 @@
      */
     var WINDOW_BLUR_ATTR = 'data-dsh-window-blur'
     /**
+     * Which home layout is in force. The stylesheet branches on it, and the two
+     * layouts differ only in arrangement — the hero's own markup is the host's
+     * either way, so the switch is one attribute plus the panel registration.
+     */
+    var HOME_LAYOUT_ATTR = 'data-dsh-claude-home-layout'
+    /**
+     * Present while the studio layout owns the page shown: the studio layout is
+     * in force and the page is the new-conversation hero. Every studio rule keys
+     * on it, so the host's hero-phase marker is read once per pass in JS rather
+     * than repeated across the stylesheet.
+     */
+    var HOME_HERO_ATTR = 'data-dsh-claude-home-hero'
+    /**
      * The host half's session-deletion route (lib/index.js, SESSION_DELETE_PATH).
      * The harness gives the browser half no deletion API of its own, so the
      * archived row's delete button posts the session id here and the host half
@@ -262,6 +323,22 @@
      * half.
      */
     var SESSION_DELETE_ROUTE = '/dsh-claude-style/session-delete'
+    /**
+     * The host half's cross-session usage roll-up (lib/index.js, USAGE_PATH).
+     * The browser half cannot read the session logs or the cost-meter ledger, so
+     * the day buckets behind the home dashboard's panel arrive from here.
+     */
+    var USAGE_ROUTE = '/dsh-claude-style/usage'
+    /**
+     * Home-page layouts. `classic` is the centered hero the skin has always
+     * drawn; `studio` is the dashboard form: the greeting sits at the top left,
+     * the composer hugs the window's bottom edge, and the usage panel fills the
+     * space between them. Studio is the default: it is Claude Code's own home.
+     */
+    var HOME_LAYOUT_CLASSIC = 'classic'
+    var HOME_LAYOUT_STUDIO = 'studio'
+    var HOME_LAYOUTS = [HOME_LAYOUT_CLASSIC, HOME_LAYOUT_STUDIO]
+    var DEFAULT_HOME_LAYOUT = HOME_LAYOUT_STUDIO
     /** Composer surfaces the restyle may cover, in settings order. */
     var COMPOSER_SCOPES = ['off', 'hero', 'conversation', 'all']
     /**
@@ -276,13 +353,15 @@
     var DEFAULT_AUTO_POPOVER = AUTO_POPOVER_ALL
     /** Route that resolves the name this instance runs as, once; never polled. */
     var USERNAME_ROUTE = '/dsh-claude-style/username'
+    /** Route that forwards the HDSL launcher's account contract; never polled. */
+    var HDSL_ROUTE = '/dsh-claude-style/hdsl'
     /**
-     * Route that serves the player's own skin (lib/index.js, SKIN_PATH). The
-     * launcher hands the host an absolute path to a normalized texture atlas;
-     * the browser reads the picture from here instead, and crops the head out
-     * of it (src/overrides/account/rows.js).
+     * The player's own avatar, forwarded by the host half; 404 falls back to the
+     * mark. What the route serves is the launcher's normalized skin atlas, not a
+     * finished avatar, so the account row crops the head out of it
+     * (src/overrides/account/rows.js).
      */
-    var SKIN_ROUTE = '/dsh-claude-style/skin'
+    var HDSL_SKIN_ROUTE = '/dsh-claude-style/hdsl-skin.png'
     /** Longest accepted custom username; mirrored by lib/index.js. */
     var USERNAME_MAX = 64
     /** Most quick-provider ids kept, and the longest id accepted; mirrored by lib/index.js. */

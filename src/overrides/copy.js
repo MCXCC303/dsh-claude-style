@@ -9,8 +9,19 @@
         'Type / for commands',
       ]
 
+      /** The classic welcome's draw, renewed each time the page comes back to the hero. */
+      var greetingDraw = Math.random()
+      var wasHero = false
+
       function rewriteHeadline() {
-        var greeting = pickHeroGreeting(getUsername(ctx))
+        var hero = ui.composer.isHero()
+        if (hero && !wasHero) greetingDraw = Math.random()
+        wasHero = hero
+        // The studio dashboard shows one fixed line; the classic hero draws from
+        // the clock slot's welcomes.
+        var greeting = readPrefs().homeLayout === HOME_LAYOUT_STUDIO
+          ? pickStudioGreeting(getUsername(ctx))
+          : pickHeroGreeting(getUsername(ctx), greetingDraw)
         var groups = document.querySelectorAll('[class*="titleGroup"]')
         for (var i = 0; i < groups.length; i++) {
           var spans = groups[i].children

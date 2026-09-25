@@ -77,6 +77,126 @@
     "archiveDays": {
       "zh": "{count} 天",
       "en": "{count} d"
+    },
+    "homeTabOverview": {
+      "zh": "概览",
+      "en": "Overview"
+    },
+    "homeTabModels": {
+      "zh": "模型",
+      "en": "Models"
+    },
+    "homeRangeAll": {
+      "zh": "全部",
+      "en": "All"
+    },
+    "homeRange30d": {
+      "zh": "30 天",
+      "en": "30d"
+    },
+    "homeRange7d": {
+      "zh": "7 天",
+      "en": "7d"
+    },
+    "homePeakHour": {
+      "zh": "高峰时段",
+      "en": "Peak hour"
+    },
+    "homeHourAm": {
+      "zh": "上午 {hour} 点",
+      "en": "{hour} AM"
+    },
+    "homeHourPm": {
+      "zh": "下午 {hour} 点",
+      "en": "{hour} PM"
+    },
+    "homeFunBook": {
+      "zh": "你的Token用量相当于{count}本{book}。",
+      "en": "You've used ~{count}× more tokens than {book}."
+    },
+    "homeBookAnimalFarm": {
+      "zh": "《动物农场》",
+      "en": "Animal Farm"
+    },
+    "homeBookGatsby": {
+      "zh": "《了不起的盖茨比》",
+      "en": "The Great Gatsby"
+    },
+    "homeBookPhilosophersStone": {
+      "zh": "《哈利·波特与魔法石》",
+      "en": "Harry Potter and the Philosopher's Stone"
+    },
+    "homeBook1984": {
+      "zh": "《一九八四》",
+      "en": "Nineteen Eighty-Four"
+    },
+    "homeBookHobbit": {
+      "zh": "《霍比特人》",
+      "en": "The Hobbit"
+    },
+    "homeBookPride": {
+      "zh": "《傲慢与偏见》",
+      "en": "Pride and Prejudice"
+    },
+    "homeBookMobyDick": {
+      "zh": "《白鲸》",
+      "en": "Moby-Dick"
+    },
+    "homeBookLordOfTheRings": {
+      "zh": "《魔戒》",
+      "en": "The Lord of the Rings"
+    },
+    "homeBookWarAndPeace": {
+      "zh": "《战争与和平》",
+      "en": "War and Peace"
+    },
+    "homeBookHarryPotter": {
+      "zh": "《哈利·波特》全集",
+      "en": "the whole Harry Potter series"
+    },
+    "homeBookLostTime": {
+      "zh": "《追忆似水年华》",
+      "en": "In Search of Lost Time"
+    },
+    "homeModelSessions": {
+      "zh": "{count} 个会话",
+      "en": "{count} sessions"
+    },
+    "homeModelsEmpty": {
+      "zh": "暂无模型数据",
+      "en": "No model data yet"
+    },
+    "homeModelsMore": {
+      "zh": "再显示 {count} 个",
+      "en": "Show {count} more"
+    },
+    "homeModelsLess": {
+      "zh": "收起",
+      "en": "Show less"
+    },
+    "homeTokens": {
+      "zh": "Token 总量",
+      "en": "Total tokens"
+    },
+    "homeCalls": {
+      "zh": "消息数",
+      "en": "Messages"
+    },
+    "homeSessions": {
+      "zh": "会话数",
+      "en": "Sessions"
+    },
+    "homeActiveDays": {
+      "zh": "活跃天数",
+      "en": "Active days"
+    },
+    "homeTopModel": {
+      "zh": "最常用模型",
+      "en": "Favorite model"
+    },
+    "homeHeatTipTokens": {
+      "zh": "{date} — {tokens} Token",
+      "en": "{date} — {tokens} tokens"
     }
   },
   "settings": {
@@ -128,6 +248,22 @@
       "zh": "重绘输入区，可选新会话页、对话内或两者。",
       "en": "Which input area the skin restyles: the new-conversation page, the conversation, or both. The hero brand mark and headline are unaffected."
     },
+    "homeTitle": {
+      "zh": "首页版面",
+      "en": "Home layout"
+    },
+    "homeDesc": {
+      "zh": "新会话页的排布：「经典」是居中大标题加输入卡片；「工作台」把标题移到左上、输入卡片贴住窗口底部，中间显示用量统计。",
+      "en": "The new-conversation page: the centered hero, or the dashboard form with the greeting at the top left, the composer at the bottom edge and the usage panel in between."
+    },
+    "homeClassic": {
+      "zh": "经典",
+      "en": "Classic"
+    },
+    "homeStudio": {
+      "zh": "工作台",
+      "en": "Studio"
+    },
     "pickerTitle": {
       "zh": "重做模型选择器",
       "en": "Redraw the model picker"
@@ -165,12 +301,12 @@
       "en": "Username"
     },
     "usernameDesc": {
-      "zh": "显示在新会话欢迎语中；留空则使用启动器发布的账号名，没有账号时用系统用户名。",
-      "en": "Shown in the new-conversation greeting. Leave empty to use the account name the launcher published, or the system username when there is none."
+      "zh": "显示在新会话欢迎语与账号行中；留空则依次使用官方账号昵称、HDSL 启动器昵称、本机系统用户名。",
+      "en": "Shown in the new-conversation greeting and the account row. Leave empty to use the signed-in account name, then the HDSL launcher's account name, then the local system user."
     },
     "usernamePlaceholder": {
-      "zh": "自动识别账号名",
-      "en": "Auto-detect account name"
+      "zh": "自动解析账号或系统用户",
+      "en": "Auto-detect account or host user"
     },
     "brandOff": {
       "zh": "关闭",
