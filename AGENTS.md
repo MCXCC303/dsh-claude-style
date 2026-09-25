@@ -119,8 +119,8 @@ All fragments share one factory scope: **no import/export**, keep 4-space base i
 ## Git and Release
 
 - Use conventional commit prefixes (`fix(scope):` / `refactor(scope):` / `docs(scope):` / `chore(release):` etc.); one logical change per commit, no WIP commits, no unrelated changes mixed in.
-- Required before committing: `npm run build` succeeds and the `lib/` artifacts are in sync with `src/` (artifacts are committed together with the source); the working tree has no stray files.
-- Release flow: update CHANGELOG → `npm version patch|minor` → tag → `npm publish` (`prepublishOnly` re-runs the build automatically) → GitHub Release, with release notes taken from the CHANGELOG section for that version.
+- Required before committing: `npm run build` succeeds and the working tree has no stray files. `lib/client.js` and `lib/model-descriptions.json` are build output and are **not** committed with the source: while a parallel session edits the same tree they stay out of the commit entirely, and each session commits only its own source. At release the complete artifacts are rebuilt from `src/` and committed together with the release commit — users consume versions, not commits.
+- Release flow: update CHANGELOG → `npm version patch|minor` → `npm run build` and commit the rebuilt `lib/` artifacts → tag → `npm publish` (`prepublishOnly` re-runs the build automatically) → GitHub Release, with release notes taken from the CHANGELOG section for that version.
 - CHANGELOG format (same spec as dsh upstream release notes):
   - Version sections: `## [x.y.z] - YYYY-MM-DD`, newest on top; in-development changes go under `## [Unreleased]`.
   - Each section is bilingual on one page: first a `[中文](#cn-x.y.z) | [English](#en-x.y.z)` language-switch line, then two anchors `<h3 id="cn-x.y.z">新增功能</h3>` (Chinese) and `<h3 id="en-x.y.z">New Features</h3>` (English) — anchor ids must carry the version number to avoid same-name collisions across sections on the page; further groups within each language use plain `###` headings.
