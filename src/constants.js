@@ -54,20 +54,66 @@
     var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
     /**
-     * Time-of-day hero greeting, à la Claude Code's rotating welcomes. Slots
-     * cover all 24 hours; the eight o'clock slot salutes the current weekday
-     * instead ("Happy Monday."). `username` fills the Good morning slot.
+     * The classic hero's welcomes, à la Claude Code's rotating greetings. Each
+     * time-of-day slot has its own pool — the night slot runs past midnight,
+     * so its hours count on from 24 — and a few lines fit any hour. `{name}`
+     * is the user's name, `{weekday}` today's.
      */
-    function pickHeroGreeting(username) {
+    var HERO_GREETING_SLOTS = [
+      { from: 5, to: 12, lines: [
+        'Good morning, {name}!',
+        'Happy {weekday}, {name}.',
+        'What are you working on?',
+        'Morning, {name}. What’s first?',
+        'Fresh start, {name}?',
+      ] },
+      { from: 12, to: 14, lines: [
+        'What’s on the agenda today?',
+        'Good afternoon, {name}.',
+        'Midday check-in, {name}?',
+      ] },
+      { from: 14, to: 18, lines: [
+        'Coffee and Claude time?',
+        'Good afternoon, {name}.',
+        'How’s the day going, {name}?',
+        'Afternoon, {name}. What’s next?',
+      ] },
+      { from: 18, to: 22, lines: [
+        'Evening, how are things?',
+        'Good evening, {name}.',
+        'How was your day, {name}?',
+        'Winding down, or just getting started?',
+      ] },
+      { from: 22, to: 29, lines: [
+        'You are here!',
+        'Hello, night owl.',
+        'Burning the midnight oil, {name}?',
+        'Still up, {name}?',
+      ] },
+    ]
+    var HERO_GREETING_ANYTIME = [
+      'Back at it, {name}?',
+      'Welcome back, {name}.',
+      'Hey there, {name}.',
+      'What shall we build?',
+    ]
+
+    /**
+     * One classic hero welcome: the current slot's pool and the any-hour lines,
+     * picked by `draw` in [0, 1). The caller holds the draw, so the line stays
+     * put between passes and changes only when the draw or the slot does.
+     */
+    function pickHeroGreeting(username, draw) {
       var now = new Date()
       var hour = now.getHours()
-      if (hour >= 6 && hour < 8) return 'Good morning, ' + (username || 'User') + '!'
-      if (hour >= 8 && hour < 9) return 'Happy ' + WEEKDAY_NAMES[now.getDay()] + '.'
-      if (hour >= 9 && hour < 12) return 'What are you working on?'
-      if (hour >= 12 && hour < 14) return 'What’s on the agenda today?'
-      if (hour >= 14 && hour < 18) return 'Coffee and Claude time?'
-      if (hour >= 18) return 'Evening, how are things?'
-      return 'You are here!'
+      var clock = hour < 5 ? hour + 24 : hour
+      var lines = HERO_GREETING_ANYTIME
+      for (var s = 0; s < HERO_GREETING_SLOTS.length; s++) {
+        var slot = HERO_GREETING_SLOTS[s]
+        if (clock >= slot.from && clock < slot.to) lines = slot.lines.concat(HERO_GREETING_ANYTIME)
+      }
+      var line = lines[Math.min(lines.length - 1, Math.floor(draw * lines.length))]
+      return line.replace('{name}', username || 'User').replace('{weekday}', WEEKDAY_NAMES[now.getDay()])
     }
 
     /**
