@@ -71,10 +71,11 @@ function check(label, ok, detail) {
  * @param mod - the host-half module.
  * @param options - `fenced` offers the host's own request check, `home` answers
  *   `dshHomePath` with a scratch harness home, and `live` names the sessions the
- *   fake `sessions` service reports as open.
+ *   fake `sessions` service reports as open, and `events` maps a session id to
+ *   the durable events the fake `sessionQuery` reader answers for it.
  */
 function fakeHost(mod, options = {}) {
-  const { fenced, home, live = [] } = options
+  const { fenced, home, live = [], events } = options
   const routes = {}
   const settings = { configure: () => () => {} }
   // Modelled on the host's connection.requestRejection(): the Host/Origin fence
@@ -93,8 +94,11 @@ function fakeHost(mod, options = {}) {
     logger: { warn() {} },
     get: (name) => {
       if (name === 'connection' && fenced) return connection
-      if (name === 'dshHomePath' && home !== undefined) return (sub) => path.join(home, sub)
+      if (name === 'dshHomePath' && home !== undefined) return (...segments) => path.join(home, ...segments)
       if (name === 'sessions') return { get: (id) => (live.includes(id) ? {} : undefined) }
+      if (name === 'sessionQuery' && events !== undefined) {
+        return { readSession: async (id) => ({ events: events[id] ?? [] }) }
+      }
       return undefined
     },
     effect: (fn) => fn(),
@@ -172,6 +176,77 @@ async function hostHalf() {
     check('a stored session is deleted', done.status === 200 && JSON.parse(done.body).ok === true, `HTTP ${done.status}`)
     check('the session directory is gone', fs.existsSync(path.join(scratchCwd, scratchId)) === false)
   }
+
+  // The usage roll-up from a cost-meter ledger: its per-day `byProviderModel`
+  // becomes the day's per-model map, one model served by two providers is one
+  // cell, and a key without a provider prefix is the model itself. The ledger
+  // has no hours, so the fold over the one stored log supplies them, per day.
+  // The ledger covers today, the day the log was written, so it answers.
+  console.log('\nhost half — usage roll-up from the cost-meter ledger')
+  const USAGE = '/dsh-claude-style/usage'
+  const now = new Date()
+  const at = (dayOffset, hour) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, 10)
+  const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const today = localDay(at(0, 15))
+  const yesterday = localDay(at(-1, 9))
+  fs.rmSync(scratchHome, { recursive: true, force: true })
+  fs.mkdirSync(path.join(scratchHome, 'storages', 'cost-meter'), { recursive: true })
+  const cell = (input, output) => ({ input, output, cacheRead: 0, cacheWrite: 0, calls: 1 })
+  fs.writeFileSync(path.join(scratchHome, 'storages', 'cost-meter', 'ledger.json'), JSON.stringify({
+    version: 1,
+    days: {
+      [today]: {
+        input: 700, output: 70, cacheRead: 0, cacheWrite: 0, calls: 3,
+        sessions: [{ id: 's1' }, { id: 's2' }],
+        byProviderModel: { 'alpha:model-a': cell(300, 30), 'beta:model-a': cell(200, 20), 'model-b': cell(200, 20) },
+      },
+      [yesterday]: {
+        input: 100, output: 10, cacheRead: 0, cacheWrite: 0, calls: 1,
+        sessions: [{ id: 's1' }],
+        byProviderModel: { 'alpha:model-b': cell(100, 10) },
+      },
+    },
+  }))
+  fs.mkdirSync(path.join(scratchCwd, 's1'), { recursive: true })
+  fs.writeFileSync(path.join(scratchCwd, 's1', 'session.v4.jsonl.zstd'), 'x')
+  const settlement = (date, turn) => ({
+    type: 'assistant/message',
+    time: date.getTime(),
+    data: { turn, step: 0, usage: { inputTokens: 10, outputTokens: 1 }, message: { source: { model: 'model-b' } } },
+  })
+  const usageHost = fakeHost(mod, {
+    fenced: true,
+    home: scratchHome,
+    events: { s1: [settlement(at(-1, 9), 1), settlement(at(0, 15), 2)] },
+  })
+  let usage = null
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const answer = await request(usageHost, USAGE, 'GET', '', browser)
+    usage = answer.status === 200 ? JSON.parse(answer.body) : { status: answer.status }
+    if (usage.value !== undefined && usage.value !== null && usage.computing !== true) break
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  const value = usage?.value ?? {}
+  const days = Array.isArray(value.days) ? value.days : []
+  check('the ledger answers the roll-up', value.source === 'cost-meter' && value.totals?.sessions === 2,
+    JSON.stringify({ source: value.source, totals: value.totals }))
+  check("each ledger day carries its per-model tokens, providers merged",
+    days.length === 2 && days[1].date === today &&
+      JSON.stringify(days[1].models) === JSON.stringify({ 'model-a': 550, 'model-b': 220 }) &&
+      JSON.stringify(days[0].models) === JSON.stringify({ 'model-b': 110 }),
+    JSON.stringify(days.map((day) => [day.date, day.models])))
+  check('the ranked models carry the input/output split across days',
+    Array.isArray(value.models) && value.models.length === 2 &&
+      value.models[0].id === 'model-a' && value.models[0].input === 500 && value.models[0].output === 50 &&
+      value.models[1].id === 'model-b' && value.models[1].tokens === 330,
+    JSON.stringify(value.models))
+  const hourOf = (hours) => (Array.isArray(hours) ? hours.indexOf(1) : null)
+  check('behind the ledger, the fold supplies the hour histograms, whole and per day',
+    Array.isArray(value.hours) && value.hours[9] === 1 && value.hours[15] === 1 &&
+      hourOf(days[0]?.hours) === 9 && hourOf(days[1]?.hours) === 15 &&
+      days.every((day) => day.hours.reduce((sum, count) => sum + count, 0) === 1),
+    JSON.stringify({ hours: value.hours, days: days.map((day) => [day.date, day.hours]) }))
+  fs.rmSync(scratchHome, { recursive: true, force: true })
 }
 
 // ---------------------------------------------------------------------------
@@ -392,6 +467,33 @@ const STAND_IN = `(function () {
         ? { ok: true, contract: true, name: 'HDSLPlayer', vendor: 'deepseek', kind: 'official', skin: 'local', skinModel: 'default', hasSkinImage: true }
         : { ok: true, contract: false }))
     }
+    if (url === '/dsh-claude-style/usage' && CASE === 'studio') {
+      // A folded answer with the model dimension, so both tabs draw their data.
+      // The all-time figures reach past the one listed day (history older than
+      // any range window): all time peaks at 3 AM over 500k tokens, today alone
+      // peaks at 3 PM over 250k.
+      var today = new Date()
+      var pad = function (value) { return value < 10 ? '0' + value : String(value) }
+      var date = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate())
+      var dayHours = new Array(24).fill(0)
+      dayHours[15] = 3
+      var day = { date: date, input: 240000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 3, sessions: 1,
+        sessionIds: ['s1'], models: { 'model-a': 175000, 'model-b': 75000 }, hours: dayHours }
+      var hours = new Array(24).fill(0)
+      hours[3] = 10
+      hours[15] = 3
+      return Promise.resolve(jsonResponse({ ok: true, computing: false, value: {
+        source: 'local', computedAt: Date.now(), days: [day], firstDay: date, lastDay: date, hours: hours,
+        // Eight models, two past the six rows the list shows before it folds.
+        models: [
+          { id: 'model-a', input: 165000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 2, tokens: 175000 },
+          { id: 'model-b', input: 75000, output: 0, cacheRead: 0, cacheWrite: 0, calls: 1, tokens: 75000 },
+        ].concat([6, 5, 4, 3, 2, 1].map(function (size) {
+          return { id: 'model-small-' + size, input: size * 10, output: 0, cacheRead: 0, cacheWrite: 0, calls: 1, tokens: size * 10 }
+        })),
+        totals: { input: 490000, output: 10000, cacheRead: 0, cacheWrite: 0, calls: 9, sessions: 4, activeDays: 3 },
+      } }))
+    }
     if (url === '/dsh-claude-style/hdsl-skin.png') {
       if (CASE !== 'hdsl') return Promise.resolve(new Response(null, { status: 404 }))
       return Promise.resolve(new Response(PNG_1PX, { headers: { 'content-type': 'image/png' } }))
@@ -473,7 +575,8 @@ const STAND_IN = `(function () {
   }
   // The studio case needs the slot registry: the home panel is an entry in the
   // dock list seat (a list seat, so it carries an id), and the registration is
-  // the whole wiring — the seat's own rendering is the host's.
+  // the whole wiring — the seat's own rendering is the host's. The component is
+  // kept so the probe can render it the way the seat would.
   var slotRegistry = CASE === 'studio' ? {
     inject: function (key, callback) {
       return key === 'conversation.input.dock' ? callback() : function () {}
@@ -481,6 +584,8 @@ const STAND_IN = `(function () {
     register: function (spec, component) {
       window.__slots = window.__slots || []
       window.__slots.push({ key: spec.name, id: spec.id, order: spec.order, component: typeof component })
+      window.__slotComponents = window.__slotComponents || {}
+      window.__slotComponents[spec.id] = component
       return function () {}
     },
   } : undefined
@@ -568,12 +673,25 @@ const STAND_IN = `(function () {
       })
     })(statsPills[sp], sp)
   }
+  // Elements are inert unless the probe renders a registered component: then
+  // function components run eagerly into a plain tree, and "states" stands in
+  // for a click that moved a state off its initial value.
   var react = {
-    createElement: function () { return null },
-    useState: function (v) { return [v, function () {}] },
+    rendering: false,
+    states: null,
+    createElement: function (type, props) {
+      if (!react.rendering) return null
+      var merged = Object.assign({}, props, { children: Array.prototype.slice.call(arguments, 2) })
+      return typeof type === 'function' ? type(merged) : { type: type, props: merged }
+    },
+    useState: function (v) {
+      var states = react.states
+      return [states !== null && Object.prototype.hasOwnProperty.call(states, v) ? states[v] : v, function () {}]
+    },
     useEffect: function () {},
     useRef: function (v) { return { current: v } },
   }
+  window.__react = react
   window.__ModuleLoader__ = {
     load: function (def) {
       window.__skin = def.factory(function (name) {
@@ -873,6 +991,117 @@ const PROBE = `(function () {
     r.homeLayoutExpected = window.SMOKE_CASE === 'studio' || window.SMOKE_CASE === 'late-forms' ? 'studio' : null
     r.slotRegistrations = window.__slots || null
     r.composerRestyle = document.body.hasAttribute('data-dsh-claude-composer-active')
+    if (window.SMOKE_CASE === 'studio') {
+      // Render the registered panel on the hero page, once per tab, the way
+      // the dock seat would: a throw here is the slot's error boundary on the
+      // live page, which leaves the new-conversation page without its panel.
+      var heroRoot = document.createElement('div')
+      heroRoot.className = '_x_root_1'
+      heroRoot.setAttribute('data-phase', 'hero')
+      // Arriving on the hero draws the yardstick book; the draw is pinned to the
+      // last book on the shelf, which no window here has passed, so the line has
+      // to step down to the longest book each window did pass.
+      var random = Math.random
+      Math.random = function () { return 0.999 }
+      document.body.appendChild(heroRoot)
+      await sleep(200)
+      Math.random = random
+      r.panelRenders = {}
+      // The Overview tab twice — all time, and the 7d pill picked — and the
+      // Models tab folded and open; each state is keyed by the initial value it
+      // replaces.
+      var tabs = {
+        overview: null,
+        'overview-7d': { all: '7d' },
+        models: { overview: 'models' },
+        'models-open': { overview: 'models', false: true },
+      }
+      for (var tab in tabs) {
+        var react = window.__react
+        react.rendering = true
+        react.states = tabs[tab]
+        try {
+          var classes = []
+          var texts = []
+          ;(function collect(node) {
+            if (typeof node === 'string') { if (node) texts.push(node); return }
+            if (node === null || typeof node !== 'object') return
+            if (Array.isArray(node)) { node.forEach(collect); return }
+            if (node.props && typeof node.props.className === 'string') classes.push(node.props.className)
+            if (node.props) collect(node.props.children)
+          })(window.__slotComponents['claude-style-usage']({}))
+          r.panelRenders[tab] = { error: null, classes: classes, texts: texts }
+        } catch (e) {
+          r.panelRenders[tab] = { error: String((e && e.stack) || e), classes: [], texts: [] }
+        } finally {
+          react.rendering = false
+          react.states = null
+        }
+      }
+      // The crab rides the hero card. The pointer leaving it starts the
+      // routine: a quarter second in it is winking, and past the routine's
+      // three seconds it faces front again — and no frame of it wakes a pass.
+      var mascot = document.querySelector('[data-composer-card] > .dsh-claude-mascot')
+      r.mascot = {
+        mounted: mascot !== null,
+        poses: mascot === null ? 0 : mascot.querySelectorAll('g[data-pose]').length,
+        visiblePoses: mascot === null ? 0 : mascot.querySelectorAll('g[data-pose]:not([display])').length,
+      }
+      if (mascot !== null) {
+        // A real press has to reach the crab: nothing on the page may cover it.
+        mascot.scrollIntoView({ block: 'center' })
+        var hitBox = mascot.querySelector('.dsh-claude-mascot-hit').getBoundingClientRect()
+        var topmost = document.elementFromPoint(hitBox.left + hitBox.width / 2, hitBox.top + hitBox.height / 2)
+        r.mascot.reachable = topmost !== null && topmost.classList.contains('dsh-claude-mascot-hit')
+        var passesBefore = window.__passes
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new PointerEvent('pointerleave'))
+        await sleep(250)
+        r.mascot.early = mascot.getAttribute('data-pose')
+        r.mascot.earlyVisible = mascot.querySelectorAll('g[data-pose]:not([display])').length
+        await sleep(3000)
+        r.mascot.settled = mascot.getAttribute('data-pose')
+        r.mascot.passesDuring = window.__passes - passesBefore
+        // A click plays it too.
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        await sleep(250)
+        r.mascot.clicked = mascot.getAttribute('data-pose')
+        await sleep(3000)
+        r.mascot.clickSettled = mascot.getAttribute('data-pose')
+      }
+      r.homeHero = { onHero: document.body.hasAttribute('data-dsh-claude-home-hero') }
+      // The studio rules reach the hero stack through that mark: the stack
+      // takes the studio column's 720px cap.
+      var studioStack = document.createElement('div')
+      studioStack.className = '_x_composerStack_1 _x_composerHero_1'
+      document.body.appendChild(studioStack)
+      r.homeHero.stackMaxWidth = getComputedStyle(studioStack).maxWidth
+      studioStack.remove()
+      heroRoot.remove()
+      await sleep(200)
+      r.homeHero.offHero = document.body.hasAttribute('data-dsh-claude-home-hero')
+      r.mascot.afterHero = document.querySelector('.dsh-claude-mascot') !== null
+      // The stylesheet alone decides where a panel may draw: under the hero
+      // stack's dock it shows, and the moment the host drops the stack's hero
+      // class (the first message sent) it is gone, before any pass runs.
+      function panelDisplay(stackClass) {
+        var stack = document.createElement('div')
+        stack.className = stackClass
+        var dock = document.createElement('div')
+        dock.setAttribute('data-slot', 'conversation.input.dock')
+        var panel = document.createElement('section')
+        panel.className = 'dsh-claude-home-panel'
+        dock.appendChild(panel)
+        stack.appendChild(dock)
+        document.body.appendChild(stack)
+        var display = getComputedStyle(panel).display
+        stack.remove()
+        return display
+      }
+      r.panelDisplay = {
+        hero: panelDisplay('_x_composerStack_1 _x_composerHero_1'),
+        conversation: panelDisplay('_x_composerStack_1'),
+      }
+    }
     // The host's own access-mode button: the permission control stands in for
     // it while installed, and hands it back when switched off.
     var hostAccess = document.querySelector('button[aria-label^="Access mode"]')
@@ -1165,6 +1394,45 @@ const CASES = {
         r.slotRegistrations[0].id === 'claude-style-usage' &&
         r.slotRegistrations[0].component === 'function',
       JSON.stringify(r.slotRegistrations))
+    const renders = r.panelRenders || {}
+    const drew = (tab, className) => renders[tab] !== undefined && renders[tab].error === null &&
+      renders[tab].classes.includes(className)
+    check('the usage panel renders its Overview tab: stat cells and heat grid',
+      drew('overview', 'dsh-claude-home-stat') && drew('overview', 'dsh-claude-home-heat'),
+      JSON.stringify(renders.overview))
+    const said = (tab, pattern) => renders[tab] !== undefined && renders[tab].texts.some((text) => pattern.test(text))
+    check('all time: the peak hour and the book line read the whole history (500k steps down to Moby-Dick)',
+      said('overview', /^3 AM$/) && said('overview', /^You've used ~2× more tokens than Moby-Dick\.$/),
+      JSON.stringify(renders.overview && renders.overview.texts))
+    check('7d: the peak hour and the book line follow the range window (250k steps down to Pride and Prejudice)',
+      said('overview-7d', /^3 PM$/) && said('overview-7d', /^You've used ~2× more tokens than Pride and Prejudice\.$/),
+      JSON.stringify(renders['overview-7d'] && renders['overview-7d'].texts))
+    check('the usage panel renders its Models tab: stacked chart and ranked list',
+      drew('models', 'dsh-claude-home-chart-seg') && drew('models', 'dsh-claude-home-model'),
+      JSON.stringify(renders.models))
+    const rows = (tab) => (renders[tab] === undefined ? 0
+      : renders[tab].classes.filter((name) => name === 'dsh-claude-home-model').length)
+    check('the folded model list shows six rows and a "Show 2 more" row',
+      rows('models') === 6 && said('models', /^Show 2 more$/),
+      JSON.stringify({ rows: rows('models'), texts: renders.models && renders.models.texts.slice(-3) }))
+    const mascot = r.mascot || {}
+    check('the crab stands on the hero card, facing front, one pose shown',
+      mascot.mounted === true && mascot.poses === 11 && mascot.visiblePoses === 1, JSON.stringify(mascot))
+    check('the pointer leaving the crab plays the routine and it ends facing front, without waking a pass',
+      mascot.early === 'wink' && mascot.earlyVisible === 1 && mascot.settled === 'front' && mascot.passesDuring === 0,
+      JSON.stringify(mascot))
+    check('a click on the crab reaches it and plays the routine too',
+      mascot.reachable === true && mascot.clicked === 'wink' && mascot.clickSettled === 'front', JSON.stringify(mascot))
+    check('the crab leaves with the hero page', mascot.afterHero === false, JSON.stringify(mascot))
+    check('the studio hero mark is on the document on the hero page and off it elsewhere, and the studio rules reach the stack',
+      r.homeHero !== undefined && r.homeHero.onHero === true && r.homeHero.offHero === false && r.homeHero.stackMaxWidth === '720px',
+      JSON.stringify(r.homeHero))
+    check('the usage panel draws under the hero stack only, so sending a message never shows it full width',
+      r.panelDisplay !== undefined && r.panelDisplay.hero === 'flex' && r.panelDisplay.conversation === 'none',
+      JSON.stringify(r.panelDisplay))
+    check('the open model list shows every row and a "Show less" row',
+      rows('models-open') === 8 && said('models-open', /^Show less$/) && !said('models-open', /^Show \d+ more$/),
+      JSON.stringify({ rows: rows('models-open'), texts: renders['models-open'] && renders['models-open'].texts.slice(-3) }))
     check('the composer restyle keeps running', r.composerRestyle === true, JSON.stringify(r.composerRestyle))
     commonChecks(r)
   },
