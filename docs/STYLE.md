@@ -191,7 +191,9 @@ with `!important`; that declaration outranks the host's plain inline value.
 
 The shipped bundle `lib/client.js` is **generated** — never edit it directly.
 Source lives in `src/` and `node scripts/build.mjs` (or `npm run build`)
-assembles the bundle:
+assembles the bundle. The map below annotates what each source is for; the
+assembly order itself is authoritative in `scripts/build.mjs`
+(`FRAGMENTS` / `STYLE_FILES`), which the build enforces:
 
 | Source | Content |
 |---|---|
@@ -207,6 +209,7 @@ assembles the bundle:
 | `src/styles/composer/inline.css` | in-conversation single-line composer (gated by composer preference) |
 | `src/styles/composer/inline-bar.css` | the inline composer's trailing bar: model trigger and merged time/usage stats line (gated by composer preference) |
 | `src/styles/sidebar.css` | sidebar brand, new-session row, workspace tree |
+| `src/styles/components/workspace.css` | the workspace section's 进行中 / 已归档 segment control and the skin's own archived list |
 | `src/styles/components/permissions.css` | permission segments and popover |
 | `src/styles/components/account-footer.css` | account row and floating popover |
 | `src/styles/components/ban-screen.css` | the account-hold easter egg (full-window overlay) |
@@ -217,23 +220,38 @@ assembles the bundle:
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
 | `src/styles/components/settings.css` | settings page section |
+| `src/styles/components/home-panel.css` | the studio home layout and its usage panel (keyed on the attribute `home-layout.js` writes) |
+| `src/styles/components/theme-flip.css` | theme-flip transition suppression |
 | `src/context/host.js` | host accessors and helpers |
 | `src/context/prefs.js` | preference store |
 | `src/context/model-copy.js` | model copy document store |
 | `src/context/i18n.js` | localized copy lookups |
 | `src/overrides/popover-utils.js` | shared anchor positioning and hover intent |
+| `src/overrides/composer.js` | composer layout feature: each pass writes the variant, gate, attachment and context-ring attributes the composer stylesheets read |
 | `src/overrides/copy.js` | composer/copy rewrites installer |
 | `src/overrides/session-stats.js` | session-stats card factory (`createSessionStats`), the permissions feature's split-out half |
 | `src/overrides/permissions.js` | permission segments/popover installer (the stats card lives in `session-stats.js`) |
+| `src/overrides/model-brand.js` | brand lockup lookup: maps a catalog model to its vendored lockup through the `brands` bindings |
+| `src/overrides/model-copy-lookup.js` | model copy lookup: exact entry → family rule → tier rule → the catalog's own text |
 | `src/overrides/model/catalog.js` | model catalog factory (`createModelCatalog`): the per-session ModelDirectory store |
 | `src/overrides/model/rows.js` | model row factory (`createModelRows`): option cells, provider rules, level-1 sections |
 | `src/overrides/model-picker.js` | model picker installer, wiring the `model/` factories (thin orchestration) |
+| `src/overrides/effort/matrix.js` | effort matrix factory (`createEffortMatrix`): the tier data the slider snaps to |
+| `src/overrides/effort/control.js` | effort control factory (`createEffortControl`): the reasoning-effort slider and its card |
+| `src/overrides/effort-picker.js` | effort picker installer, wiring the `effort/` factories (thin orchestration) |
 | `src/overrides/hero-menu.js` | stamps the host menu card the hero row's pickers open |
+| `src/overrides/quick-providers.js` | the settings page's quick-providers multi-select popover |
 | `src/overrides/account/profile.js` | account profile factory (`createAccountProfile`): signed-in name/avatar reads and retries |
 | `src/overrides/account/host-menu.js` | host account menu factory (`createHostAccountMenu`): reads and drives the host's own menu |
+| `src/overrides/account/rows.js` | account rows factory (`createAccountRows`): the account popover's row builders |
 | `src/overrides/account/footer-mirror.js` | footer mirror factory (`createFooterMirror`): redirects other plugins' footer entries into the drawer |
+| `src/overrides/account/surface.js` | account surface factory (`createAccountSurface`): one row model, picks the mount point each pass (the host's account menu or the self-built popover) |
 | `src/overrides/account-footer.js` | account drawer installer, wiring the `account/` factories (thin orchestration) |
 | `src/overrides/ban-screen.js` | account-hold easter egg installer |
+| `src/overrides/theme-flip.js` | suppresses transitions during a theme flip, so colours and shapes land together |
+| `src/overrides/workspace-view.js` | workspace section feature: the 进行中 / 已归档 segments and the archived list (row delete goes through the plugin's own route) |
+| `src/overrides/view-tabs.js` | conversation view tabs: moves the tab bar onto the title row when it fits |
+| `src/overrides/home-layout.js` | home layout feature: writes the layout attribute and registers the usage panel into the host's dock seat |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |

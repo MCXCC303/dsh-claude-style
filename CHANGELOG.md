@@ -6,19 +6,31 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 
 [中文](#cn-unreleased) | [English](#en-unreleased)
 
+<h3 id="cn-unreleased">新增功能</h3>
+
+- **两套首页版面，设置页随时切换**：新增「首页版面」设置项。**经典**沿用居中大标题加输入卡片；**工作台**把标题移到左上角（与品牌标记同一行）、输入卡片贴住窗口底部，中间新增一块用量面板——累计 Token、调用次数、会话数、活跃天数、常用模型五个数字格，外加半年的按天热力图。面板只在新会话页出现，进入对话后自动消失。
+- **用量数据在本机汇总**：新增只读路由 `GET /dsh-claude-style/usage`（与用户名路由同一同源护栏）。装了 `dsh-cost-meter` 时直接读它的账本缓存（只读），否则读本机会话日志自行汇总，并按日志文件增量缓存——冷启动首次约两秒，之后每次启动约 3 毫秒。汇总不可用（旧宿主半边或汇总失败）时，面板改用宿主会话列表自带的投影值出数，并在面板上标注来源。
+- **面板先画骨架再填数**：数字到达前先画好外框、占位数字与空热力格，到达后只替换文字与格子颜色，整个版面不跳动；取不到数据的格子画破折号，不画零。
+
+<h3 id="en-unreleased">New Features</h3>
+
+- **Two home layouts, switchable in the settings page**: a new Home layout preference. **Classic** keeps the centered headline over the composer card; **Studio** moves the greeting to the top left (on the brand mark's line), docks the composer to the window's bottom edge, and adds a usage panel between them — five stat cells (total tokens, calls, sessions, active days, top model) and a half-year per-day heat grid. The panel appears on the new-conversation page only and steps away once a session is open.
+- **The usage numbers are folded locally**: a new read-only route, `GET /dsh-claude-style/usage`, behind the same same-origin fence as the username route. With `dsh-cost-meter` installed it reads that plugin's ledger cache (read-only); otherwise the host half folds the local session logs itself and caches the result incrementally per log file — about two seconds on the first cold pass, about 3 ms per start afterwards. When the fold cannot answer (an older host half or a failed pass), the panel falls back to the projection block each host session row carries and marks the source on the panel.
+- **The panel draws its skeleton before its numbers**: the frame, number placeholders and an empty heat grid come first; arriving values replace only the text and the cell colours, so nothing shifts. A figure no source can answer is a dash, never a zero.
+
 <h3 id="cn-unreleased">问题修复</h3>
 
-- 修复 **浅色模式下聊天记录顶部的“加载更早”按钮几乎看不见**：宿主的这颗按钮用次级文字色画在实色悬停底上，而浅色调色板把实色悬停底留成了深色基底的 `#2e2c29`，浅色文字色 `#6e6a60` 压在上面只有 2.6:1。浅色下的实色悬停底改为浅灰 `#f0efe9`，同一对颜色回到 4.7:1；深色不变（6.2:1）。同属这一族的 `--dsw-alias-button-elevated-fill` 在浅色下也由 `#242320` 改为 `#ffffff`，工作区重命名输入框不再是一个深色方块。
-- 修复 **设置页“账号与余额”里的“充值”按钮文字与底色几乎同色**：宿主把这个操作渲染成带按钮类的链接（`_linkButton _primary`），底色是品牌色的实心按钮、文字色由宿主的前景色令牌给出，而皮肤把所有链接统一涂成陶土色，于是文字与底色都是陶土色（1.3:1）。统一的链接色现在跳过带 `_linkButton` 类的锚点，实心按钮保留自己的文字色（浅色 3.1:1，深色 6.1:1）；旁边的“查询用量”也随之回到宿主的描边按钮样式。
-- 修复 **实心主按钮的悬停底色偏离色系**：宿主的主按钮底色取自品牌色、悬停色却取自它自己的单色阶（浅色 `#43454a`、深色 `#ebeef2`），皮肤把品牌色换成陶土色后没有换悬停色，悬停时按钮会跳到冷灰或近白。浅色与深色现在都写明主按钮的底色与悬停色，悬停与底色同族。
-- 修复 **工作区选择器弹层打开时会先跳到宿主的位置再弹回**：宿主的菜单卡片在打开期间每一帧都按锚点重新计算位置，并以普通内联样式写入 `left` / `top`，而皮肤的位置写在同一个属性上，会被宿主的下一帧覆盖，于是卡片先出现在触发器下方、再跳回触发器旁边。位置改为写在卡片上的两个自定义属性（`--dsh-claude-hero-menu-x` / `--dsh-claude-hero-menu-y`），宿主的内联写入不碰它们，样式表读取这两个属性并带 `!important`；卡片从被打上标记的那一帧起就停在正确位置，不再有可见的跳动。
+- 修复 **浅色模式下聊天记录顶部「加载更早」按钮几乎看不见**：浅色下的实色悬停底改为浅灰，按钮文字对比度从 2.6:1 回到 4.7:1，深色不变；同族令牌下的工作区重命名输入框在浅色里也不再是深色方块。
+- 修复 **设置页「账号与余额」的「充值」按钮文字与底色几乎同色**：统一的链接色不再覆盖这类实心按钮链接，按钮恢复自身配色（浅色 3.1:1，深色 6.1:1），旁边的「查询用量」回到描边按钮样式。
+- 修复 **实心主按钮悬停时底色跳出陶土色系**：悬停色与底色现在同族，悬停不再跳到冷灰或近白。
+- 修复 **工作区选择器弹层打开时先跳到触发器下方再弹回**：弹层从打开的第一帧起就停在触发器旁边的正确位置，不再有可见的跳动。
 
 <h3 id="en-unreleased">Bug Fixes</h3>
 
-- Fix **the "load earlier" button at the top of the transcript being nearly invisible in light mode**: the host paints that chip in its secondary ink on the solid hover fill, and the light palette had left the solid hover fill at the dark base's `#2e2c29`, putting the light ink `#6e6a60` on it at 2.6:1. The light solid hover fill is now the light gray `#f0efe9`, which returns the pair to 4.7:1; dark is unchanged (6.2:1). `--dsw-alias-button-elevated-fill` moves from `#242320` to `#ffffff` in the same palette, so the workspace rename field is no longer a dark block.
-- Fix **the "Top up" button in Settings → Account & balance having its label the same colour as its fill**: the host renders that action as an anchor carrying button classes (`_linkButton _primary`), a filled button whose ink comes from the host's foreground token, while the skin painted every anchor in clay — leaving the label and the fill the same clay (1.3:1). The shared link ink now skips anchors carrying `_linkButton`, so a filled button keeps its own ink (3.1:1 light, 6.1:1 dark); the neighbouring "View usage" returns to the host's outlined button treatment with it.
-- Fix **a filled primary button's hover fill leaving the accent's family**: the host takes a primary button's fill from the brand colour but its hover from a monochrome step of its own scale (light `#43454a`, dark `#ebeef2`), and the skin replaced the brand colour with clay without replacing the hover, so a hovered button jumped to a cold gray or near-white. Both palettes now state the primary button's fill and hover, and the hover stays in the fill's family.
-- Fix **the workspace picker card jumping to the host's position and back as it opens**: the host's menu card recomputes its position from the anchor on every frame while it is open and writes `left` / `top` as plain inline styles, so a position written on those same properties by the skin was overwritten on the host's next frame and the card first appeared below the trigger before snapping back beside it. The position now travels in two custom properties on the card (`--dsh-claude-hero-menu-x` / `--dsh-claude-hero-menu-y`), which the host's inline writes never touch and which the stylesheet reads with `!important`; the card holds its place from the frame it is stamped onward, with no visible jump.
+- Fix **the "load earlier" button at the top of the transcript being nearly invisible in light mode**: the light-mode solid hover fill is now a light gray, returning the button's contrast from 2.6:1 to 4.7:1 (dark unchanged); the workspace rename field on the same token family is no longer a dark block in light mode either.
+- Fix **the "Top up" button in Settings → Account & balance showing its label in the same colour as its fill**: the shared link ink no longer overrides filled-button anchors, so the button keeps its own ink (3.1:1 light, 6.1:1 dark) and the neighbouring "View usage" returns to the outlined treatment.
+- Fix **a filled primary button's hover fill jumping out of the accent family**: the hover now stays in the fill's family instead of jumping to a cold gray or near-white.
+- Fix **the workspace picker card jumping below its trigger and back as it opens**: the card holds its correct position beside the trigger from the first frame it appears, with no visible jump.
 
 ## [0.6.4] - 2026-09-24
 

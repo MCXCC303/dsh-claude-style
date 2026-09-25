@@ -90,7 +90,7 @@
 
 ## D12. 特性级失败隔离：一个特性出错只关掉它自己
 
-- **背景**：`apply()` 依次装 14 个特性，teardown 却在最后才交给 `ctx.effect`；每轮 pass 里各 `sync()` 也没有逐个兜底——一个抛错，排在它后面的全部跳过，而且每轮如此。实测：宿主 `remote.account.getProfile()` 返回非 Promise 时 `apply()` 中途抛错，样式表与 body 属性留在页面上、调度器没装上、teardown 没注册（关掉插件也清不掉），前面装好的特性的监听器一并泄漏。effort-picker 那次「Loading plugins…」卡死是同一类问题。
+- **背景**：`apply()` 依次安装全部特性，teardown 却在最后才交给 `ctx.effect`；每轮 pass 里各 `sync()` 也没有逐个兜底——一个抛错，排在它后面的全部跳过，而且每轮如此。实测：宿主 `remote.account.getProfile()` 返回非 Promise 时 `apply()` 中途抛错，样式表与 body 属性留在页面上、调度器没装上、teardown 没注册（关掉插件也清不掉），前面装好的特性的监听器一并泄漏。effort-picker 那次「Loading plugins…」卡死是同一类问题。
 - **决定**：
   - teardown 最先经 `ctx.effect` 注册且幂等；每个特性单独 try/catch 安装，装不上的报一次 `console.error` 并退役。调度器本身装不上时整体回滚到宿主原样——没有调度器，其余特性都不会同步，留着只是一张半套的皮。
   - 每轮 pass 里每个特性的 `sync()` 单独 try/catch，连续失败 3 轮即报一次并退役（`ui.retire`）。
