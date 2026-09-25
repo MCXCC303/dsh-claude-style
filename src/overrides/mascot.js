@@ -6,8 +6,8 @@
      * leaves it, and now and then on its own while the hero page stays up, it
      * plays Claude Code's fishing routine: a half turn and a wink, a rod raised
      * overhead and cast down onto the card's edge, a spell of fishing side-on,
-     * and the rod put away as it turns back. A reader who asks the system for reduced motion
-     * gets the crab without the routine.
+     * and the rod put away as it turns back. A reader who asks the system for
+     * reduced motion gets the routine only by clicking the crab.
      *
      * The crab is one inline SVG holding every pose as its own group; a frame
      * change is a `display` flip on two groups, an attribute the scheduler's
@@ -175,7 +175,11 @@
       var playing = false
       var stepTimer = null
       var idleTimer = null
-      var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+      /** Whether the reader asks the system for reduced motion, as of now. */
+      function reducedMotion() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      }
 
       function rect(parent, className, x, y, width, height) {
         var node = document.createElementNS(SVG_NS, 'rect')
@@ -284,8 +288,14 @@
         if (root !== null) show('front')
       }
 
-      function play() {
-        if (playing || reducedMotion.matches || root === null || !root.isConnected) return
+      /**
+       * Play the routine once. Under reduced motion only a click plays it — the
+       * reader asked for it by name; the pointer passing by and the idle timer
+       * do not.
+       */
+      function play(event) {
+        if (playing || root === null || !root.isConnected) return
+        if (reducedMotion() && !(event && event.type === 'click')) return
         playing = true
         var step = 0
         function next() {
