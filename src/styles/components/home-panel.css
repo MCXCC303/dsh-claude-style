@@ -22,9 +22,11 @@ body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_composerSeat"] 
    and fills the seat, so the context row and the card rest on the bottom edge.
    The composer keeps the 720px column, while the greeting and the dashboard
    card read as a 480px block against its left edge. */
-body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_composerHero"] {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_composerStack"][class*="_composerHero"] {
   /* The conversation form's own rule pins this stack to its content height; the
-     studio column has to fill the seat for the card to reach the bottom edge. */
+     studio column has to fill the seat for the card to reach the bottom edge.
+     Naming the stack by both its classes matches that gated rule's weight, and
+     this sheet comes after it, so the studio column wins. */
   flex: 1 1 auto !important;
   box-sizing: border-box;
   width: 100%;
@@ -69,8 +71,9 @@ body[data-dsh-claude-style][data-dsh-claude-home-layout="studio"] [class*="_comp
 }
 
 /* The context row's triggers wear Claude's chip: a hairline box on the canvas
-   rather than a bare label. */
-body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] button {
+   rather than a bare label. The target list is the composer card's own for these
+   triggers, so the chip carries the same weight and, coming later, wins. */
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] :is(button, [role="button"]) {
   box-sizing: border-box;
   height: 28px;
   padding: 0 10px;
@@ -79,7 +82,7 @@ body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRo
   background: transparent;
 }
 
-body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] button:hover:not(:disabled) {
+body[data-dsh-claude-style][data-dsh-claude-home-hero] [class*="_heroWorkspaceRow"] :is(button, [role="button"]):hover:not(:disabled) {
   background: color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 5%, transparent);
 }
 
