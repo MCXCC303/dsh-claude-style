@@ -29,6 +29,106 @@
         }
       }
 
+      /** The head's canvas, and what a pass needs to decide whether to keep it. */
+      var headCanvas = null
+      /** A load has been started; the route is read once per page, so is a failure. */
+      var headRequested = false
+      var headFailed = false
+
+      /**
+       * Draw the head out of a launcher skin, the way the launcher's own
+       * account list draws it: the front face of the head texel block, inset by
+       * 1/18 of the box, then the hat layer over the whole box. The atlas may
+       * be stored at any integer multiple of 64 (the launcher normalizes to
+       * 64×64 and keeps an already-larger import at its size), so every texel
+       * block is measured by that multiple.
+       *
+       * @returns whether a head was drawn.
+       */
+      function drawLauncherHead(canvas, image) {
+        var box = canvas.width
+        var scale = image.naturalWidth / 64
+        var context = canvas.getContext('2d')
+        if (context === null || scale < 1 || scale !== Math.floor(scale)) return false
+        var offset = Math.round(box / 18)
+        context.clearRect(0, 0, box, box)
+        // The face is a 8×8 texel block drawn inside the inset; the pixels are
+        // already at the right size, so smoothing would only blur them.
+        context.imageSmoothingEnabled = false
+        context.drawImage(image, 8 * scale, 8 * scale, 8 * scale, 8 * scale, offset, offset, box - 2 * offset, box - 2 * offset)
+        context.drawImage(image, 40 * scale, 8 * scale, 8 * scale, 8 * scale, 0, 0, box, box)
+        return true
+      }
+
+      /**
+       * Load the launcher's atlas once. The canvas is built off-screen: the
+       * avatar element a pass hands in may be a different one by the time the
+       * picture lands, and a failure only means the mark keeps the circle.
+       */
+      function loadLauncherHead() {
+        headRequested = true
+        var image = new Image()
+        image.decoding = 'async'
+        image.addEventListener('load', function () {
+          if (image.naturalWidth !== image.naturalHeight || image.naturalWidth < 64) {
+            headFailed = true
+            wake()
+            return
+          }
+          if (headCanvas === null) {
+            headCanvas = document.createElement('canvas')
+            headCanvas.className = 'dsh-claude-account-skin'
+            headCanvas.width = 64
+            headCanvas.height = 64
+            headCanvas.setAttribute('aria-hidden', 'true')
+          }
+          if (!drawLauncherHead(headCanvas, image)) headFailed = true
+          wake()
+        })
+        image.addEventListener('error', function () {
+          headFailed = true
+          wake()
+        })
+        image.src = HDSL_SKIN_ROUTE
+      }
+
+      /** Ask for the pass that mounts the head (the picture changes no DOM). */
+      function wake() {
+        if (typeof options.onChange === 'function') options.onChange()
+      }
+
+      /** Drop the account profile's photo, if one is mounted. */
+      function clearAccountPhoto(avatarEl) {
+        var photo = avatarEl.querySelector('.dsh-claude-account-photo')
+        if (photo === null) return
+        avatarEl.removeChild(photo)
+        if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+      }
+
+      /** Take the head's canvas back out of a circle the photo path owns again. */
+      function detachLauncherHead(avatarEl) {
+        if (headCanvas !== null && headCanvas.parentElement === avatarEl) avatarEl.removeChild(headCanvas)
+        if (avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.removeAttribute('data-dsh-claude-skin')
+      }
+
+      /**
+       * Paint the player's own head. What the launcher serves is the normalized
+       * skin atlas — a sheet of body parts, not a face — so it is cropped into
+       * a canvas rather than handed to the `<img>` the photo path uses.
+       *
+       * @returns whether the circle is the launcher head's to paint.
+       */
+      function syncLauncherHead(avatarEl) {
+        if (!headRequested && !headFailed) loadLauncherHead()
+        if (headCanvas === null) return false
+        if (headCanvas.parentElement !== avatarEl) {
+          if (headCanvas.parentElement !== null) headCanvas.parentElement.removeChild(headCanvas)
+          avatarEl.appendChild(headCanvas)
+        }
+        if (!avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.setAttribute('data-dsh-claude-skin', '')
+        return true
+      }
+
       /**
        * Paint (or clear) the picture inside the avatar circle. The address comes
        * from the identity chain (src/context/host.js): the account's own avatar,
@@ -42,10 +142,19 @@
       function syncAccountAvatar(avatarEl) {
         if (avatarEl === null) return
         var src = accountPhotoUrl(resolveAvatarUrl())
+        if (src === HDSL_SKIN_ROUTE) {
+          // The launcher's picture owns the circle as a cropped head; the
+          // profile photo stands down while it does.
+          if (syncLauncherHead(avatarEl)) {
+            clearAccountPhoto(avatarEl)
+            return
+          }
+        } else {
+          detachLauncherHead(avatarEl)
+        }
         var photo = avatarEl.querySelector('.dsh-claude-account-photo')
         if (src === null) {
-          if (photo !== null) avatarEl.removeChild(photo)
-          if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+          clearAccountPhoto(avatarEl)
           return
         }
         if (photo === null) {
