@@ -929,6 +929,37 @@ const PROBE = `(function () {
     }
     r.seatIdle = seatState(seats[0])
     r.seatRunning = seatState(seats[1])
+    if (window.SMOKE_CASE === 'default') {
+      // The classic hero's welcome is drawn on arrival and holds between
+      // passes: the draw pinned to either end of its pool gives two different
+      // lines, and a further pass leaves the drawn one alone.
+      var greetRoot = document.createElement('div')
+      greetRoot.className = '_x_root_1'
+      greetRoot.setAttribute('data-phase', 'hero')
+      var greetGroup = document.createElement('div')
+      greetGroup.className = '_x_titleGroup_1'
+      var greetSpan = document.createElement('span')
+      greetSpan.textContent = 'Host greeting'
+      greetGroup.appendChild(greetSpan)
+      greetRoot.appendChild(greetGroup)
+      var greetRandom = Math.random
+      var arrive = async function (draw) {
+        Math.random = function () { return draw }
+        document.body.appendChild(greetRoot)
+        await sleep(150)
+        Math.random = greetRandom
+        return greetSpan.textContent
+      }
+      r.greeting = { low: await arrive(0) }
+      document.body.appendChild(document.createElement('i'))
+      await sleep(150)
+      r.greeting.held = greetSpan.textContent
+      greetRoot.remove()
+      await sleep(150)
+      r.greeting.high = await arrive(0.999)
+      greetRoot.remove()
+      await sleep(150)
+    }
     if (window.SMOKE_CASE === 'default' && statsRoot) {
       // The host's panels mount on its own commit, later than the skin's old
       // read window: both sections must still reach the card.
@@ -1061,12 +1092,21 @@ const PROBE = `(function () {
         await sleep(3000)
         r.mascot.settled = mascot.getAttribute('data-pose')
         r.mascot.passesDuring = window.__passes - passesBefore
-        // A click plays it too.
+        // Under reduced motion the pointer passing by leaves it still, and a
+        // click still plays it.
+        var matchMedia = window.matchMedia
+        window.matchMedia = function (query) {
+          return query === '(prefers-reduced-motion: reduce)' ? { matches: true } : matchMedia.call(window, query)
+        }
+        mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new PointerEvent('pointerleave'))
+        await sleep(250)
+        r.mascot.reducedLeave = mascot.getAttribute('data-pose')
         mascot.querySelector('.dsh-claude-mascot-hit').dispatchEvent(new MouseEvent('click', { bubbles: true }))
         await sleep(250)
         r.mascot.clicked = mascot.getAttribute('data-pose')
         await sleep(3000)
         r.mascot.clickSettled = mascot.getAttribute('data-pose')
+        window.matchMedia = matchMedia
       }
       r.homeHero = { onHero: document.body.hasAttribute('data-dsh-claude-home-hero') }
       // The studio rules reach the hero stack through that mark: the stack
@@ -1305,6 +1345,12 @@ const CASES = {
   default(r) {
     check('apply() completes', r.applyError === null, r.applyError)
     check('stylesheet injected', r.stylesheet)
+    const greeting = r.greeting || {}
+    check('the classic hero draws its welcome on arrival and keeps it between passes',
+      typeof greeting.low === 'string' && greeting.low !== 'Host greeting' && greeting.low !== '' &&
+        greeting.held === greeting.low && typeof greeting.high === 'string' && greeting.high !== 'Host greeting' &&
+        greeting.high !== greeting.low,
+      JSON.stringify(greeting))
     check('no feature reported a failure', r.errors.length === 0, r.errors.join(' | '))
     check('detailed stats keep the merged sentence: host icons hidden, our separator in',
       r.statsMode === 'detailed' && r.statsIcons !== null && r.statsIcons.length === 2 &&
@@ -1421,8 +1467,9 @@ const CASES = {
     check('the pointer leaving the crab plays the routine and it ends facing front, without waking a pass',
       mascot.early === 'wink' && mascot.earlyVisible === 1 && mascot.settled === 'front' && mascot.passesDuring === 0,
       JSON.stringify(mascot))
-    check('a click on the crab reaches it and plays the routine too',
-      mascot.reachable === true && mascot.clicked === 'wink' && mascot.clickSettled === 'front', JSON.stringify(mascot))
+    check('a click reaches the crab; under reduced motion only a click plays the routine',
+      mascot.reachable === true && mascot.reducedLeave === 'front' && mascot.clicked === 'wink' && mascot.clickSettled === 'front',
+      JSON.stringify(mascot))
     check('the crab leaves with the hero page', mascot.afterHero === false, JSON.stringify(mascot))
     check('the studio hero mark is on the document on the hero page and off it elsewhere, and the studio rules reach the stack',
       r.homeHero !== undefined && r.homeHero.onHero === true && r.homeHero.offHero === false && r.homeHero.stackMaxWidth === '720px',
@@ -1547,6 +1594,10 @@ async function runCase(port, base, name) {
   const tab = await connectTab(port)
   try {
     await tab.send('Page.enable')
+    // The machine's own motion setting must not decide a check: every case
+    // runs with no reduced-motion request, and a probe that needs one asks
+    // for it itself.
+    await tab.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await tab.send('Page.navigate', { url: `${base}/${name}` })
     for (let i = 0; i < 100; i++) {
       const out = await tab.send('Runtime.evaluate', { expression: 'window.__smoke', awaitPromise: true, returnByValue: true })
