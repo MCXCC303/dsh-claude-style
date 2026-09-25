@@ -1,7 +1,7 @@
 {
-  "name": "dsh-claude-style",
-  "description": "Claude Code Desktop theme for DeepSeek Harness (dsh) web GUI — visual & interaction overhaul",
-  "version": "0.6.4",
+  "name": "hdsl-claude-style",
+  "description": "Claude Code Desktop theme for DeepSeek Harness (dsh) web GUI — HDSL local build, shipped as a plugin tarball",
+  "version": "0.7.0",
   "type": "module",
   "main": "lib/index.js",
   "icon": "lib/claude-mark.svg",
@@ -58,13 +58,5 @@
     "editorial"
   ],
   "license": "MIT",
-  "author": "Nwflower",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Nwflower/dsh-claude-style.git"
-  },
-  "homepage": "https://github.com/Nwflower/dsh-claude-style#readme",
-  "bugs": {
-    "url": "https://github.com/Nwflower/dsh-claude-style/issues"
-  }
+  "author": "Nwflower"
 }

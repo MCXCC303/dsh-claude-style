@@ -142,7 +142,7 @@ const HEADER = (() => {
  * ${styleSheets}
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-claude-style',
+  id: 'hdsl-claude-style',
   factory: (require) => {
     'use strict'
     var module = { exports: {} }

@@ -13,7 +13,7 @@
      * package name, which is what makes it render on this plugin's page.
      */
     var SETTINGS_ENTRY_FALLBACK = 'ui-skin-claude-style'
-    var PACKAGE_NAME = 'dsh-claude-style'
+    var PACKAGE_NAME = 'hdsl-claude-style'
     var BUNDLE_CONFIG_SLOT = 'plugins.bundle.config'
     var SETTINGS_SECTION_SLOT = 'settings.section'
 
