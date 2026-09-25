@@ -52,12 +52,15 @@
     /**
      * Hover dwell before a popover unfolds, and grace before it closes.
      *
-     * The dwell is deliberately tiny: it exists to swallow a pointer that merely
-     * CROSSES a trigger on its way somewhere else, not to make the user wait for
-     * the card. The grace is what lets the pointer travel the gap between a
-     * trigger and its card without the card vanishing underneath it.
+     * The dwell exists to swallow a pointer that merely CROSSES a trigger on its
+     * way somewhere else, not to make the user wait for the card: 100ms is what a
+     * pointer travelling at an ordinary pace needs to clear a 28px trigger, so a
+     * pass-through no longer unfolds anything while a pointer the user parked
+     * there still opens at once. The grace is what lets the pointer travel the
+     * gap between a trigger and its card without the card vanishing underneath
+     * it.
      */
-    var POPOVER_OPEN_DELAY = 50
+    var POPOVER_OPEN_DELAY = 100
     var POPOVER_CLOSE_DELAY = 100
 
     /**
@@ -103,6 +106,57 @@
             close()
           }, closeDelay)
         },
+      }
+    }
+
+    /**
+     * The skin's popovers, one entry per popover.
+     *
+     * A picker whose second level is a card of its own registers ONCE: opening
+     * that second level must not fold the first, and both levels answer the same
+     * choice. A host menu is registered by the feature that drives its trigger,
+     * so it takes part on the same terms as the skin's own cards.
+     *
+     * An entry carries the feature's close path and nothing else. Every closer is
+     * a no-op while its popover is down, so the registry never holds "who is
+     * open": a card the user dismissed with Escape or an outside press leaves no
+     * stale entry behind.
+     */
+    var popoverRegistry = []
+
+    /**
+     * Register (or replace) one popover's closer. Replacing by name is what makes
+     * a client reload safe: the previous generation's disposals never ran, so its
+     * closer is still registered and points at a scope that is gone.
+     */
+    function registerPopover(name, close) {
+      for (var i = 0; i < popoverRegistry.length; i++) {
+        if (popoverRegistry[i].name === name) {
+          popoverRegistry[i].close = close
+          return
+        }
+      }
+      popoverRegistry.push({ name: name, close: close })
+    }
+
+    /** Drop one popover's entry when its feature is torn down. */
+    function unregisterPopover(name) {
+      for (var i = 0; i < popoverRegistry.length; i++) {
+        if (popoverRegistry[i].name === name) {
+          popoverRegistry.splice(i, 1)
+          return
+        }
+      }
+    }
+
+    /**
+     * Close every registered popover except the one named. Called on the way
+     * open, so two cards never share the screen.
+     */
+    function closeOtherPopovers(name) {
+      for (var i = 0; i < popoverRegistry.length; i++) {
+        if (popoverRegistry[i].name === name) continue
+        popoverRegistry[i].close()
       }
     }
 

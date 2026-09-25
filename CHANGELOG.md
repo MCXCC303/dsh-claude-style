@@ -20,6 +20,16 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - **The panel draws its skeleton before its numbers**: the frame, number placeholders, an empty heat grid and stand-in share bars come first; arriving values replace only the text, the cell colours and the bar lengths, so nothing shifts. A figure no source can answer is a dash, never a zero.
 - **HDSL launcher accounts are picked up**: an instance started by HDSL prefers the launcher's account for both the nickname and the picture. The nickname falls back through the custom nickname → the signed-in account's name → the HDSL account name → the last probed system user → the system user → `User`; the picture through the account's avatar → the HDSL avatar → the Claude mark. The host half gains two read-only private routes behind the same request fence as the username route: `GET /dsh-claude-style/hdsl` answers the account metadata (never the avatar file's absolute path) and `GET /dsh-claude-style/hdsl-skin.png` answers the image. A contract version that is missing or unknown voids the whole group, and a deleted avatar file falls back to the mark.
 
+<h3 id="cn-unreleased">体验优化</h3>
+
+- **同时只开一张弹层卡片**：悬停或点击打开模型选择器、推理强度、权限、账户抽屉、会话统计卡片、工作台新会话页的工作区菜单时，之前打开的那张卡片立即收起，两张卡不再叠在同一角；宿主自带的工作区菜单与账户菜单一并参与。
+- **悬停停留由 50ms 延长到 100ms**：指针以平常速度扫过触发器不再展开卡片——工作台版面把上下文行贴在输入卡片正上方，此前指针移向输入框时几乎每次都会展开工作区菜单；停在触发器上仍然立即展开。模型选择器的收起宽限与会话统计卡片的展开停留保持各自的例外值。
+
+<h3 id="en-unreleased">Improvements</h3>
+
+- **One popover card at a time**: opening the model picker, the reasoning-effort card, the permission menu, the account drawer, the session-stats card or the studio new-conversation page's workspace menu now folds whatever card was up before it, so two panels no longer stack over one corner; the host's own workspace and account menus join on the same terms.
+- **The hover dwell goes from 50 ms to 100 ms**: a pointer crossing a trigger at an ordinary pace no longer unfolds a card — the studio layout sets the context row directly above the composer card, where a pointer on its way to the input used to unfold the workspace menu almost every time — while a pointer parked on the trigger still opens at once. The model picker's close grace and the stats card's open dwell keep their own values.
+
 <h3 id="cn-unreleased">问题修复</h3>
 
 - 修复 **浅色模式下聊天记录顶部「加载更早」按钮几乎看不见**：浅色下的实色悬停底改为浅灰，按钮文字对比度从 2.6:1 回到 4.7:1，深色不变；同族令牌下的工作区重命名输入框在浅色里也不再是深色方块。
@@ -30,6 +40,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - 修复 **权限弹层随重建在页面里残留**：宿主重渲染换掉控件容器后，下一次重建会往页面里追加一颗新弹层，旧弹层失去引用后永远留在文档里（长时间使用的页面上数到过 38 颗）。现在每次安装弹层先清扫文档里已有的弹层，功能卸载时一并扫除，页面上始终只有当前这一颗。
 - 修复 **已归档行的时间被操作按钮顶离右缘**：取消归档与删除按钮此前以透明常驻占位，时间只能停在按钮预留区的左边，悬停时三样挤在一行。现在与官方会话行同一机制：静止时按钮不占位，时间与行右缘对齐；悬停（或键盘聚焦行）时时间让位隐藏，两颗按钮出现在原位置。按钮隐身期间也不再响应落在那片区域上的点击。
 - 修复 **页面加载后第一次修改设置提示「设置存储不可用，改动不会被保存」**：设置表单现在会等宿主的命名空间登记完成后再绑定，登记晚到时也会在到达后立即绑定并读回取值，第一次修改即可保存。
+- 修复 **新会话页把鼠标从预设模式快速移到工作文件夹时两个弹层同时打开并闪烁**：一行里的两个选择器（工作文件夹与预设模式）现在只会有一个打开，移到另一个触发器时先收起前一个，两个弹窗不再同时出现、也不再闪动；悬停离开收起的是悬停打开的那一个。
 
 <h3 id="en-unreleased">Bug Fixes</h3>
 
@@ -41,6 +52,7 @@ All notable changes to `dsh-claude-style` are documented here, newest first.
 - Fix **the permission popover stranding in the document across rebuilds**: when a host re-render replaced the control's container, the next rebuild appended a fresh popover while the previous one lost its only reference and stayed in the document forever (38 were counted on a long-lived page). Each install now sweeps every popover already in the document before appending its own, teardown sweeps the rest, and exactly one popover remains.
 - Fix **the archived rows' time being pushed off the row's right edge by the action buttons**: the unarchive and delete buttons reserved their place while transparent, so the time stopped where their reserved space began and hover crowded all three onto one line. The rows now follow the host's own session rows' mechanism: at rest the buttons occupy nothing and the time right-aligns with the row; on hover (or while the row holds keyboard focus) the time steps aside and the two buttons take its place. The invisible buttons also stop answering clicks aimed at that area.
 - Fix **the first settings change after a page load reporting "The settings store is unavailable, so changes will not be saved."**: the settings form now waits for the host's namespace registration before binding, binds as soon as a late registration arrives and reads the value back, so the first change saves.
+- Fix **both popovers on the new-conversation page opening at once, and flickering, when the pointer moved quickly from the preset mode to the workspace folder**: only one of the row's two pickers (the workspace folder and the preset mode) is open at a time — moving to the other trigger folds the first, so the two cards no longer appear together or flicker, and a hover-leave folds the picker the hover opened.
 
 ## [0.6.4] - 2026-09-24
 

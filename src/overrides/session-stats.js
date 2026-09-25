@@ -254,6 +254,10 @@
         function showStatsSections(anchor, sections) {
           renderStatsPopover(sections)
           renderedSections = sections.length
+          // One card at a time, and this is the moment the card is really up: the
+          // read above can come back short or late, and the other popover must not
+          // fold for a card that never appears.
+          closeOtherPopovers('stats')
           ensureStatsPopover().setAttribute('data-open', 'true')
           placeStatsPopover(anchor)
         }
@@ -425,6 +429,8 @@
           bindStatsHover(root)
         }
 
+        registerPopover('stats', hideStatsPopover)
+
         return {
             /** Re-sweep strays left by a previous generation, then refresh the sentence. */
             sync: function () {
@@ -435,6 +441,7 @@
             close: hideStatsPopover,
             /** Remove the card and its hide timer. */
             teardown: function () {
+                unregisterPopover('stats')
                 if (statsHideTimer) {
                     clearTimeout(statsHideTimer)
                     statsHideTimer = null

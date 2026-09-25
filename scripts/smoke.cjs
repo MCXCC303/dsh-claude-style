@@ -19,6 +19,10 @@
  *   - idle       once settled, no scheduler pass runs — a pass that mutates the
  *                DOM schedules the next one, and then the page never idles;
  *   - enter      Enter on an open composer menu reaches the host, never "Send";
+ *   - popovers   the shared popover rule: a pointer crossing a trigger opens
+ *                nothing before the dwell elapses, and whichever card opens last
+ *                folds the one before it — the skin's own cards and the host's
+ *                hero menu alike;
  *   - desktop    the 0.1.7 desktop footer: the host's own account row is the
  *                entry, and our container is injected into its account menu —
  *                first child, self-healing across a host re-render, reachable
@@ -280,29 +284,43 @@ const STAND_IN = `(function () {
     closeHostMenu()
   }, true)
 
-  // The hero row's workspace trigger and the host menu its click toggles, for the
-  // popovers case: the skin opens this menu by pressing the trigger once the
-  // dwell has passed, and folds it the same way when another card opens.
+  // The hero row's two pickers and the host menus their clicks toggle, for the
+  // popovers case. They are TWO independent host menus behind one row — the
+  // workspace chip and the preset seat in the real page — which is what made
+  // crossing from one trigger to the other leave both cards up.
   if (CASE === 'popovers') {
-    var heroTrigger = document.getElementById('hero-workspace')
-    var heroMenu = null
-    function closeHeroMenu() {
-      if (heroMenu && heroMenu.parentElement) heroMenu.parentElement.removeChild(heroMenu)
-      heroMenu = null
-      heroTrigger.setAttribute('aria-expanded', 'false')
+    var heroMenus = {}
+    function heroMenuOf(id) { return heroMenus[id] || null }
+    function closeHeroMenu(id) {
+      var menu = heroMenus[id]
+      if (menu && menu.parentElement) menu.parentElement.removeChild(menu)
+      heroMenus[id] = null
+      document.getElementById(id).setAttribute('aria-expanded', 'false')
     }
-    heroTrigger.addEventListener('click', function () {
-      if (heroMenu) { closeHeroMenu(); return }
-      heroMenu = document.createElement('div')
-      heroMenu.setAttribute('role', 'menu')
-      heroMenu.innerHTML = '<div class="itemWrap"><button type="button" role="menuitem">Workspace A</button></div>'
-      document.body.appendChild(heroMenu)
-      heroTrigger.setAttribute('aria-expanded', 'true')
-    })
+    function bindHeroTrigger(id, label) {
+      document.getElementById(id).addEventListener('click', function () {
+        if (heroMenus[id]) { closeHeroMenu(id); return }
+        var menu = document.createElement('div')
+        menu.setAttribute('role', 'menu')
+        menu.innerHTML = '<div class="itemWrap"><button type="button" role="menuitem">' + label + '</button></div>'
+        document.body.appendChild(menu)
+        heroMenus[id] = menu
+        document.getElementById(id).setAttribute('aria-expanded', 'true')
+      })
+    }
+    bindHeroTrigger('hero-workspace', 'Workspace A')
+    bindHeroTrigger('hero-preset', 'Standard mode')
     document.addEventListener('keydown', function (e) {
-      if (heroMenu && e.key === 'Escape') closeHeroMenu()
+      if (e.key !== 'Escape') return
+      closeHeroMenu('hero-workspace')
+      closeHeroMenu('hero-preset')
     })
-    window.__heroMenuOpen = function () { return heroMenu !== null }
+    window.__heroMenuOpen = function (id) { return heroMenuOf(id) !== null }
+    window.__heroMenusOpen = function () {
+      var count = 0
+      for (var id in heroMenus) if (heroMenus[id]) count++
+      return count
+    }
   }
 
   window.__keys = []
@@ -604,8 +622,10 @@ const PROBE = `(function () {
       var permTrigger = document.querySelector('.dsh-claude-perm-btn')
       var drawerTrigger = document.querySelector('.dsh-claude-account-btn')
       var heroTrigger = document.getElementById('hero-workspace')
+      var presetTrigger = document.getElementById('hero-preset')
       function permUp() { return document.querySelectorAll('.dsh-claude-perm-popover[data-open="true"]').length }
       function drawerUp() { return document.querySelectorAll('.dsh-claude-account-popover[data-open="true"]').length }
+      function hostCards() { return document.querySelectorAll('body > [role="menu"]:not([class*="dsh-claude"])').length }
       // The dwell is 100 ms: at 50 ms a crossing pointer has opened nothing, and
       // by 250 ms a pointer that stayed has the card.
       permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
@@ -621,13 +641,30 @@ const PROBE = `(function () {
       // The hero row's host menu opens on the same dwell, over the drawer.
       heroTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
       await sleep(250)
-      r.heroUp = window.__heroMenuOpen()
+      r.heroUp = window.__heroMenuOpen('hero-workspace')
       r.drawerFoldedByHero = drawerUp()
       // ...and the permission card folds the host menu on its way back.
       permTrigger.dispatchEvent(new MouseEvent('mouseenter'))
       await sleep(250)
       r.permReopened = permUp()
-      r.heroFoldedByPerm = window.__heroMenuOpen()
+      r.heroFoldedByPerm = window.__heroMenuOpen('hero-workspace')
+      // The row's two pickers are two host menus: crossing from the preset seat
+      // straight to the workspace chip must fold the first, not leave both cards
+      // up (with two cards up the skin stamps and places neither, and the pair
+      // flickers as the hover-close path presses the wrong trigger).
+      presetTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.presetUp = window.__heroMenuOpen('hero-preset')
+      r.permFoldedByPreset = permUp()
+      heroTrigger.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await sleep(250)
+      r.workspaceUpAfterCrossing = window.__heroMenuOpen('hero-workspace')
+      r.presetFoldedBySibling = window.__heroMenuOpen('hero-preset')
+      r.heroCardsUp = hostCards()
+      // Leaving the row folds the menu the hover opened, and only that one.
+      heroTrigger.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }))
+      await sleep(300)
+      r.heroMenusLeft = window.__heroMenusOpen()
       permTrigger.dispatchEvent(new MouseEvent('mouseleave'))
       drawerTrigger.dispatchEvent(new MouseEvent('mouseleave'))
       await sleep(250)
@@ -942,11 +979,12 @@ function page(name) {
         '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="105 tok · Cache hit 90%">' +
           '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">105 tok · Cache hit 90%</span></button></span>' +
       '</div>'
-  // The hero row's workspace trigger, only where the popovers case drives it: the
-  // host's own menu there is opened and closed by pressing this button.
+  // The hero row's two pickers, only where the popovers case drives them: each is
+  // its own host menu, opened and closed by pressing its own trigger.
   var heroRow = name === 'popovers'
     ? '<div class="_x_heroWorkspaceRow_1">' +
         '<button type="button" id="hero-workspace" aria-haspopup="menu" aria-expanded="false">workspace</button>' +
+        '<button type="button" id="hero-preset" aria-haspopup="menu" aria-expanded="false">preset</button>' +
       '</div>'
     : ''
   // Two of the host's own controls, painted the way the host paints them: the
@@ -1169,6 +1207,14 @@ const CASES = {
     check('opening the permission card folds the hero menu',
       r.permReopened === 1 && r.heroFoldedByPerm === false,
       JSON.stringify({ permission: r.permReopened, hero: r.heroFoldedByPerm }))
+    check("the row's other picker opens over the permission card and folds it",
+      r.presetUp === true && r.permFoldedByPreset === 0,
+      JSON.stringify({ preset: r.presetUp, permission: r.permFoldedByPreset }))
+    check('crossing to the row\'s other trigger folds the picker left behind',
+      r.workspaceUpAfterCrossing === true && r.presetFoldedBySibling === false && r.heroCardsUp === 1,
+      JSON.stringify({ workspace: r.workspaceUpAfterCrossing, preset: r.presetFoldedBySibling, cards: r.heroCardsUp }))
+    check('leaving the row leaves no hero picker up',
+      r.heroMenusLeft === 0, `${r.heroMenusLeft} open`)
     check('leaving every trigger leaves no card up',
       r.cardsLeftAfterLeave === 0, `${r.cardsLeftAfterLeave} open`)
     commonChecks(r)

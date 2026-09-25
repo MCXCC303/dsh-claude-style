@@ -45,6 +45,7 @@
       function openPopover() {
         if (!accountPopover || !accountBtn) return
         cancelClosePopover()
+        closeOtherPopovers('account')
         // Mirrors are frozen while the popover is open (footer-mirror.sync
         // bails), so reconcile them here — before the reveal — to show fresh
         // content/order and bind click targets for the upcoming interaction.
@@ -140,6 +141,9 @@
         isOpen: function () { return surface.mode() === 'synthetic' && isPopoverOpen() },
         close: closeSurface
       })
+      // The account area takes part in the shared popover rule (popover-utils.js):
+      // ONE entry for both surfaces, since a given host has only one of them.
+      registerPopover('account', closeAccountSurfaces)
       /** The entry row's width, as last written to the stylesheet. */
       var accountWidth = 0
       /** The self-built drawer's distance from the footer's edges, as last written. */
@@ -260,6 +264,17 @@
       }
 
       /**
+       * Close whichever account surface is up, for the shared popover rule
+       * (popover-utils.js): the self-built drawer directly, the host's menu the
+       * way the host dismisses it. Both halves are no-ops while their surface is
+       * down, so this is safe to call on every open of every other popover.
+       */
+      function closeAccountSurfaces() {
+        if (surface.mode() === 'host') closeSurface()
+        else closePopover()
+      }
+
+      /**
        * Open the host's account menu for the hover preference. The menu is the
        * host's, so it is opened by driving its trigger; when it is already up
        * (the pointer re-entered the row) nothing is pressed, or the host's own
@@ -277,6 +292,7 @@
       function openHostMenu() {
         if (surface.mode() !== 'host') return
         if (hostMenu.findMenu() !== null) return
+        closeOtherPopovers('account')
         armAccountMenu()
         hostMenu.openMenu()
       }
@@ -501,6 +517,7 @@
       }
       return function () {
         profile.stop()
+        unregisterPopover('account')
         dropAccountFooter(findFootArea())
       }
     }

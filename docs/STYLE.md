@@ -117,6 +117,18 @@ the account drawer, the session-stats card, and the host's own menu primitive
 under the hero row's workspace and preset pickers — is meant to start from one
 recipe. New popovers take it rather than inventing a card.
 
+Two rules hold across all of them, both owned by `overrides/popover-utils.js`. A
+pointer opens a card only after a **100 ms dwell** — long enough that crossing a
+28px trigger on the way somewhere else unfolds nothing — and the card closes
+100 ms after the pointer leaves. Two cards keep their own numbers with the reason
+written where they are used: the model picker's levels close after 150 ms (the
+pointer has to cross level 1 to reach level 2) and the session-stats card waits
+300 ms to open (its sentence sits mid-row, where a passing pointer would trip
+it). And **only one card is on screen at a time**: each popover registers its
+close path with `registerPopover(name, close)` and calls
+`closeOtherPopovers(name)` on the way open, so opening the model picker folds the
+permission menu, the account drawer, the stats card and the host's hero menu.
+
 **Card**
 
 | Property | Value |
@@ -248,10 +260,10 @@ which a range window unions into one distinct session count. The panel names
 which one it drew from, and a figure neither can answer is a dash.
 
 The skeleton keeps the frame's geometry — six fixed-size stat cells, a heat grid
-of a fixed cell count and stand-in share bars on the models tab — and the heat
-grid's empty cell **is** the zero step, so "no data" and "a day with no usage"
-stay different things: a missing value draws a placeholder, a zero day draws the
-grid's own base tone.
+of a fixed cell count, and on the models tab the chart's frame with three
+stand-in rows — and the heat grid's empty cell **is** the zero step, so "no data"
+and "a day with no usage" stay different things: a missing value draws a
+placeholder, a zero day draws the grid's own base tone.
 
 ## Implementation notes
 
@@ -291,7 +303,9 @@ assembly order itself is authoritative in `scripts/build.mjs`
 | `src/styles/components/footer-takeover.css` | host footer takeover rules |
 | `src/styles/components/third-party.css` | agy-link repair rules |
 | `src/styles/components/settings.css` | settings page section |
-| `src/styles/components/home-panel.css` | the studio home layout and its usage panel (keyed on the attribute `home-layout.js` writes) |
+| `src/styles/components/home-panel.css` | the studio home layout and the usage panel's shell (keyed on the attribute `home-layout.js` writes) |
+| `src/styles/components/home-overview.css` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
+| `src/styles/components/home-models.css` | the usage panel's Models tab: the stacked chart and the ranked list |
 | `src/styles/components/theme-flip.css` | theme-flip transition suppression |
 | `src/context/host.js` | host accessors and helpers |
 | `src/context/prefs.js` | preference store |
@@ -322,7 +336,10 @@ assembly order itself is authoritative in `scripts/build.mjs`
 | `src/overrides/theme-flip.js` | suppresses transitions during a theme flip, so colours and shapes land together |
 | `src/overrides/workspace-view.js` | workspace section feature: the 进行中 / 已归档 segments and the archived list (row delete goes through the plugin's own route) |
 | `src/overrides/view-tabs.js` | conversation view tabs: moves the tab bar onto the title row when it fits |
-| `src/overrides/home-layout.js` | home layout feature: writes the layout attribute and registers the usage panel into the host's dock seat |
+| `src/overrides/home-layout.js` | home layout feature shell: writes the layout attribute, registers the usage panel into the host's dock seat, and draws the panel's head |
+| `src/overrides/home/data.js` | the usage panel's data: the roll-up route, the session list's fallback, and the figures both tabs read |
+| `src/overrides/home/overview.js` | the usage panel's Overview tab: stat cells, heat grid, yardstick line |
+| `src/overrides/home/models.js` | the usage panel's Models tab: the stacked chart and the ranked list |
 | `src/overrides/scheduler.js` | scheduler, observers, subscriptions, teardown |
 | `src/overrides/selection.js` | mirrors the window's focus state onto the document for the two text-selection paints |
 | `src/settings.js` | settings section (brand switch) |

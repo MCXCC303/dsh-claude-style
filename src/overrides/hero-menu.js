@@ -50,6 +50,10 @@
       var closeTimer = null
       var openTimer = null
       var openedByHover = false
+      /** The trigger the hover opened. The row has TWO of them (workspace, preset). */
+      var hoverTrigger = null
+      /** The hero trigger the pointer last entered: the picker a click just used. */
+      var pointerTrigger = null
 
       function cancelHoverClose() {
         if (closeTimer === null) return
@@ -73,8 +77,17 @@
         openTimer = null
         if (!hoverEnabled()) return
         if (trigger.getAttribute('aria-expanded') === 'true') return
+        // One card at a time. The row carries two pickers — the workspace chip and
+        // the preset seat — and they are two independent host menus, while the
+        // shared registry holds ONE entry for the row. The sibling therefore has
+        // to be folded here: crossing from the preset straight to the workspace
+        // chip left both cards up, and syncHeroMenu (which stamps and places a
+        // single card) then placed neither.
+        closeSiblingHeroMenus(trigger)
+        closeOtherPopovers('hero')
         trigger.click()
         openedByHover = true
+        hoverTrigger = trigger
       }
 
       function scheduleHoverOpen(trigger) {
@@ -82,13 +95,41 @@
         openTimer = setTimeout(function () { openFromHover(trigger) }, POPOVER_OPEN_DELAY)
       }
 
+      /**
+       * Close every open hero menu, whatever opened it — a hover or a click. The
+       * shared popover rule calls this when another popover opens; the hover-leave
+       * path comes through closeFromHover below, which closes only what hover
+       * opened.
+       */
+      function closeHeroMenu() {
+        cancelHoverOpen()
+        openedByHover = false
+        hoverTrigger = null
+        var open = openTriggers()
+        for (var i = 0; i < open.length; i++) open[i].click()
+      }
+
       /** Close what hover opened; a click-opened menu is left alone. */
       function closeFromHover() {
         closeTimer = null
         if (!openedByHover) return
-        var trigger = openTrigger()
-        if (trigger !== null) trigger.click()
+        var trigger = hoverTrigger
         openedByHover = false
+        hoverTrigger = null
+        if (trigger === null || trigger.getAttribute('aria-expanded') !== 'true') return
+        trigger.click()
+      }
+
+      /**
+       * The row's other open picker, folded so only one card can be up. The list
+       * is read before the first press: a press re-renders the host's row, and a
+       * node it replaced answers no click anyway.
+       */
+      function closeSiblingHeroMenus(trigger) {
+        var open = openTriggers()
+        for (var i = 0; i < open.length; i++) {
+          if (open[i] !== trigger) open[i].click()
+        }
       }
 
       function scheduleHoverClose() {
@@ -116,6 +157,7 @@
         }
         var trigger = closestWithin(target, TRIGGER_SELECTOR)
         if (trigger === null) return
+        pointerTrigger = trigger
         cancelHoverClose()
         if (trigger.getAttribute('aria-expanded') !== 'true') scheduleHoverOpen(trigger)
       }
@@ -141,10 +183,32 @@
         stampedTrigger = null
       }
 
+      /** The hero row's open pickers: the workspace chip and the preset seat. */
+      function rowTriggers() {
+        var nodes = document.querySelectorAll('[class*="heroWorkspaceRow"] [aria-haspopup="menu"][aria-expanded="true"]')
+        var found = []
+        for (var i = 0; i < nodes.length; i++) found.push(nodes[i])
+        return found
+      }
+
+      /**
+       * The open pickers, one entry each. The composer card's own workspace trigger
+       * is a SECOND view of the same picker state as the row's chip (both read the
+       * host's `pickerOpen`), so it stands in only when the row carries no open
+       * picker: pressing both views in one task toggles the picker shut and open
+       * again, which is how a "close everything" pass used to leave the card up.
+       */
+      function openTriggers() {
+        var row = rowTriggers()
+        if (row.length > 0) return row
+        var card = document.querySelector('[class*="cardWorkspaceTrigger"] [aria-expanded="true"]')
+        return card === null ? [] : [card]
+      }
+
       /** The trigger whose picker is open, or null. */
       function openTrigger() {
-        return document.querySelector('[class*="heroWorkspaceRow"] [aria-haspopup="menu"][aria-expanded="true"]') ||
-               document.querySelector('[class*="cardWorkspaceTrigger"] [aria-expanded="true"]')
+        var open = openTriggers()
+        return open.length === 0 ? null : open[0]
       }
 
       /**
@@ -179,7 +243,20 @@
           // The menu is shut — by a click, by Escape or by an outside press — so
           // whatever hover opened it no longer owns it.
           openedByHover = false
+          hoverTrigger = null
           cancelHoverClose()
+          clearStamp()
+          return
+        }
+        // Both of the row's pickers being open at once — a click on the second
+        // trigger is enough — is the state this feature exists to prevent, and
+        // with two cards up neither can be stamped or placed. The picker the
+        // pointer is on stays (a click on it is the newest intent), the row's
+        // other pickers fold. The hover path never arrives here: openFromHover
+        // folds the sibling before it presses.
+        var open = openTriggers()
+        if (open.length > 1) {
+          closeSiblingHeroMenus(open.indexOf(pointerTrigger) === -1 ? trigger : pointerTrigger)
           clearStamp()
           return
         }
@@ -199,12 +276,20 @@
         placeCard(trigger, stamped)
       }
 
+      // The hero row's two host menus take part in the shared popover rule
+      // (popover-utils.js): the entry closes whatever menu the row has open,
+      // however that menu was opened.
+      registerPopover('hero', closeHeroMenu)
+
       ui.heroMenu = { sync: syncHeroMenu, reposition: repositionHeroMenu }
       return function () {
         cancelHoverClose()
         cancelHoverOpen()
         openedByHover = false
+        hoverTrigger = null
+        pointerTrigger = null
         clearStamp()
+        unregisterPopover('hero')
         document.removeEventListener('mouseover', onHeroPointerOver, true)
         document.removeEventListener('mouseout', onHeroPointerOut, true)
         delete ui.heroMenu
