@@ -416,6 +416,52 @@ const STAND_IN = `(function () {
       }
     }
   }
+  // The host's two statistics dialogs. They mount on the pill's own click, and
+  // the host commits them on its own schedule: the delay here is longer than the
+  // skin's read window used to be, so a read that gives up early loses the
+  // section (the 'card drops to Token usage only' bug).
+  var STATS_DIALOG_DELAY_MS = 500
+  function mountStatsDialog(pill) {
+    var kind = pill.getAttribute('data-stats-kind')
+    var dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-label', kind === 'details' ? '会话统计' : 'Token 用量')
+    var list = document.createElement('dl')
+    list.setAttribute(kind === 'details' ? 'data-session-stats-details' : 'data-session-stats-usage', '')
+    list.innerHTML = kind === 'details'
+      ? '<dt>模型用时</dt><dd>1.2s</dd><dt>工具调用用时</dt><dd>0.4s</dd>'
+      : '<dt>缓存命中</dt><dd>90%</dd><dt>输出</dt><dd>105 tok</dd>'
+    dialog.appendChild(list)
+    document.body.appendChild(dialog)
+    return dialog
+  }
+  var statsPills = document.querySelectorAll('[data-composer-stats] button[aria-haspopup="dialog"]')
+  for (var sp = 0; sp < statsPills.length; sp++) {
+    (function (pill, index) {
+      pill.setAttribute('data-stats-kind', index === 0 ? 'details' : 'usage')
+      var dialog = null
+      var timer = null
+      var presses = 0
+      pill.addEventListener('click', function () {
+        if (dialog !== null) {
+          if (dialog.parentElement) dialog.parentElement.removeChild(dialog)
+          dialog = null
+          pill.setAttribute('aria-expanded', 'false')
+          return
+        }
+        // The host re-renders the row on its own schedule, and a press that lands
+        // on a node React has since replaced goes nowhere: the second pill's first
+        // press is swallowed here, and the skin has to press the live node again.
+        if (index === 1 && presses++ === 0) return
+        pill.setAttribute('aria-expanded', 'true')
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(function () {
+          timer = null
+          if (pill.getAttribute('aria-expanded') === 'true') dialog = mountStatsDialog(pill)
+        }, STATS_DIALOG_DELAY_MS)
+      })
+    })(statsPills[sp], sp)
+  }
   var react = {
     createElement: function () { return null },
     useState: function (v) { return [v, function () {}] },
@@ -457,6 +503,18 @@ const PROBE = `(function () {
       for (var n = 0; n < 4; n++) { document.body.appendChild(document.createElement('i')); await sleep(80) }
     }
     if (window.SMOKE_CASE === 'desktop') {
+      // The footer entries are hidden in place from the first pass: nothing in
+      // this case has opened the drawer yet, so this read is the state a fresh
+      // page shows beside the account row. (The first pass runs on a frame.)
+      await sleep(500)
+      r.footerEntriesBeforeOpen = Array.prototype.map.call(
+        document.querySelectorAll('[class*="footerActions"] [data-slot] > *'),
+        function (entry) {
+          return {
+            hidden: entry.hasAttribute('data-dsh-claude-footer-hidden'),
+            display: getComputedStyle(entry).display,
+          }
+        })
       // The first login frame makes the skin read the profile once.
       window.__pushAccountFrame({ status: 'credential-stored', attempt: { phase: 'succeeded', id: 'smoke-1' } })
       await sleep(500)
@@ -567,6 +625,35 @@ const PROBE = `(function () {
       statsRoot.dispatchEvent(new MouseEvent('mouseleave'))
       await sleep(150)
     }
+    // The session list's leading seat. The host's newer rows render it through a
+    // slot outlet, so an idle row's seat is not :empty — the circle has to hang
+    // on the empty outlet anchor. A seat carrying the running status dot keeps
+    // its own paint and gets no circle.
+    var seats = document.querySelectorAll('[class*="sessionRow"] [class*="slot"]')
+    function seatState(seat) {
+      if (!seat) return null
+      var outlet = seat.querySelector(':scope > [data-slot]')
+      var target = outlet !== null ? outlet : seat
+      var after = getComputedStyle(target, '::after')
+      return { content: after.content, width: after.width, border: after.borderTopWidth, svgs: seat.querySelectorAll('svg').length }
+    }
+    r.seatIdle = seatState(seats[0])
+    r.seatRunning = seatState(seats[1])
+    if (window.SMOKE_CASE === 'default' && statsRoot) {
+      // The host's panels mount on its own commit, later than the skin's old
+      // read window: both sections must still reach the card.
+      statsRoot.dispatchEvent(new MouseEvent('mouseenter'))
+      await sleep(2600)
+      r.statsCardOpen = document.querySelectorAll('.dsh-claude-stats-popover[data-open="true"]').length
+      r.statsCardSections = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-stats-popover-section'), function (s) {
+        return (s.textContent || '').trim()
+      })
+      r.statsCardLabels = Array.prototype.map.call(document.querySelectorAll('.dsh-claude-stats-popover-label'), function (s) {
+        return (s.textContent || '').trim()
+      })
+      statsRoot.dispatchEvent(new MouseEvent('mouseleave'))
+      await sleep(300)
+    }
     var drawer = document.querySelector('.dsh-claude-account-popover-body')
     r.drawer = drawer ? Array.prototype.map.call(drawer.children, function (c) {
       if (c.hasAttribute('data-action-index')) return 'action'
@@ -576,6 +663,13 @@ const PROBE = `(function () {
     }) : null
     var syntheticPopover = document.querySelector('.dsh-claude-account-popover')
     r.syntheticHeader = !!(syntheticPopover && syntheticPopover.querySelector('[data-dsh-claude-ban-row]'))
+    // The closed drawer's rows are built and reconciled while it is closed, so
+    // the panel sits over the account row with its icons in it: visibility has
+    // to take that content out of the paint and hit-test tree.
+    r.syntheticVisibility = syntheticPopover ? getComputedStyle(syntheticPopover).visibility : null
+    r.syntheticRowVisibility = syntheticPopover && syntheticPopover.querySelector('.dsh-claude-popover-item')
+      ? getComputedStyle(syntheticPopover.querySelector('.dsh-claude-popover-item')).visibility
+      : null
     // offsetLeft/offsetWidth, not the rect: the closed drawer still carries its
     // translateY/scale transition, which would shrink a measured rect.
     var syntheticBtn = document.querySelector('.dsh-claude-account-btn')
@@ -701,6 +795,10 @@ function page(name) {
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
 <body>
 ${footer}
+<div class="_x_treeBody_1" role="tree">
+  <div class="_x_sessionRow_1" role="treeitem"><span class="_x_slot_1"><div data-slot="sidebar.session.row.leading" style="display:contents"></div></span><span class="_x_title_1">idle session</span></div>
+  <div class="_x_sessionRow_1" role="treeitem"><span class="_x_slot_1"><svg data-state="ongoing" viewBox="0 0 16 16" width="10" height="10"></svg></span><span class="_x_title_1">running session</span></div>
+</div>
 <div data-composer-card>
   <div class="_x_toolbar_1"><button aria-label="Access mode: Edit">Edit</button></div>
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
@@ -716,6 +814,12 @@ ${stats}
 
 /** Checks every case shares: a clean teardown and an idle scheduler. */
 function commonChecks(r) {
+  check('the idle session seat draws the status circle through the slot outlet',
+    r.seatIdle !== null && r.seatIdle.content !== 'none' && r.seatIdle.width === '5px',
+    JSON.stringify(r.seatIdle))
+  check('a seat carrying the running status dot draws no circle',
+    r.seatRunning !== null && r.seatRunning.content === 'none' && r.seatRunning.svgs > 0,
+    JSON.stringify(r.seatRunning))
   check('scheduler idle once settled (0 passes in 1 s)', r.idlePasses === 0, `${r.idlePasses} passes`)
   check('no Windows titlebar marker: the body carries no data-dsh-titlebar-tabs',
     r.titlebarTabs === false, JSON.stringify(r.titlebarTabs))
@@ -756,6 +860,15 @@ const CASES = {
     check('the Auto review rows are offered while the catalog carries the preset',
       r.permAutoRowDisplay !== null && r.permAutoRowDisplay !== 'none',
       JSON.stringify({ popoverRow: r.permAutoRowDisplay, rows: r.permRows }))
+    check('the stats card keeps both sections when the host panels mount late',
+      r.statsCardOpen === 1 && same(r.statsCardSections, ['会话统计', 'Token 用量']),
+      JSON.stringify({ open: r.statsCardOpen, sections: r.statsCardSections }))
+    check('the late card carries both sections\' rows',
+      same(r.statsCardLabels, ['模型用时', '工具调用用时', '缓存命中', '输出']),
+      JSON.stringify(r.statsCardLabels))
+    check('the closed drawer takes its parked rows out of the paint tree',
+      r.syntheticVisibility === 'hidden' && r.syntheticRowVisibility === 'hidden',
+      JSON.stringify({ panel: r.syntheticVisibility, row: r.syntheticRowVisibility }))
     commonChecks(r)
   },
   'stats-compact'(r) {
@@ -810,6 +923,10 @@ const CASES = {
   },
   desktop(r) {
     check('apply() completes', r.applyError === null, r.applyError)
+    check('the footer entries are hidden in place before the drawer is ever opened',
+      Array.isArray(r.footerEntriesBeforeOpen) && r.footerEntriesBeforeOpen.length === 2 &&
+        r.footerEntriesBeforeOpen.every(function (entry) { return entry.hidden === true && entry.display === 'none' }),
+      JSON.stringify(r.footerEntriesBeforeOpen))
     check("the host's own account row stays visible; the skin builds no trigger",
       r.hostRowVisible === true && r.hostRowDisplay !== 'none' && r.syntheticBtn === false,
       JSON.stringify({ visible: r.hostRowVisible, display: r.hostRowDisplay, synthetic: r.syntheticBtn }))

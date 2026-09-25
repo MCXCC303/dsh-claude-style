@@ -321,6 +321,12 @@
         var footerEntries = syncFooterActionVisibility(footerActions)
         var body = options.body()
 
+        // A closed host drawer has no container to mirror into, but the entries
+        // above are hidden in place all the same: the host re-renders them, and a
+        // pass that skips this leaves their icons painted in the sidebar until the
+        // drawer is opened once.
+        if (body === null) return
+
         // While the popover is open, its mirrors must stay completely static:
         // a content rewrite, reorder, or embedded-clone replacement under the
         // pointer cancels the browser's :hover state and can swallow the click

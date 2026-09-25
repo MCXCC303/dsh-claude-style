@@ -2,6 +2,26 @@
 
 All notable changes to `dsh-claude-style` are documented here, newest first.
 
+## [0.6.4] - 2026-09-24
+
+[中文](#cn-0.6.4) | [English](#en-0.6.4)
+
+<h3 id="cn-0.6.4">问题修复</h3>
+
+- 修复 **刚启动、账号抽屉还没展开过时，页脚里的插件条目一直留在账户行旁边**：隐藏页脚条目与把条目镜像进抽屉原本挤在同一次调用里，而抽屉没打开时这次调用会提前返回，于是宿主重新渲染出来的插件图标继续画在侧栏底部、紧挨账户行，直到抽屉被展开过一次才被标记隐藏——这正是该现象只在首次启动后出现的原因。现在隐藏条目每次同步都跑，只有镜像需要抽屉容器。
+- 修复 **底栏统计弹层偶尔只剩一段（只显示会话统计，或只显示 Token 用量）**：皮肤按标签文字区分宿主的两颗药丸，读取窗口又只有 300 毫秒，而宿主的两个面板按它自己的提交节奏挂载，晚到一步就丢掉那一段。现在按面板自身的标记判定类型，等待拉长到 800 毫秒、读失败时重试一次；药丸按钮每一步都从 DOM 重新取，窗口内还会再按一次——宿主重渲染换掉节点时，按旧节点等于没按；首次只读到一段时安排一次补读把缺的那段补上，卡片只增不减，已经打开的卡片不会被一次失败的读取改小。会话本身没有计时数据时宿主也不渲染计时面板，此时只有 Token 用量是正确的。
+- 修复 **0.1.7-rc.2 里工作区会话行的状态圈消失**：新宿主把会话行的前导座位交给槽位出口渲染，座位里因此始终有一个 `div[data-slot]` 包裹层（`display: contents`），座位不再是空元素，画在 `:empty` 上的圆圈就不再出现。圆圈现在也挂在空的槽位出口上；座位里带运行状态点时仍由状态点自己绘制。
+- 修复 **账户抽屉收起时它的行与图标停在账户行上方**：自建抽屉的内容要在收起状态下预先对账（镜像行只在收起时同步、展开时冻结），所以收起时面板连同齿轮图标一直挂在账户行正上方，此前只用透明度隐藏，内容仍留在绘制与命中树里。收起状态改用 `visibility` 隐藏（保留布局，关闭的淡出照常），展开时恢复可见。
+
+<h3 id="en-0.6.4">Bug Fixes</h3>
+
+- Fix **the footer's plugin entries staying beside the account row after a fresh start until the drawer has been opened once**: hiding the entries and mirroring them into the drawer shared one call that returned early while no drawer was up, so the plugin icons the host re-rendered stayed painted at the sidebar's bottom next to the account row until the drawer had been opened once — which is why the symptom only appeared after a fresh start. The hiding now runs on every sync; only the mirroring needs the drawer's container.
+- Fix **the stats card occasionally showing only one section (session statistics alone, or Token usage alone)**: the skin told the host's two pills apart by their label text and read with a 300 ms window, while the host mounts its panels on its own commit — one late panel lost that section. The read now identifies each panel by its own marker, waits up to 800 ms and retries once; it re-resolves the pill from the DOM at every step and presses the live node again while the window lasts, because a press on a node the host has since re-rendered goes nowhere; and a card that did come up short schedules one late re-read that fills the missing section in, so the card only ever grows and a failed read never shrinks a card already on screen. A session with no timing data renders no timing panel in the host either, where Token usage alone is correct.
+- Fix **the workspace session rows' status circle disappearing on 0.1.7-rc.2**: the newer host renders the row's leading seat through a slot outlet, so the seat always carries a `div[data-slot]` anchor (`display: contents`) and is never empty — the circle drawn on `:empty` stopped appearing. The circle now hangs on the empty outlet anchor as well; a seat carrying the running status dot still keeps the dot's own paint.
+- Fix **the account drawer's rows and icons parked above the account row while it is closed**: the self-built drawer's content is reconciled while closed by design (the mirror sync only runs then and freezes while open), so the panel and its gear icon sit right above the account row; opacity alone left that content in the paint and hit-test tree. The closed state now hides it with `visibility` (layout kept, closing fade intact) and the open state restores it.
+
+**Full Changelog**: [v0.6.1...v0.6.4](https://github.com/Nwflower/dsh-claude-style/compare/v0.6.1...v0.6.4)
+
 ## [0.6.1] - 2026-09-24
 
 [中文](#cn-0.6.1) | [English](#en-0.6.1)

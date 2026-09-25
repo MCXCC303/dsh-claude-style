@@ -582,7 +582,12 @@ body[data-dsh-claude-style] [class*="projectRow"] [class*="chevron"]::after {
 body[data-dsh-claude-style] [class*="projectRow"][aria-expanded="false"] [class*="chevron"]::after {
   transform: rotate(-90deg);
 }
-/* Session status circle indicator (matching Claude style) */
+/* Session status circle indicator (matching Claude style). The host's newer
+   sidebar renders the leading seat through a slot outlet, whose anchor
+   (`div[data-slot]`, display:contents) is a child of the seat even when nothing
+   is registered — an idle row's seat is therefore no longer :empty, so the
+   circle hangs on the empty anchor as well. A seat carrying status dots or
+   another plugin's content keeps its own paint and gets no circle. */
 body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"] {
   width: 14px !important;
   height: 16px !important;
@@ -590,7 +595,8 @@ body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"] {
   align-items: center !important;
   justify-content: center !important;
 }
-body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"]:empty::after {
+body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"]:empty::after,
+body[data-dsh-claude-style] [class*="sessionRow"] [class*="slot"] > [data-slot]:empty::after {
   content: "";
   display: inline-block;
   width: 5px;

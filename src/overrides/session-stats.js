@@ -54,49 +54,114 @@
           return rows
         }
 
-        function statsPanelData(selector) {
-          var panel = document.querySelector(selector)
-          return {
-            title: panel === null ? '' : (panel.getAttribute('aria-label') || ''),
-            rows: statsRowsFrom(panel),
+        /** How long one pill's panel may take to mount (the host commits on its own schedule). */
+        var STATS_PANEL_POLL_MS = 25
+        var STATS_PANEL_ATTEMPTS = 32
+        /** When a click is repeated inside that window, and how often. */
+        var STATS_PANEL_REPRESS_AT = 12
+        var STATS_PANEL_REPRESS_MAX = 2
+        /** How often a read that could not open a panel is retried, and after what delay. */
+        var STATS_READ_RETRIES = 1
+        var STATS_RETRY_MS = 120
+        /** How long after a short card the one late re-read runs. */
+        var STATS_FILL_MS = 700
+
+        /** The stats panel that is open right now, with the kind its own marker names. */
+        function openStatsPanel() {
+          var details = document.querySelector('[data-session-stats-details]')
+          if (details !== null) {
+            var detailsDialog = details.closest('[role="dialog"]')
+            if (detailsDialog !== null) return { kind: 'details', panel: detailsDialog }
           }
+          var usage = document.querySelector('[data-session-stats-usage]')
+          if (usage !== null) {
+            var usageDialog = usage.closest('[role="dialog"]')
+            if (usageDialog !== null) return { kind: 'usage', panel: usageDialog }
+          }
+          return null
         }
 
-        function withStatsPanel(button, selector, done) {
-          if (button === null) { done({ title: '', rows: [] }); return }
-          if (button.getAttribute('aria-expanded') !== 'true') button.click()
+        /** The row's pill buttons as they are right now (the host replaces them on re-render). */
+        function statsPillAt(index) {
+          var root = statsRoot()
+          if (root === null) return null
+          var buttons = root.querySelectorAll('button')
+          return index < buttons.length ? buttons[index] : null
+        }
+
+        /**
+         * Open one pill, read whichever stats panel it shows, and close it again.
+         *
+         * The read is kind-agnostic on purpose: which panel appears is the host's
+         * own answer, so a pill is never mislabelled by its label text (the timing
+         * pill's label carries a tok/s reading as well, and the timing pill is a
+         * plain span — no trigger at all — while the session has no timing yet).
+         * The panel counts only while that pill reports itself expanded, so a
+         * sibling's panel that has not unmounted yet is never read as this one's.
+         * The pill is re-resolved from the DOM at every step and pressed again
+         * while the window lasts: the host re-renders the row on its own schedule,
+         * and a click on a node it has since replaced goes nowhere. `null` means
+         * the row has no such pill; a pill that shows no panel inside the window
+         * reports a failure, which is not an absent section.
+         */
+        function readStatsPill(index, done) {
+          var presses = 0
+          function press() {
+            var pill = statsPillAt(index)
+            if (pill === null) return false
+            if (pill.getAttribute('aria-expanded') !== 'true') pill.click()
+            return true
+          }
+          if (!press()) { done(null); return }
           var attempts = 0
           function read() {
-            var panel = document.querySelector(selector)
-            if (panel === null && attempts < 15) {
+            var pill = statsPillAt(index)
+            if (pill === null) { done({ failed: true, rows: [] }); return }
+            var open = pill.getAttribute('aria-expanded') === 'true' ? openStatsPanel() : null
+            if (open === null && attempts < STATS_PANEL_ATTEMPTS) {
               attempts += 1
-              setTimeout(read, 20)
+              if (attempts === STATS_PANEL_REPRESS_AT && presses < STATS_PANEL_REPRESS_MAX) {
+                presses += 1
+                press()
+              }
+              setTimeout(read, STATS_PANEL_POLL_MS)
               return
             }
-            var data = statsPanelData(selector)
-            if (button.getAttribute('aria-expanded') === 'true') button.click()
-            done(data)
+            if (pill.getAttribute('aria-expanded') === 'true') pill.click()
+            if (open === null) { done({ failed: true, rows: [] }); return }
+            done({ kind: open.kind, title: open.panel.getAttribute('aria-label') || '', rows: statsRowsFrom(open.panel) })
           }
-          setTimeout(read, 20)
+          setTimeout(read, STATS_PANEL_POLL_MS)
         }
 
+        /**
+         * Read both of the host's pills.
+         *
+         * `done(sections, incomplete)`: the sections in the host's own order
+         * (session statistics, then token usage), and `incomplete` true when a
+         * pill the row carries could not be read — the caller must not mistake
+         * that for a section the host does not have.
+         */
         function collectStatsData(done) {
-          var root = statsRoot()
-          if (root === null) { done([]); return }
-          var buttons = root.querySelectorAll('button')
-          var timeBtn = null
-          var usageBtn = null
-          for (var i = 0; i < buttons.length; i++) {
-            var aria = buttons[i].getAttribute('aria-label') || ''
-            if (/轮|步|turns?|steps?/i.test(aria)) timeBtn = buttons[i]
-            else usageBtn = buttons[i]
-          }
-          withStatsPanel(timeBtn, '[role="dialog"]:has([data-session-stats-details])', function (timeData) {
-            withStatsPanel(usageBtn, '[role="dialog"]:has([data-session-stats-usage])', function (usageData) {
+          if (statsRoot() === null) { done([], false); return }
+          readStatsPill(0, function (first) {
+            readStatsPill(1, function (second) {
+              var reads = [first, second]
               var sections = []
-              if (timeData.rows.length > 0) sections.push(timeData)
-              if (usageData.rows.length > 0) sections.push(usageData)
-              done(sections)
+              var incomplete = false
+              for (var i = 0; i < reads.length; i++) {
+                var read = reads[i]
+                if (read === null) continue
+                if (read.failed === true || read.rows.length === 0) {
+                  incomplete = true
+                  continue
+                }
+                sections.push(read)
+              }
+              sections.sort(function (a, b) {
+                return (a.kind === 'details' ? 0 : 1) - (b.kind === 'details' ? 0 : 1)
+              })
+              done(sections, incomplete)
             })
           })
         }
@@ -164,12 +229,34 @@
           pop.innerHTML = html
         }
 
-        /** The last full read; a thinner one never replaces it while the card is up. */
+        /** Whether the card is up, so a failed re-read can leave its content alone. */
+        function isStatsPopoverOpen() {
+          return statsPopover !== null && statsPopover.getAttribute('data-open') === 'true'
+        }
 
-        var statsSections = null
+        /** How many sections the card currently shows. */
+        var renderedSections = 0
 
-        var statsSectionsAt = 0
+        /** Place the card above the stats row, clamped to the viewport. */
+        function placeStatsPopover(anchor) {
+          var pop = ensureStatsPopover()
+          var live = statsRoot() || anchor
+          if (live === null) return
+          var rect = live.getBoundingClientRect()
+          var width = pop.offsetWidth
+          var height = pop.offsetHeight
+          var left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8))
+          var top = Math.max(8, rect.top - height - 8)
+          pop.style.left = left + 'px'
+          pop.style.top = top + 'px'
+        }
 
+        function showStatsSections(anchor, sections) {
+          renderStatsPopover(sections)
+          renderedSections = sections.length
+          ensureStatsPopover().setAttribute('data-open', 'true')
+          placeStatsPopover(anchor)
+        }
 
         function showStatsPopover(anchor) {
           // The card reads the host's two dialogs, which only the detailed row
@@ -181,29 +268,40 @@
             clearTimeout(statsHideTimer)
             statsHideTimer = null
           }
-          collectStatsData(function (sections) {
+          readStatsCard(anchor, 0)
+        }
+
+        /**
+         * Collect the host's panels and render the card.
+         *
+         * A read that could not open one of the panels is retried, and one that
+         * still comes back short while the card is already up leaves the card as
+         * it is: the host's panels mount on its own commit, so a read that lost
+         * the race must never read as a section the host does not have — that was
+         * the 'click and it drops to Token usage only' card. A card that did come
+         * up short schedules one late re-read, which fills it in and never
+         * shrinks it.
+         */
+        function readStatsCard(anchor, attempt) {
+          collectStatsData(function (sections, incomplete) {
             if (sections.length === 0) return
-            // A click re-collects, and the host's two pills can be mid-flight then: a read
-            // that comes back with fewer sections than the card already shows must not
-            // shrink it — that is the 'click and it drops to Token usage only' bug.
-            var fresh = Date.now() - statsSectionsAt < 180000
-            if (statsSections !== null && fresh && sections.length < statsSections.length) {
-              sections = statsSections
-            } else {
-              statsSections = sections
-              statsSectionsAt = Date.now()
+            if (incomplete && attempt < STATS_READ_RETRIES) {
+              setTimeout(function () { readStatsCard(anchor, attempt + 1) }, STATS_RETRY_MS)
+              return
             }
-            renderStatsPopover(sections)
-            var pop = ensureStatsPopover()
-            pop.setAttribute('data-open', 'true')
-            var live = statsRoot() || anchor
-            var rect = live.getBoundingClientRect()
-            var width = pop.offsetWidth
-            var height = pop.offsetHeight
-            var left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8))
-            var top = Math.max(8, rect.top - height - 8)
-            pop.style.left = left + 'px'
-            pop.style.top = top + 'px'
+            if (incomplete && isStatsPopoverOpen()) return
+            showStatsSections(anchor, sections)
+            if (incomplete) setTimeout(function () { fillStatsCard(anchor) }, STATS_FILL_MS)
+          })
+        }
+
+        /** One late re-read for a card that came up short; it only ever adds. */
+        function fillStatsCard(anchor) {
+          collectStatsData(function (sections, incomplete) {
+            if (incomplete || sections.length === 0) return
+            if (!isStatsPopoverOpen()) return
+            if (sections.length <= renderedSections) return
+            showStatsSections(anchor, sections)
           })
         }
 

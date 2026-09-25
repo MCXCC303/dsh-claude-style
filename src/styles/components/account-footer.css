@@ -106,15 +106,24 @@ body[data-dsh-claude-style] .dsh-claude-account-popover {
   flex-direction: column !important;
   gap: 6px !important;
   opacity: 0 !important;
+  /* The drawer's rows are built and reconciled while it is closed (the mirror
+     sync only runs then), so the panel sits right above the account row with
+     its icons in it. opacity alone leaves that content in the paint and
+     hit-test tree; visibility takes it out of both, and the delayed transition
+     keeps the closing fade. Layout is untouched, so the closed drawer's box is
+     still measurable. */
+  visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(6px) scale(0.98) !important;
   transform-origin: bottom left !important;
-  transition: opacity 0.15s ease, transform 0.15s ease !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s linear 0.15s !important;
 }
 body[data-dsh-claude-style] .dsh-claude-account-popover[data-open="true"] {
   opacity: 1 !important;
+  visibility: visible !important;
   pointer-events: auto !important;
   transform: translateY(0) scale(1) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s !important;
 }
 body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-account-popover {
   background: #1e1e1d !important;

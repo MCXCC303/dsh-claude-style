@@ -443,10 +443,15 @@
         syncAccountRowBox(entryRow, footArea)
         if (hostTrigger !== null) bindHostRowHover(hostTrigger)
 
+        // The host's footer entries are hidden in place on every pass, drawer or
+        // no drawer: the host re-renders them, and a pass that skipped this left
+        // their icons painted beside the account row until the drawer had been
+        // opened once. Only the mirroring needs a container to write into.
+        mirror.sync(footArea)
+
         var root = surface.mode() === 'host' ? surface.container() : accountPopover
         if (root === null) return
         rows.syncHeader(root, hostTrigger)
-        mirror.sync(footArea)
         // The rail toggle (and any reflow) moves the anchor without a window
         // resize or a page scroll, so an open drawer re-resolves its position at
         // the end of its own pass.
