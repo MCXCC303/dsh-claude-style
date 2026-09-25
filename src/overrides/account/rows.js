@@ -28,21 +28,133 @@
         }
       }
 
+      /** The account whose head the canvas holds, and the picture in flight. */
+      var headSource = null
+      var headCanvas = null
+      var headImage = null
       /**
-       * Paint (or clear) the picture inside the avatar circle. It is a real
-       * `<img>` layered over the starburst rather than a CSS background: the
-       * host's own avatar `<img>` carries `referrerPolicy="no-referrer"`, which
-       * is what the picture host expects, and a background cannot drop the
-       * referrer. A picture that fails to load hides itself, so the starburst
-       * underneath shows instead of an empty circle.
+       * The account whose skin could not be used. Kept per account rather than
+       * as a flag so nothing asks for the same missing picture on every pass;
+       * the mark keeps the circle in the meantime.
+       */
+      var headFailedFor = null
+
+      /**
+       * Draw the head out of a launcher skin, the way the launcher's own
+       * account list draws it: the front face of the head texel block, inset by
+       * 1/18 of the box, then the hat layer over the whole box. The atlas may
+       * be stored at any integer multiple of 64 (the launcher normalizes to
+       * 64×64 and keeps an already-larger import at its size), so every texel
+       * block is measured by that multiple.
+       *
+       * @returns whether a head was drawn.
+       */
+      function drawLauncherHead(canvas, image) {
+        var box = canvas.width
+        var scale = image.naturalWidth / 64
+        var context = canvas.getContext('2d')
+        if (context === null || scale < 1 || scale !== Math.floor(scale)) return false
+        var offset = Math.round(box / 18)
+        context.clearRect(0, 0, box, box)
+        // The face is a 8×8 texel block drawn inside the inset; the pixels are
+        // already at the right size, so smoothing would only blur them.
+        context.imageSmoothingEnabled = false
+        context.drawImage(image, 8 * scale, 8 * scale, 8 * scale, 8 * scale, offset, offset, box - 2 * offset, box - 2 * offset)
+        context.drawImage(image, 40 * scale, 8 * scale, 8 * scale, 8 * scale, 0, 0, box, box)
+        return true
+      }
+
+      /** Load the launcher's skin once for one account. */
+      function loadLauncherHead(account, avatarEl) {
+        var image = new Image()
+        headImage = image
+        image.decoding = 'async'
+        image.addEventListener('load', function () {
+          if (headImage !== image || headSource !== account) return
+          if (image.naturalWidth !== image.naturalHeight || image.naturalWidth < 64) {
+            headFailedFor = account
+            return
+          }
+          if (headCanvas === null) {
+            headCanvas = document.createElement('canvas')
+            headCanvas.className = 'dsh-claude-account-skin'
+            headCanvas.width = 64
+            headCanvas.height = 64
+            headCanvas.setAttribute('aria-hidden', 'true')
+          }
+          if (!drawLauncherHead(headCanvas, image)) {
+            headFailedFor = account
+            return
+          }
+          syncLauncherHead(avatarEl)
+        })
+        image.addEventListener('error', function () {
+          if (headImage !== image) return
+          // No picture: the circle keeps the account profile's photo when there
+          // is one, and the mark otherwise. Nothing retries until a new answer.
+          headFailedFor = account
+        })
+        image.src = SKIN_ROUTE
+      }
+
+      /** Drop the account profile's photo, if one is mounted. */
+      function clearAccountPhoto(avatarEl) {
+        var photo = avatarEl.querySelector('.dsh-claude-account-photo')
+        if (photo === null) return
+        avatarEl.removeChild(photo)
+        if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+      }
+
+      /**
+       * Paint the player's own head, when the launcher published a skin for
+       * this instance. The picture is a canvas cropped from the normalized
+       * atlas the host serves, so it is the same head the launcher's own
+       * account list shows.
+       *
+       * @returns whether the circle is the launcher head's to paint.
+       */
+      function syncLauncherHead(avatarEl) {
+        var account = getHostAccount()
+        var skin = account !== null && account.hasSkin === true ? account : null
+        if (skin === null) {
+          headSource = null
+          if (headCanvas !== null && headCanvas.parentElement === avatarEl) avatarEl.removeChild(headCanvas)
+          if (avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.removeAttribute('data-dsh-claude-skin')
+          return false
+        }
+        if (headSource !== skin && headFailedFor !== skin) {
+          headSource = skin
+          loadLauncherHead(skin, avatarEl)
+        }
+        if (headCanvas === null || headFailedFor === skin || headSource !== skin) return false
+        if (headCanvas.parentElement !== avatarEl) {
+          if (headCanvas.parentElement !== null) headCanvas.parentElement.removeChild(headCanvas)
+          avatarEl.appendChild(headCanvas)
+        }
+        if (!avatarEl.hasAttribute('data-dsh-claude-skin')) avatarEl.setAttribute('data-dsh-claude-skin', '')
+        return true
+      }
+
+      /**
+       * Paint (or clear) the picture inside the avatar circle. The launcher's
+       * own skin wins — it is the player's picture for this instance — and the
+       * account profile's photo follows it. That photo is a real `<img>`
+       * layered over the starburst rather than a CSS background: the host's own
+       * avatar `<img>` carries `referrerPolicy="no-referrer"`, which is what
+       * the picture host expects, and a background cannot drop the referrer. A
+       * picture that fails to load hides itself, so the starburst underneath
+       * shows instead of an empty circle.
        */
       function syncAccountAvatar(avatarEl) {
         if (avatarEl === null) return
+        if (syncLauncherHead(avatarEl)) {
+          clearAccountPhoto(avatarEl)
+          return
+        }
         var src = accountPhotoUrl(profile.avatar())
         var photo = avatarEl.querySelector('.dsh-claude-account-photo')
         if (src === null) {
-          if (photo !== null) avatarEl.removeChild(photo)
-          if (avatarEl.hasAttribute('data-dsh-claude-photo')) avatarEl.removeAttribute('data-dsh-claude-photo')
+          clearAccountPhoto(avatarEl)
           return
         }
         if (photo === null) {

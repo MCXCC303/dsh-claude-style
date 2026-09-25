@@ -57,15 +57,37 @@
     }
 
     /**
-     * Host-resolved username.
+     * Host-resolved identity.
      *
-     * The host half owns the OS user (`os.userInfo().username`); this side
-     * fetches it once and caches it. A custom username from the settings page
-     * always wins. No workspace parsing, no polling.
+     * The host half resolves the name this instance runs as once — the
+     * launcher's account name when one was published, the OS user otherwise —
+     * and this side fetches it once and caches it. The same answer carries the
+     * launcher account, whose picture the account row draws in place of the
+     * mark. A custom username from the settings page always wins. No workspace
+     * parsing, no polling.
      */
     var usernameFromHost = ''
+    /** The launcher account behind that name, or null; see accountFromPayload. */
+    var accountFromHost = null
     var usernameRequested = false
     var usernameListeners = []
+
+    /**
+     * Clamp the launcher account the host reported. Every field is display
+     * copy or a switch: the skin picture itself is fetched separately, and the
+     * absolute path behind it never reaches this side.
+     */
+    function accountFromPayload(raw) {
+      if (raw === null || raw === undefined || typeof raw !== 'object') return null
+      return {
+        name: typeof raw.name === 'string' ? raw.name : '',
+        vendor: typeof raw.vendor === 'string' ? raw.vendor : '',
+        kind: typeof raw.kind === 'string' ? raw.kind : '',
+        skin: typeof raw.skin === 'string' ? raw.skin : '',
+        skinModel: typeof raw.skinModel === 'string' ? raw.skinModel : '',
+        hasSkin: raw.hasSkin === true,
+      }
+    }
 
     function onUsernameLoaded(listener) {
       usernameListeners.push(listener)
@@ -88,6 +110,7 @@
           .then(function (data) {
             if (!data || data.ok !== true || typeof data.username !== 'string') return
             usernameFromHost = data.username.trim().slice(0, USERNAME_MAX)
+            accountFromHost = accountFromPayload(data.account)
             var listeners = usernameListeners.slice()
             for (var i = 0; i < listeners.length; i++) {
               try { listeners[i](usernameFromHost) } catch (error) { /* listener error */ }
@@ -104,6 +127,11 @@
       return 'User'
     }
 
+    /** The launcher account this instance runs as, or null; null until the host answers. */
+    function getHostAccount() {
+      return accountFromHost
+    }
+
     /**
      * Host context reference for services that need to read host state
      * (e.g. locale) outside of apply(ctx)'s direct call stack.
@@ -111,8 +139,9 @@
     var hostCtx = null
     function setHostContext(ctx) {
       hostCtx = ctx
-      // A new host context means a new OS user; the next apply resolves once
-      // again rather than reusing the previous host's cached name.
+      // A new host context means a new user; the next apply resolves once again
+      // rather than reusing the previous host's cached identity.
       usernameRequested = false
       usernameFromHost = ''
+      accountFromHost = null
     }

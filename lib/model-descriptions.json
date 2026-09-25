@@ -165,12 +165,12 @@
       "en": "Username"
     },
     "usernameDesc": {
-      "zh": "显示在新会话欢迎语中；留空则使用宿主解析到的系统用户名。",
-      "en": "Shown in the new-conversation greeting. Leave empty to use the system username resolved by the host."
+      "zh": "显示在新会话欢迎语中；留空则使用启动器发布的账号名，没有账号时用系统用户名。",
+      "en": "Shown in the new-conversation greeting. Leave empty to use the account name the launcher published, or the system username when there is none."
     },
     "usernamePlaceholder": {
-      "zh": "自动解析系统用户",
-      "en": "Auto-detect host user"
+      "zh": "自动识别账号名",
+      "en": "Auto-detect account name"
     },
     "brandOff": {
       "zh": "关闭",

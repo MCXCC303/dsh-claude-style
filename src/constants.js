@@ -119,37 +119,51 @@
       'Spinning', 'Twisting', 'Unfurling', 'Unravelling', 'Vibing', 'Whirring'
     ]
 
-    /** Segment label and the shipped /permission preset it selects. */
+    /**
+     * Claude-flavored presentation of the permission presets, keyed by preset
+     * id. The host's catalog decides WHICH presets a deployment offers — a
+     * third-party plugin's ride in it, the auto mode plugin's `auto-mode` among
+     * them — and this table decides how a known one reads. A preset the table
+     * does not know falls back to the name the catalog carries, so nothing the
+     * host offers is ever hidden and a machine id is never shown.
+     */
+    var PERMISSION_PRESETS = {
+      'read-only': { label: 'Read only', desc: '仅读取文件与分析，不修改代码' },
+      'workspace-write': { label: 'Accept edits', desc: '允许编辑工作区文件' },
+      'auto-mode': { label: 'Auto mode', desc: '规则放行常规操作，其余由分类器裁决' },
+      'auto': { label: 'Auto review', desc: '无沙箱运行，调用前由模型审查' },
+      'danger-full-access': { label: 'Full access', desc: '自动执行，无需反复确认' }
+    }
+
+    /**
+     * The control's segments, in slot order. Each slot lists the presets it may
+     * bind to, best first: the deployment's own auto tier wins the slot over the
+     * host's built-in Auto review, and a slot none of whose presets the host
+     * offers is not drawn at all.
+     */
     var PERMISSION_SEGMENTS = [
-      { label: 'Read', preset: 'read-only' },
-      { label: 'Edit', preset: 'workspace-write' },
-      { label: 'Auto', preset: 'auto' },
-      { label: 'Yolo', preset: 'danger-full-access' },
+      { label: 'Read', presets: ['read-only'] },
+      { label: 'Edit', presets: ['workspace-write'] },
+      { label: 'Auto', presets: ['auto-mode', 'auto'] },
+      { label: 'Yolo', presets: ['danger-full-access'] }
     ]
 
-    /** In-conversation permission popover options matching Claude Code desktop style. */
-    var PERMISSION_OPTIONS = [
-      {
-        preset: 'read-only',
-        label: 'Read only',
-        desc: '仅读取文件与分析，不修改代码'
-      },
-      {
-        preset: 'workspace-write',
-        label: 'Accept edits',
-        desc: '允许编辑工作区文件'
-      },
-      {
-        preset: 'auto',
-        label: 'Auto review',
-        desc: '无沙箱运行，调用前由模型审查'
-      },
-      {
-        preset: 'danger-full-access',
-        label: 'Full access',
-        desc: '自动执行，无需反复确认'
-      }
-    ]
+    /** Popover row order; a preset the host offers but this list does not know follows in catalog order. */
+    var PERMISSION_ORDER = ['read-only', 'workspace-write', 'auto-mode', 'auto', 'danger-full-access']
+
+    /**
+     * What the control draws before the host's first catalog read settles: the
+     * shipped built-ins, with the auto slot left out the way the shipped picker
+     * renders nothing until its own catalog arrives.
+     */
+    var PERMISSION_SHIPPED_PRESETS = ['read-only', 'workspace-write', 'danger-full-access']
+
+    /**
+     * Names for host values that are never switch targets. `custom` is the
+     * host's own word for knob settings that match no preset, so the trigger
+     * reads that rather than the machine value.
+     */
+    var PERMISSION_CURRENT_LABELS = { custom: 'Custom' }
 
     /** The presets the shipped UI gates behind its risk-confirmation dialog. */
     var GATED_PRESET = 'danger-full-access'
@@ -260,8 +274,15 @@
     var AUTO_POPOVER_ALL = 'all'
     var AUTO_POPOVER_SCOPES = [AUTO_POPOVER_OFF, AUTO_POPOVER_ACCOUNT, AUTO_POPOVER_ALL]
     var DEFAULT_AUTO_POPOVER = AUTO_POPOVER_ALL
-    /** Route that resolves the host OS user once; never polled. */
+    /** Route that resolves the name this instance runs as, once; never polled. */
     var USERNAME_ROUTE = '/dsh-claude-style/username'
+    /**
+     * Route that serves the player's own skin (lib/index.js, SKIN_PATH). The
+     * launcher hands the host an absolute path to a normalized texture atlas;
+     * the browser reads the picture from here instead, and crops the head out
+     * of it (src/overrides/account/rows.js).
+     */
+    var SKIN_ROUTE = '/dsh-claude-style/skin'
     /** Longest accepted custom username; mirrored by lib/index.js. */
     var USERNAME_MAX = 64
     /** Most quick-provider ids kept, and the longest id accepted; mirrored by lib/index.js. */
