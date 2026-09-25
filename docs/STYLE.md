@@ -21,6 +21,18 @@ Rules:
 - Never pure white, never pure black, never cool grays.
 - Accent usage stays under ~10% of visible elements.
 
+**Host token bindings.** The skin supplies its palette through the host's own
+alias tokens, so a host control that reads more than one token for one surface
+has to be given all of them. A filled primary button is that case: the host takes
+the fill from `--dsw-alias-brand-primary`, but the hover from a monochrome step
+of its own scale (light `#43454a`, dark `#ebeef2`) and the label from a
+foreground token the skin leaves alone. `--dsw-alias-button-primary-fill` and
+`--dsw-alias-button-primary-hover` therefore state both steps in each palette.
+Two fills are palette-specific rather than carried over from the dark base:
+`--dsw-alias-interactive-bg-hover-solid` (a solid chip, lighter than the canvas
+in light) and `--dsw-alias-button-elevated-fill` (a surface above the canvas in
+light, a raised gray in dark).
+
 ## Typography
 
 - **Serif display** — headings / editorial statements (`--dsw-font-serif`).
@@ -247,6 +259,10 @@ rule should be checked for accidental hits:
 - Never override the host's active-phase layout contract on
   `[class*="viewArea"]` (`flex: 1 0 auto; min-height: auto`) — it is what
   keeps the sticky composer seat pinned to the scrollport bottom.
+- An anchor that carries a host button class (`_linkButton`, e.g. the settings
+  page's "充值") is a filled or outlined control, not a text link: it states its
+  own ink. The blanket anchor colour excludes that class — painting it leaves a
+  filled button's label the same colour as its fill.
 
 `node scripts/probe.cjs --token <launch-token>` drives a headless Chrome over
 CDP and asserts the invariants (composer pinned at bottom, single-line start,

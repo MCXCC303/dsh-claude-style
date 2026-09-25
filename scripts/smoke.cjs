@@ -715,6 +715,17 @@ const PROBE = `(function () {
     r.hostRowPresent = document.getElementById('host-account') !== null
     var hostRowAtRest = document.getElementById('host-account')
     r.hostRowMarked = !!(hostRowAtRest && hostRowAtRest.hasAttribute('data-dsh-claude-account-host-row'))
+    // The two host controls the skin's own colour rules must leave readable: the
+    // chat's solid hover chip, and a filled anchor button whose ink comes from
+    // the host's foreground token rather than from the link colour.
+    var chip = document.querySelector('._h_older_1 button')
+    var chipCS = chip ? getComputedStyle(chip) : null
+    r.chipInk = chipCS ? chipCS.color : null
+    r.chipFill = chipCS ? chipCS.backgroundColor : null
+    var topUp = document.querySelector('._h_balance_1 a')
+    var topUpCS = topUp ? getComputedStyle(topUp) : null
+    r.topUpInk = topUpCS ? topUpCS.color : null
+    r.topUpFill = topUpCS ? topUpCS.backgroundColor : null
     var banRow = document.querySelector('[data-dsh-claude-ban-row]')
     if (banRow) banRow.click()
     var toast = document.querySelector('.dsh-claude-ban-toast-text')
@@ -791,6 +802,22 @@ function page(name) {
         '<span class="_a_anchor_1"><button type="button" class="_p_pill_1" aria-haspopup="dialog" aria-expanded="false" aria-label="105 tok · Cache hit 90%">' +
           '<svg viewBox="0 0 16 16" width="14" height="14"></svg><span class="_l_label_1">105 tok · Cache hit 90%</span></button></span>' +
       '</div>'
+  // Two of the host's own controls, painted the way the host paints them: the
+  // chat's "load earlier" chip (secondary ink on the solid hover fill) and a
+  // filled anchor button (AccountSection's "充值", `_linkButton _primary`). The
+  // skin supplies the tokens both read; the host supplies the foreground token
+  // for a filled control, which the skin leaves alone.
+  var hostControls = '<style>' +
+      'body { --dsw-alias-label-primary-foreground: #ffffff; }' +
+      'body[data-ds-dark-theme] { --dsw-alias-label-primary-foreground: #0f1115; }' +
+      '._h_older_1 button { border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px;' +
+        ' color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-interactive-bg-hover-solid); }' +
+      '._h_linkButton_1 { color: var(--dsw-alias-label-primary); background: transparent; }' +
+      '._h_primary_1 { color: var(--dsw-alias-label-primary-foreground);' +
+        ' background: var(--dsw-alias-button-primary-fill); }' +
+    '</style>' +
+    '<div class="_h_older_1"><button type="button">Load earlier</button></div>' +
+    '<div class="_h_balance_1"><a class="_h_linkButton_1 _h_primary_1" href="#">Top up</a></div>'
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>dsh-claude-style smoke: ${name}</title></head>
 <body>
@@ -805,6 +832,7 @@ ${footer}
   <button aria-label="Send" id="send">Send</button>
 </div>
 ${stats}
+${hostControls}
 <script>window.SMOKE_CASE = ${JSON.stringify(name)}</script>
 <script>${STAND_IN}</script>
 <script src="/client.js"></script>
@@ -812,8 +840,28 @@ ${stats}
 </body></html>`
 }
 
+/** WCAG contrast ratio between two `rgb(r, g, b)` readings. */
+function contrast(a, b) {
+  const luminance = (css) => {
+    const channels = css.match(/[\d.]+/g).slice(0, 3).map((raw) => {
+      const c = Number(raw) / 255
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    })
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+  }
+  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (high + 0.05) / (low + 0.05)
+}
+
 /** Checks every case shares: a clean teardown and an idle scheduler. */
 function commonChecks(r) {
+  check("the host's solid hover chip keeps its label readable on its fill",
+    r.chipInk !== null && r.chipFill !== null && contrast(r.chipInk, r.chipFill) >= 4.5,
+    JSON.stringify({ ink: r.chipInk, fill: r.chipFill }))
+  check('a filled host anchor keeps its own ink instead of the link colour',
+    r.topUpInk !== null && r.topUpFill !== null && r.topUpInk !== r.topUpFill &&
+      contrast(r.topUpInk, r.topUpFill) >= 3,
+    JSON.stringify({ ink: r.topUpInk, fill: r.topUpFill }))
   check('the idle session seat draws the status circle through the slot outlet',
     r.seatIdle !== null && r.seatIdle.content !== 'none' && r.seatIdle.width === '5px',
     JSON.stringify(r.seatIdle))
